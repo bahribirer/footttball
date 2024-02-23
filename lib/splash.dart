@@ -1,6 +1,7 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
-import 'start.dart';
+import 'package:footttball/startPage.dart';
+import 'joinRoom.dart';
 import 'package:lottie/lottie.dart';
 
 void main() {

@@ -1,105 +1,12 @@
-// ignore_for_file: unused_element
-
 import 'dart:math';
+
 import 'package:flutter/material.dart';
+import 'package:footttball/api_service.dart';
+import 'package:footttball/getInfo.dart';
+import 'package:footttball/home.dart';
+import 'package:footttball/main.dart';
 import 'package:footttball/players.dart';
-import 'api_service.dart';
-import 'splash.dart';
-import 'main.dart';
 
-void main() {
-  runApp(const TikiTakaToeApp());
-}
-
-class TikiTakaToeApp extends StatelessWidget {
-  const TikiTakaToeApp({Key? key}) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Tiki Taka Toe',
-      home: StartPage(),
-    );
-  }
-}
-
-class StartPage extends StatelessWidget {
-  const StartPage({Key? key}) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: null,
-      body: Stack(
-        children: [
-          GestureDetector(
-            onTap: () {
-              // Herhangi bir yere tıklanınca buraya gelecek
-            },
-            child: Container(
-              decoration: BoxDecoration(
-                image: DecorationImage(
-                  image: AssetImage('images/arka2.PNG'),
-                  fit: BoxFit.cover,
-                ),
-              ),
-            ),
-          ),
-          Positioned(
-            right: MediaQuery.of(context).size.width * 0.55,
-            bottom: MediaQuery.of(context).size.height * 0.05,
-            child: GestureDetector(
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => CreateRoomPage()),
-                );
-              },
-              child: Image.asset(
-                'images/create.PNG',
-                width: MediaQuery.of(context).size.width * 0.4,
-                height: MediaQuery.of(context).size.height * 0.2,
-                fit: BoxFit.contain,
-              ),
-            ),
-          ),
-          Positioned(
-            left: MediaQuery.of(context).size.width * 0.55,
-            bottom: MediaQuery.of(context).size.height * 0.05,
-            child: GestureDetector(
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => JoinRoomPage()),
-                );
-              },
-              child: Image.asset(
-                'images/join.PNG',
-                width: MediaQuery.of(context).size.width * 0.4,
-                height: MediaQuery.of(context).size.height * 0.2,
-                fit: BoxFit.contain,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class BackgroundWidget extends StatelessWidget {
-  const BackgroundWidget({Key? key}) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    return Positioned.fill(
-      child: Image.asset(
-        'images/arka1.png',
-        fit: BoxFit.cover,
-      ),
-    );
-  }
-}
 class CreateRoomPage extends StatefulWidget {
   @override
   _CreateRoomPageState createState() => _CreateRoomPageState();
@@ -109,6 +16,8 @@ class _CreateRoomPageState extends State<CreateRoomPage> {
   String selectedGameMode = ''; // Seçilen oyun modu
   late String roomCode;
   late bool isLeagueSelected;
+  var teamobject=getTeamInfo();
+  
   Map<String, bool> isModeSelectedMap = {
     'Premier League': false,
     'Ligue1': false,
@@ -125,7 +34,7 @@ class _CreateRoomPageState extends State<CreateRoomPage> {
     super.initState();
     isLeagueSelected = false;
     roomCode = _generateRandomCode();
-    apiService = ApiService('http://127.0.0.1:8000');
+    teamobject = getTeamInfo();
   }
 
   String _generateRandomCode() {
@@ -134,46 +43,53 @@ class _CreateRoomPageState extends State<CreateRoomPage> {
     return randomCode.toString();
   }
 
-  Future<void> _startGame() async {
-  if (selectedGameMode.isNotEmpty) {
-    try {
-      // Oyun moduna göre lig bilgilerini alma
-      final leagueInfo = await apiService.getLeagueInfo(selectedGameMode);
-      print('League Information: $leagueInfo');
+  void navigate(){
 
-      // Lig bilgilerini kullanarak oyuncu listesini ve ülkeleri alma
-      final result = await apiService.getPlayersAndCountriesByLeague(leagueInfo);
-      final players = result['players'] as List<Player>;
-      final countries = result['countries'] as List<String>;
 
-      print('Players in the selected league: $players');
-      print('Countries in the selected league: $countries');
 
-      // Oyuncu listesi ve ülkeleri kullanarak oyunu başlatma işlemleri burada yapılacak
-      _startGameScreen(players, countries);
-    } catch (e) {
-      print('Error fetching league information: $e');
-    }
-  } else {
-    _showModeNotSelectedDialog(context);
-  }
+    
+
+    
+  // if (selectedGameMode.isNotEmpty) {
+  //   try {
+  //     // Oyun moduna göre lig bilgilerini alma
+  //     print(teamobject.getmap(selectedGameMode));
+  //     final leagueInfo = await apiService.getLeagueInfo(teamobject.getmap(selectedGameMode));
+  //     print('League Information: $leagueInfo');
+
+  //     // Lig bilgilerini kullanarak oyuncu listesini ve ülkeleri alma
+  //     // final result = await apiService.getPlayersAndCountriesByLeague(leagueInfo);
+  //     // final players = result['players'] as List<Player>;
+  //     // final countries = result['countries'] as List<String>;
+
+  //     // print('Players in the selected league: $players');
+  //     // print('Countries in the selected league: $countries');
+
+  //     // // Oyuncu listesi ve ülkeleri kullanarak oyunu başlatma işlemleri burada yapılacak
+  //     // _startGameScreen(players, countries);
+  //   } catch (e) {
+  //     print('Error fetching league information: $e');
+  //   }
+  // } else {
+  //   _showModeNotSelectedDialog(context);
+  // }
 }
 
 
 
-  void _startGameScreen(List<Player> players, List<String> countries) {
-    // Oyun ekranına geçiş yapmak için Navigator kullanma
-    Navigator.of(context).pushReplacement(
-      MaterialPageRoute(
-        builder: (context) {
-          // Oyuncu listesi ve ülkeleri ileterek oyun sayfasına geçiş yapma
-          return TikiTakaToeGame(
-            gridInfo: {'players': players, 'countries': countries},
-          );
-        },
-      ),
-    );
-  }
+  // void _startGameScreen(List<Player> players, List<String> countries) {
+  //   // Oyun ekranına geçiş yapmak için Navigator kullanma
+  //   Navigator.of(context).pushReplacement(
+  //     MaterialPageRoute(
+  //       builder: (context) {
+  //         // Oyuncu listesi ve ülkeleri ileterek oyun sayfasına geçiş yapma
+  //         return TikiTakaToeGame(
+  //           gridInfo: {'players': players, 'countries': countries},
+  //         );
+  //       },
+  //     ),
+  //   );
+  // }
 
  Widget buildGameModeButton(String imagePath, String mode) {
     return ElevatedButton(
@@ -331,7 +247,18 @@ class _CreateRoomPageState extends State<CreateRoomPage> {
             ),
             SizedBox(height: 30),
             ElevatedButton(
-              onPressed: _startGame,
+              onPressed: ()async{
+               var result= await ApiService.getLeagueInfo(teamobject.getmap(selectedGameMode));
+
+               print(result);
+
+                
+                
+  //               Navigator.push(
+  //   context,
+  //   MaterialPageRoute(builder: (context) =>  TikiTakaToeGame()),
+  // );
+              },
               style: ElevatedButton.styleFrom(
                 primary: Colors.transparent,
                 padding: EdgeInsets.zero,
@@ -353,96 +280,3 @@ class _CreateRoomPageState extends State<CreateRoomPage> {
 }
 
 
-
-
-
-class JoinRoomPage extends StatefulWidget {
-  @override
-  _JoinRoomPageState createState() => _JoinRoomPageState();
-}
-
-class _JoinRoomPageState extends State<JoinRoomPage> {
-  String? roomCode;
-  String selectedGameMode = ''; // Seçilen oyun modu
-  late FocusNode _roomCodeFocusNode;
-
-  @override
-  void initState() {
-    super.initState();
-    _roomCodeFocusNode = FocusNode();
-  }
-
-  @override
-  void dispose() {
-    _roomCodeFocusNode.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('Join Room'),
-        backgroundColor: Colors.blue,
-      ),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            TextField(
-              maxLength: 4,
-              keyboardType: TextInputType.number,
-              onChanged: (value) {
-                setState(() {
-                  roomCode = value;
-                });
-              },
-              decoration: InputDecoration(
-                hintText: 'Enter Room Code',
-                border: OutlineInputBorder(),
-                contentPadding:
-                    EdgeInsets.symmetric(vertical: 10, horizontal: 15),
-              ),
-            ),
-            SizedBox(height: 20),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget buildGameModeButton(String mode) {
-    return ElevatedButton(
-      onPressed: () {
-        setState(() {
-          selectedGameMode = mode;
-        });
-      },
-      style: ElevatedButton.styleFrom(
-        primary: Colors.blue,
-        padding: EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-      ),
-      child: Text(mode),
-    );
-  }
-
-  void _showCodeNotSelectedDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text('Please Enter Code'),
-          content: Text('You need to enter code.'),
-          actions: [
-            ElevatedButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-              child: Text('OK'),
-            ),
-          ],
-        );
-      },
-    );
-  }
-}
