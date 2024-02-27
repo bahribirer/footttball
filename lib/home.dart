@@ -1,13 +1,18 @@
 import 'package:flutter/material.dart';
-import 'package:footttball/api_service.dart';
+import 'package:footttball/Api/api_service.dart';
+import 'package:footttball/Models/teamModel.dart';
 import 'package:footttball/main.dart';
-import 'package:footttball/players.dart';
+import 'package:footttball/Models/players.dart';
 import 'package:footttball/startPage.dart';
 
 
 class TikiTakaToeGame extends StatefulWidget {
 
-  TikiTakaToeGame({Key? key}) : super(key: key);
+  final TeamModel teammodel;
+  final String gamemode;
+
+
+  TikiTakaToeGame({Key? key,required this.teammodel,required this.gamemode}) : super(key: key);
 
   @override
   _TikiTakaToeGameState createState() => _TikiTakaToeGameState();
@@ -18,14 +23,18 @@ class TikiTakaToeGame extends StatefulWidget {
 class _TikiTakaToeGameState extends State<TikiTakaToeGame> {
   late List<Player> players;
   late String currentPlayer;
-  late ApiService apiService;
   late List<String> squares;
+  int teamindex=0;
   @override
   void initState() {
     super.initState();
     resetGame();
+
     
   }
+
+    
+
 
  void fetchAndShowGridInformation(String leagueId) async {
   // try {
@@ -50,6 +59,13 @@ class _TikiTakaToeGameState extends State<TikiTakaToeGame> {
       squares = List.filled(16, '');
       currentPlayer = 'X';
     });
+    squares[1]="image";
+    squares[2]="image";
+    squares[3]="image";
+
+    // for(int i=0; i<squares.length; i++){
+    //   print(squares[i]);
+    // }
   }
 
   void makeMove(int index) {
@@ -151,9 +167,22 @@ class _TikiTakaToeGameState extends State<TikiTakaToeGame> {
                           border: Border.all(color: Colors.white),
                         ),
                         child: Center(
-                          child: Text(
+                          
+                          child: squares[index].length > 1  ? FutureBuilder<String>(
+                    future: ApiService.getLogo(gamemode: widget.gamemode, countryname: widget.teammodel.clubs[teamindex++]), // Assuming this function fetches the image URL from an API
+                    builder: (BuildContext context, AsyncSnapshot<String> snapshot) {
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return CircularProgressIndicator(); // Show loading spinner while waiting for data
+                      } else if (snapshot.hasError) {
+                        return Icon(Icons.error); // Show error icon in case of an error
+                      } else {
+                        return Image.network(snapshot.data!); // Display the image from the URL
+                      }
+                    },
+                  )
+                          :Text(
                             squares[index],
-                            style: TextStyle(fontSize: 30),
+                            style: TextStyle(fontSize: 15),
                           ),
                         ),
                       ),

@@ -1,11 +1,12 @@
 import 'dart:math';
 
 import 'package:flutter/material.dart';
-import 'package:footttball/api_service.dart';
+import 'package:footttball/Api/api_service.dart';
+import 'package:footttball/Models/teamModel.dart';
 import 'package:footttball/getInfo.dart';
 import 'package:footttball/home.dart';
 import 'package:footttball/main.dart';
-import 'package:footttball/players.dart';
+import 'package:footttball/Models/players.dart';
 
 class CreateRoomPage extends StatefulWidget {
   @override
@@ -16,8 +17,8 @@ class _CreateRoomPageState extends State<CreateRoomPage> {
   String selectedGameMode = ''; // Seçilen oyun modu
   late String roomCode;
   late bool isLeagueSelected;
-  var teamobject=getTeamInfo();
-  
+  var teamobject = getTeamInfo();
+
   Map<String, bool> isModeSelectedMap = {
     'Premier League': false,
     'Ligue1': false,
@@ -43,39 +44,31 @@ class _CreateRoomPageState extends State<CreateRoomPage> {
     return randomCode.toString();
   }
 
-  void navigate(){
+  void navigate() {
+    // if (selectedGameMode.isNotEmpty) {
+    //   try {
+    //     // Oyun moduna göre lig bilgilerini alma
+    //     print(teamobject.getmap(selectedGameMode));
+    //     final leagueInfo = await apiService.getLeagueInfo(teamobject.getmap(selectedGameMode));
+    //     print('League Information: $leagueInfo');
 
+    //     // Lig bilgilerini kullanarak oyuncu listesini ve ülkeleri alma
+    //     // final result = await apiService.getPlayersAndCountriesByLeague(leagueInfo);
+    //     // final players = result['players'] as List<Player>;
+    //     // final countries = result['countries'] as List<String>;
 
+    //     // print('Players in the selected league: $players');
+    //     // print('Countries in the selected league: $countries');
 
-    
-
-    
-  // if (selectedGameMode.isNotEmpty) {
-  //   try {
-  //     // Oyun moduna göre lig bilgilerini alma
-  //     print(teamobject.getmap(selectedGameMode));
-  //     final leagueInfo = await apiService.getLeagueInfo(teamobject.getmap(selectedGameMode));
-  //     print('League Information: $leagueInfo');
-
-  //     // Lig bilgilerini kullanarak oyuncu listesini ve ülkeleri alma
-  //     // final result = await apiService.getPlayersAndCountriesByLeague(leagueInfo);
-  //     // final players = result['players'] as List<Player>;
-  //     // final countries = result['countries'] as List<String>;
-
-  //     // print('Players in the selected league: $players');
-  //     // print('Countries in the selected league: $countries');
-
-  //     // // Oyuncu listesi ve ülkeleri kullanarak oyunu başlatma işlemleri burada yapılacak
-  //     // _startGameScreen(players, countries);
-  //   } catch (e) {
-  //     print('Error fetching league information: $e');
-  //   }
-  // } else {
-  //   _showModeNotSelectedDialog(context);
-  // }
-}
-
-
+    //     // // Oyuncu listesi ve ülkeleri kullanarak oyunu başlatma işlemleri burada yapılacak
+    //     // _startGameScreen(players, countries);
+    //   } catch (e) {
+    //     print('Error fetching league information: $e');
+    //   }
+    // } else {
+    //   _showModeNotSelectedDialog(context);
+    // }
+  }
 
   // void _startGameScreen(List<Player> players, List<String> countries) {
   //   // Oyun ekranına geçiş yapmak için Navigator kullanma
@@ -91,7 +84,7 @@ class _CreateRoomPageState extends State<CreateRoomPage> {
   //   );
   // }
 
- Widget buildGameModeButton(String imagePath, String mode) {
+  Widget buildGameModeButton(String imagePath, String mode) {
     return ElevatedButton(
       onPressed: () {
         setState(() {
@@ -247,17 +240,17 @@ class _CreateRoomPageState extends State<CreateRoomPage> {
             ),
             SizedBox(height: 30),
             ElevatedButton(
-              onPressed: ()async{
-               var result= await ApiService.getLeagueInfo(teamobject.getmap(selectedGameMode));
+              onPressed: () async {
+                print(selectedGameMode);
+                var result = await ApiService.getLeagueInfo(
+                    teamobject.getmap(selectedGameMode));
+                print(result.clubs);
+                print(result.nations);
 
-               print(result);
-
-                
-                
-  //               Navigator.push(
-  //   context,
-  //   MaterialPageRoute(builder: (context) =>  TikiTakaToeGame()),
-  // );
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => TikiTakaToeGame(teammodel:result,gamemode:teamobject.getmap(selectedGameMode),)),
+                );
               },
               style: ElevatedButton.styleFrom(
                 primary: Colors.transparent,
@@ -276,7 +269,4 @@ class _CreateRoomPageState extends State<CreateRoomPage> {
       ),
     );
   }
-
 }
-
-

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:footttball/createRoom.dart';
-import 'package:footttball/joinRoom.dart';
+import 'package:footttball/Rooms/createRoom.dart';
+import 'package:footttball/Rooms/joinRoom.dart';
 
 class StartPage extends StatelessWidget {
   const StartPage({Key? key}) : super(key: key);

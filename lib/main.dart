@@ -1,11 +1,11 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:footttball/home.dart';
-import 'package:footttball/players.dart';
-import 'package:footttball/joinRoom.dart';
+import 'package:footttball/Models/players.dart';
+import 'package:footttball/Rooms/joinRoom.dart';
 import 'package:footttball/startPage.dart';
-import 'api_service.dart';
-import "players.dart";
+import 'Api/api_service.dart';
+import 'Models/players.dart';
 
 void main() {
   runApp(const TikiTakaToeApp(gridInfo: {}));

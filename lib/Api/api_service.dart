@@ -1,6 +1,8 @@
 import 'dart:convert';
-import 'players.dart';
-import 'players.dart';
+import 'package:footttball/Models/teamModel.dart';
+
+import '../Models/players.dart';
+import '../Models/players.dart';
 import 'package:http/http.dart' as http;
 
 class ApiService {
@@ -49,12 +51,15 @@ Future<String> getClubLogo(String leagueId, String clubName) async {
     throw Exception('Failed to load club logo');
   }
 }
-static Future<String> getLeagueInfo(String gameMode) async {
+static Future<TeamModel> getLeagueInfo(String gameMode) async {
   
   final response = await http.get(Uri.parse('$baseUrl/api/v1/final_grid/$gameMode'));
 
   if (response.statusCode == 200) {
-      return utf8.decode(response.bodyBytes);
+      String decodedBody = utf8.decode(response.bodyBytes);
+      Map<String, dynamic> jsonMap = json.decode(decodedBody);
+      return TeamModel.fromJson(jsonMap);
+      
 
   } else {
     throw Exception('Failed to load league information');
@@ -83,6 +88,34 @@ Future<Map<String, dynamic>> getPlayersAndCountriesByLeague(String leagueId) asy
     } catch (e) {
       throw Exception('Error: $e');
     }
+  }
+ static  Future<String> getLogo({
+    required String gamemode,
+    required String countryname
+  }) async{
+
+    try{
+      final response = await http.get(Uri.parse('$baseUrl/api/v1/club_logo/$gamemode/$countryname'));
+
+      if (response.statusCode == 200) {
+
+      String decodedBody = utf8.decode(response.bodyBytes);
+      Map<String, dynamic> jsonMap = json.decode(decodedBody);
+      return  jsonMap["logoURL"];
+      } else {
+        return "";
+        
+      }
+
+
+    }
+    catch(e){
+      print(e);
+      return "";
+
+    }
+
+
   }
 }
 

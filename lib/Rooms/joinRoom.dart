@@ -4,10 +4,10 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:footttball/getInfo.dart';
 import 'package:footttball/home.dart';
-import 'package:footttball/players.dart';
-import 'api_service.dart';
-import 'splash.dart';
-import 'main.dart';
+import 'package:footttball/Models/players.dart';
+import '../Api/api_service.dart';
+import '../splash.dart';
+import '../main.dart';
 
 
 class JoinRoomPage extends StatefulWidget {
