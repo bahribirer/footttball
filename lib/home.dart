@@ -4,6 +4,8 @@ import 'package:footttball/Models/teamModel.dart';
 import 'package:footttball/main.dart';
 import 'package:footttball/Models/players.dart';
 import 'package:footttball/startPage.dart';
+import 'dart:io';
+import 'package:http/http.dart' as http;
 
 
 class TikiTakaToeGame extends StatefulWidget {
@@ -24,16 +26,27 @@ class _TikiTakaToeGameState extends State<TikiTakaToeGame> {
   late List<Player> players;
   late String currentPlayer;
   late List<String> squares;
-  int teamindex=0;
+  List<String> urls=[];
+  int teamindex=-1;
   @override
   void initState() {
     super.initState();
+     getLogoUrl();
     resetGame();
 
     
   }
 
+  void getLogoUrl()async{
+    for(int i=0; i<3; i++){
+      var value=await ApiService.getLogo(gamemode: widget.gamemode, countryname:widget.teammodel.clubs[i]);
+      urls.add(value);
+    }
+    setState(() {
+      
+    });
     
+  }
 
 
  void fetchAndShowGridInformation(String leagueId) async {
@@ -50,6 +63,16 @@ class _TikiTakaToeGameState extends State<TikiTakaToeGame> {
   // } catch (e) {
   //   print('Error fetching and showing grid information: $e');
   // }
+}
+int controlTeamIndex(){
+  if(teamindex>=2){
+
+    teamindex=0;
+  }
+  else {
+    teamindex++;
+  }
+  return teamindex;
 }
 
 
@@ -139,6 +162,7 @@ class _TikiTakaToeGameState extends State<TikiTakaToeGame> {
                   return GestureDetector(
                     
                     onTap: () {
+                      
                       if (!checkWin('X') && !checkWin('O') && !isBoardFull()) {
                         makeMove(index);
                         if (checkWin('X')) {
@@ -168,22 +192,28 @@ class _TikiTakaToeGameState extends State<TikiTakaToeGame> {
                         ),
                         child: Center(
                           
-                          child: squares[index].length > 1  ? FutureBuilder<String>(
-                    future: ApiService.getLogo(gamemode: widget.gamemode, countryname: widget.teammodel.clubs[teamindex++]), // Assuming this function fetches the image URL from an API
-                    builder: (BuildContext context, AsyncSnapshot<String> snapshot) {
-                      if (snapshot.connectionState == ConnectionState.waiting) {
-                        return CircularProgressIndicator(); // Show loading spinner while waiting for data
-                      } else if (snapshot.hasError) {
-                        return Icon(Icons.error); // Show error icon in case of an error
-                      } else {
-                        return Image.network(snapshot.data!); // Display the image from the URL
-                      }
-                    },
-                  )
+                          child: (index==1 || index==2 || index==3) ?
+                          urls.isEmpty ? CircularProgressIndicator(): Image.network(urls[controlTeamIndex()])
                           :Text(
                             squares[index],
-                            style: TextStyle(fontSize: 15),
-                          ),
+                            style:TextStyle(fontSize: 15),
+                          )
+                  //         squares[index].length > 1  ? FutureBuilder<String>(
+                  //   future: ApiService.getLogo(gamemode: widget.gamemode, countryname: widget.teammodel.clubs[controlTeamIndex()]), // Assuming this function fetches the image URL from an API
+                  //   builder: (BuildContext context, AsyncSnapshot<String> snapshot) {
+                  //     if (snapshot.connectionState == ConnectionState.waiting) {
+                  //       return CircularProgressIndicator(); // Show loading spinner while waiting for data
+                  //     } else if (snapshot.hasError) {
+                  //       return Icon(Icons.error); // Show error icon in case of an error
+                  //     } else {
+                  //       return Image.network(snapshot.data!); // Display the image from the URL
+                  //     }
+                  //   },
+                  // )
+                  //         :Text(
+                  //           squares[index],
+                  //           style: TextStyle(fontSize: 15),
+                  //         ),
                         ),
                       ),
                     ),
@@ -216,12 +246,10 @@ class _TikiTakaToeGameState extends State<TikiTakaToeGame> {
             bottom: screenSize.height * 0.05,
             child: GestureDetector(
               onTap: () async {
+                
 
                 // var object= new ApiService("http://localhost:8000");
                 // var value=await object.getFinalGrid("TR1");
-
-                print("RESULT IS ");
-
 
 
                 resetGame();
