@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:footttball/Api/api_service.dart';
+import 'package:footttball/Helper/helper.dart';
 import 'package:footttball/Models/teamModel.dart';
+import 'package:footttball/getInfo.dart';
 import 'package:footttball/main.dart';
 import 'package:footttball/Models/players.dart';
 import 'package:footttball/startPage.dart';
@@ -28,6 +30,9 @@ class _TikiTakaToeGameState extends State<TikiTakaToeGame> {
   late List<String> squares;
   List<String> urls=[];
   int teamindex=-1;
+  int countryindex=-1;
+    var teamobject = getTeamInfo();
+
   @override
   void initState() {
     super.initState();
@@ -74,6 +79,16 @@ int controlTeamIndex(){
   }
   return teamindex;
 }
+int controlCountryIndex(){
+  if(teamindex>=2){
+
+    teamindex=0;
+  }
+  else {
+    teamindex++;
+  }
+  return teamindex;
+}
 
 
 
@@ -102,35 +117,54 @@ int controlTeamIndex(){
         currentPlayer = (currentPlayer == 'X') ? 'O' : 'X';
 
         // Kazanan kontrolü burada yapılıyor
-        if (checkWin('X')) {
-          showDialog(
-            context: context,
-            builder: (_) => gameOverDialog('X'),
-          );
-        } else if (checkWin('O')) {
-          showDialog(
-            context: context,
-            builder: (_) => gameOverDialog('O'),
-          );
-        } else if (isBoardFull()) {
-          showDialog(
-            context: context,
-            builder: (_) => gameOverDialog('T'),
-          );
-        }
+        // if (checkWin('X')) {
+        //   showDialog(
+        //     context: context,
+        //     builder: (_) => gameOverDialog('X'),
+        //   );
+        // } else if (checkWin('O')) {
+        //   showDialog(
+        //     context: context,
+        //     builder: (_) => gameOverDialog('O'),
+        //   );
+        // } else if (isBoardFull()) {
+        //   showDialog(
+        //     context: context,
+        //     builder: (_) => gameOverDialog('T'),
+        //   );
+        // }
       });
     }
   }
 
   bool checkWin(String player) {
-    // Kazanma kontrolleri burada yapılıyor
-    // ...
-
-    return false;
-  }
+  // Horizontal win conditions
+  bool horizontalWin = (squares[5] == player && squares[6] == player && squares[7] == player) ||
+                       (squares[9] == player && squares[10] == player && squares[11] == player) ||
+                       (squares[13] == player && squares[14] == player && squares[15] == player);
+  
+  // Vertical win conditions
+  bool verticalWin = (squares[5] == player && squares[9] == player && squares[13] == player) ||
+                     (squares[6] == player && squares[10] == player && squares[14] == player) ||
+                     (squares[7] == player && squares[11] == player && squares[15] == player);
+  
+  // Diagonal win conditions
+  bool diagonalWin = (squares[5] == player && squares[10] == player && squares[15] == player) ||
+                     (squares[7] == player && squares[10] == player && squares[13] == player);
+  
+  return horizontalWin || verticalWin || diagonalWin;
+}
 
   bool isBoardFull() {
     return !squares.contains('');
+  }
+  void showStatus(bool player1,String value){
+
+    if(player1){
+      Helper().showInfoDialog(context, "WIN!", "$value WON THE GAME ");
+    }
+
+
   }
 
   @override
@@ -162,26 +196,36 @@ int controlTeamIndex(){
                   return GestureDetector(
                     
                     onTap: () {
+
+                      makeMove(index);
+
+                      var player1=checkWin("X");
+                      var player2=checkWin("O");
+
+                      showStatus(player1,"X");
+                      showStatus(player2,"Y");
+
+
                       
-                      if (!checkWin('X') && !checkWin('O') && !isBoardFull()) {
-                        makeMove(index);
-                        if (checkWin('X')) {
-                          showDialog(
-                            context: context,
-                            builder: (_) => gameOverDialog('X'),
-                          );
-                        } else if (checkWin('O')) {
-                          showDialog(
-                            context: context,
-                            builder: (_) => gameOverDialog('O'),
-                          );
-                        } else if (isBoardFull()) {
-                          showDialog(
-                            context: context,
-                            builder: (_) => gameOverDialog('T'),
-                          );
-                        }
-                      }
+                      // if (!checkWin('X') && !checkWin('O') && !isBoardFull()) {
+                      //   makeMove(index);
+                      //   if (checkWin('X')) {
+                      //     showDialog(
+                      //       context: context,
+                      //       builder: (_) => gameOverDialog('X'),
+                      //     );
+                      //   } else if (checkWin('O')) {
+                      //     showDialog(
+                      //       context: context,
+                      //       builder: (_) => gameOverDialog('O'),
+                      //     );
+                      //   } else if (isBoardFull()) {
+                      //     showDialog(
+                      //       context: context,
+                      //       builder: (_) => gameOverDialog('T'),
+                      //     );
+                      //   }
+                      // }
                     },
                     child: SizedBox(
                       width: boxSize,
@@ -194,9 +238,12 @@ int controlTeamIndex(){
                           
                           child: (index==1 || index==2 || index==3) ?
                           urls.isEmpty ? CircularProgressIndicator(): Image.network(urls[controlTeamIndex()])
-                          :Text(
+                          :(index==4 || index==8 || index==12) ?
+                          Image.network("https://flagsapi.com/"+teamobject.getCountry(widget.teammodel.nations[controlCountryIndex()])+"/flat/64.png")
+                          :
+                          Text(
                             squares[index],
-                            style:TextStyle(fontSize: 15),
+                            style:TextStyle(fontSize: 20,fontWeight:FontWeight.bold),
                           )
                   //         squares[index].length > 1  ? FutureBuilder<String>(
                   //   future: ApiService.getLogo(gamemode: widget.gamemode, countryname: widget.teammodel.clubs[controlTeamIndex()]), // Assuming this function fetches the image URL from an API
