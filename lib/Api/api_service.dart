@@ -117,6 +117,35 @@ Future<Map<String, dynamic>> getPlayersAndCountriesByLeague(String leagueId) asy
 
 
   }
+  static Future<String> checkPlayer({
+    required String player_name,required String nationality,required String club 
+  }) async {
+
+    final body={
+      "player_name":player_name,
+      "nationality":nationality,
+      "club":club
+    };
+
+
+    final headers = {
+      'Content-Type': 'application/json',
+    };
+  
+  final response = await http.post(Uri.parse('$baseUrl/api/v1/guess_player/'),body:jsonEncode(body),headers:headers);
+
+  if (response.statusCode == 200) {
+      return response.body;
+      
+
+  } else {
+    throw Exception('Failed to load league information');
+  }
+
+  
+}
+
+
 
  
 }

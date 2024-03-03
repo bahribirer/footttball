@@ -97,7 +97,11 @@ class getTeamInfo{
   "Albania":"AL",
   "Ireland":"IE",
   "Austria":"AT",
-  "Sweden":"SE"
+  "Sweden":"SE",
+  "Bosnia-Herzegovina":"BA",
+  "Mali":"ML",
+  "Senegal":"SN",
+  "Kosovo":"XK"
 };
 
 }

@@ -31,7 +31,7 @@ class _TikiTakaToeGameState extends State<TikiTakaToeGame> {
   List<String> urls=[];
   int teamindex=-1;
   int countryindex=-1;
-    var teamobject = getTeamInfo();
+  var teamobject = getTeamInfo();
 
   @override
   void initState() {
@@ -195,15 +195,24 @@ int controlCountryIndex(){
                 itemBuilder: (context, index) {
                   return GestureDetector(
                     
-                    onTap: () {
+                    onTap: () async{
+                      var result=await Helper().showPlayerName(context, widget.teammodel.clubs[(index%4)-1], widget.teammodel.nations[(index~/4)-1]);
+                      print(result);
+                      if(result){
+                        makeMove(index);
+                      }
+                      else {
+                        currentPlayer = (currentPlayer == 'X') ? 'O' : 'X';
 
-                      makeMove(index);
+                      }
+
+                      // makeMove(index);
 
                       var player1=checkWin("X");
                       var player2=checkWin("O");
 
                       showStatus(player1,"X");
-                      showStatus(player2,"Y");
+                      showStatus(player2,"O");
 
 
                       

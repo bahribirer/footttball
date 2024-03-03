@@ -3,6 +3,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:footttball/Api/api_service.dart';
 import 'package:footttball/Models/teamModel.dart';
+import 'package:footttball/Rooms/waitingRoom.dart';
 import 'package:footttball/getInfo.dart';
 import 'package:footttball/home.dart';
 import 'package:footttball/main.dart';
@@ -249,8 +250,12 @@ class _CreateRoomPageState extends State<CreateRoomPage> {
 
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => TikiTakaToeGame(teammodel:result,gamemode:teamobject.getmap(selectedGameMode),)),
+                  MaterialPageRoute(builder: (context) => WaitingRoom(room_id: roomCode,teammodel:result,gamemode:teamobject.getmap(selectedGameMode),)),
                 );
+                // Navigator.push(
+                //   context,
+                //   MaterialPageRoute(builder: (context) => TikiTakaToeGame(teammodel:result,gamemode:teamobject.getmap(selectedGameMode),)),
+                // );
               },
               style: ElevatedButton.styleFrom(
                 primary: Colors.transparent,
