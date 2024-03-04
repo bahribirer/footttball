@@ -1,8 +1,11 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/material.dart';
-import 'package:footttball/Api/api_service.dart';
+import 'package:footttball/Services/api_service.dart';
 import 'package:footttball/Helper/helper.dart';
 import 'package:footttball/Models/teamModel.dart';
+import 'package:footttball/Services/websocket.dart';
 import 'package:footttball/getInfo.dart';
 import 'package:footttball/home.dart';
 import 'package:footttball/main.dart';
@@ -17,6 +20,7 @@ class WaitingRoom extends StatefulWidget {
   String room_id;
   TeamModel teammodel;
   String gamemode;
+  
    WaitingRoom({super.key,required this.room_id,required this.teammodel,required this.gamemode});
 
   @override
@@ -26,33 +30,46 @@ class WaitingRoom extends StatefulWidget {
 class _WaitingRoomState extends State<WaitingRoom> {
 
   
-  late final WebSocketChannel channel;
+  String firstMessage="";
+  bool control=true;
 
   @override
   void initState() {
     super.initState();
     var room_id=widget.room_id;
     // Initialize the WebSocketChannel in initState using widget.room_id
-    channel = WebSocketChannel.connect(
-      Uri.parse('ws://192.168.0.11:8000/ws/$room_id'),
-    );
-    channel.sink.add("HELLO ROOM");
-    channel.stream.listen((message) {
-    setState(() {
-      if(message=="ready"){
-        Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => TikiTakaToeGame(teammodel:widget.teammodel, gamemode:widget.gamemode)),
-                );
-      }
-      // Process the incoming message
+    WebSocketManager().connect('ws://192.168.81.212:8000/ws/$room_id', context, widget.teammodel, widget.gamemode);
+    WebSocketManager().send(jsonEncode({"teammodel":widget.teammodel,"gamemode":widget.gamemode}));
+  //   channel.stream.listen((message) {
+  //   setState(() {
+  //     if(control){
+  //       firstMessage=message;
+  //       control=false;
+  //     }
       
-    });
-  });
+      
+  //     if(message=="ready"){
+  //       Map<String, dynamic> decoded = jsonDecode(firstMessage);
+
+        
+  //       widget.teammodel.nations=List<String>.from(decoded["teammodel"]["nations"]);
+  //       widget.teammodel.clubs=List<String>.from(decoded["teammodel"]["clubs"]);
+  //       widget.gamemode=decoded["gamemode"];
+        
+  //        Navigator.push(
+  //                  context,
+  //                  MaterialPageRoute(builder: (context) => TikiTakaToeGame(teammodel:widget.teammodel, gamemode:widget.gamemode)),
+  //               );
+  //     }
+  //     else {
+
+  //     }
+  //     // Process the incoming message
+      
+  //   });
+  // });
   }
-  void _sendMessage(String message) {
-  channel.sink.add(message);
-}
+  
 
 
   @override

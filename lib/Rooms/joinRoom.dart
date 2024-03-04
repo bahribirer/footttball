@@ -2,10 +2,12 @@
 
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:footttball/Models/teamModel.dart';
+import 'package:footttball/Rooms/waitingRoom.dart';
 import 'package:footttball/getInfo.dart';
 import 'package:footttball/home.dart';
 import 'package:footttball/Models/players.dart';
-import '../Api/api_service.dart';
+import '../Services/api_service.dart';
 import '../splash.dart';
 import '../main.dart';
 
@@ -19,6 +21,7 @@ class _JoinRoomPageState extends State<JoinRoomPage> {
   String? roomCode;
   String selectedGameMode = ''; // Seçilen oyun modu
   late FocusNode _roomCodeFocusNode;
+  TextEditingController roomcode=new TextEditingController();
 
   @override
   void initState() {
@@ -44,21 +47,24 @@ class _JoinRoomPageState extends State<JoinRoomPage> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             TextField(
-              maxLength: 4,
-              keyboardType: TextInputType.number,
-              onChanged: (value) {
-                setState(() {
-                  roomCode = value;
-                });
-              },
-              decoration: InputDecoration(
-                hintText: 'Enter Room Code',
-                border: OutlineInputBorder(),
-                contentPadding:
-                    EdgeInsets.symmetric(vertical: 10, horizontal: 15),
-              ),
-            ),
+            controller: roomcode,
+            decoration: InputDecoration(hintText: "Enter Room Code"),
+          ),
             SizedBox(height: 20),
+
+            TextButton(
+              child: Text('OK'),
+              onPressed: () {
+                Navigator.push(
+                  
+                  context,
+                  MaterialPageRoute(builder: (context) => WaitingRoom(room_id: roomcode.text,teammodel:TeamModel(nations: [""], clubs:[""]),gamemode:"")),
+                );
+
+                
+              },
+            ),
+
           ],
         ),
       ),

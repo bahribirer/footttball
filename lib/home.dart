@@ -1,7 +1,10 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
-import 'package:footttball/Api/api_service.dart';
+import 'package:footttball/Services/api_service.dart';
 import 'package:footttball/Helper/helper.dart';
 import 'package:footttball/Models/teamModel.dart';
+import 'package:footttball/Services/websocket.dart';
 import 'package:footttball/getInfo.dart';
 import 'package:footttball/main.dart';
 import 'package:footttball/Models/players.dart';
@@ -199,7 +202,11 @@ int controlCountryIndex(){
                       var result=await Helper().showPlayerName(context, widget.teammodel.clubs[(index%4)-1], widget.teammodel.nations[(index~/4)-1]);
                       print(result);
                       if(result){
+                        WebSocketManager().send(jsonEncode({"index":index,"type":currentPlayer}));
+                        
                         makeMove(index);
+                        
+
                       }
                       else {
                         currentPlayer = (currentPlayer == 'X') ? 'O' : 'X';

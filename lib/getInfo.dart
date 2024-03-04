@@ -101,7 +101,8 @@ class getTeamInfo{
   "Bosnia-Herzegovina":"BA",
   "Mali":"ML",
   "Senegal":"SN",
-  "Kosovo":"XK"
+  "Kosovo":"XK",
+  "Greece":"GR"
 };
 
 }

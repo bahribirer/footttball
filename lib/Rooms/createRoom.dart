@@ -1,7 +1,7 @@
 import 'dart:math';
 
 import 'package:flutter/material.dart';
-import 'package:footttball/Api/api_service.dart';
+import 'package:footttball/Services/api_service.dart';
 import 'package:footttball/Models/teamModel.dart';
 import 'package:footttball/Rooms/waitingRoom.dart';
 import 'package:footttball/getInfo.dart';
