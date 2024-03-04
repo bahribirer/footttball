@@ -11,9 +11,13 @@ class WebSocketManager {
   bool control=true;
   String firstMessage="";
 
-  String gameMessage="";
   int index=0;
   String type="";
+
+  String initialType="";
+  bool playerTurn=false;
+
+  Function(int index,String type)? makeMove;
 
   static final WebSocketManager _instance = WebSocketManager._internal();
 
@@ -48,9 +52,33 @@ class WebSocketManager {
                 );
       }
       else {
-        Map<String,dynamic> decoded=jsonDecode(gameMessage);
-        index=decoded["index"];
-        type=decoded["type"];
+
+        if(message!="X" && message!="O"){
+           Map<String,dynamic> decoded=jsonDecode(message);
+
+        if(decoded.containsKey("index")){
+          index=decoded["index"];
+          type=decoded["type"];
+
+
+        makeMove!(index,type);
+
+        }
+
+        }
+        else {
+          initialType=message;
+          if(initialType=="X"){
+            playerTurn=true;
+          }
+          else {
+            playerTurn=false;
+          }
+
+        }
+
+       
+        
 
         
       }
@@ -67,4 +95,5 @@ class WebSocketManager {
     _channel?.sink.close();
     _controller?.close();
   }
+  
 }

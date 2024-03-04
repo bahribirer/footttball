@@ -39,6 +39,7 @@ class _TikiTakaToeGameState extends State<TikiTakaToeGame> {
   @override
   void initState() {
     super.initState();
+    WebSocketManager().makeMove=makeMove;
      getLogoUrl();
     resetGame();
 
@@ -98,7 +99,8 @@ int controlCountryIndex(){
   void resetGame() {
     setState(() {
       squares = List.filled(16, '');
-      currentPlayer = 'X';
+      currentPlayer = WebSocketManager().initialType;
+      print("MY TYPE IS "+currentPlayer);
     });
     squares[1]="image";
     squares[2]="image";
@@ -109,15 +111,14 @@ int controlCountryIndex(){
     // }
   }
 
-  void makeMove(int index) {
+  void makeMove(int index,String type) {
     int row = index ~/ 4;
     int col = index % 4;
 
     // Sadece son satır ve son sütun harici hücrelere izin ver
-    if (squares[index] == '' && row != 0 && col != 0) {
-      setState(() {
-        squares[index] = currentPlayer;
-        currentPlayer = (currentPlayer == 'X') ? 'O' : 'X';
+    if (index!=-1 && squares[index] == '' && row != 0 && col != 0) {
+        squares[index] = type;
+        // currentPlayer = (currentPlayer == 'X') ? 'O' : 'X';
 
         // Kazanan kontrolü burada yapılıyor
         // if (checkWin('X')) {
@@ -136,8 +137,30 @@ int controlCountryIndex(){
         //     builder: (_) => gameOverDialog('T'),
         //   );
         // }
-      });
+      
     }
+      var player1=checkWin("X");
+      var player2=checkWin("O");
+
+      if(player1 || player2){
+        setState(() {
+          WebSocketManager().playerTurn==true;
+        });
+
+      }
+                    
+      showStatus(player1,"X");
+      showStatus(player2,"O");
+
+      
+      if(!player1 && !player2) {
+        setState(() {
+        WebSocketManager().playerTurn=!WebSocketManager().playerTurn;
+      });
+      }
+    
+      
+    
   }
 
   bool checkWin(String player) {
@@ -196,87 +219,88 @@ int controlCountryIndex(){
                   crossAxisSpacing: 0,
                 ),
                 itemBuilder: (context, index) {
-                  return GestureDetector(
-                    
-                    onTap: () async{
-                      var result=await Helper().showPlayerName(context, widget.teammodel.clubs[(index%4)-1], widget.teammodel.nations[(index~/4)-1]);
-                      print(result);
-                      if(result){
-                        WebSocketManager().send(jsonEncode({"index":index,"type":currentPlayer}));
-                        
-                        makeMove(index);
-                        
-
-                      }
-                      else {
-                        currentPlayer = (currentPlayer == 'X') ? 'O' : 'X';
-
-                      }
-
-                      // makeMove(index);
-
-                      var player1=checkWin("X");
-                      var player2=checkWin("O");
-
-                      showStatus(player1,"X");
-                      showStatus(player2,"O");
-
-
+                  return IgnorePointer(
+                    ignoring: !WebSocketManager().playerTurn,
+                    child: GestureDetector(
                       
-                      // if (!checkWin('X') && !checkWin('O') && !isBoardFull()) {
-                      //   makeMove(index);
-                      //   if (checkWin('X')) {
-                      //     showDialog(
-                      //       context: context,
-                      //       builder: (_) => gameOverDialog('X'),
-                      //     );
-                      //   } else if (checkWin('O')) {
-                      //     showDialog(
-                      //       context: context,
-                      //       builder: (_) => gameOverDialog('O'),
-                      //     );
-                      //   } else if (isBoardFull()) {
-                      //     showDialog(
-                      //       context: context,
-                      //       builder: (_) => gameOverDialog('T'),
-                      //     );
-                      //   }
-                      // }
-                    },
-                    child: SizedBox(
-                      width: boxSize,
-                      height: boxSize,
-                      child: Container(
-                        decoration: BoxDecoration(
-                          border: Border.all(color: Colors.white),
-                        ),
-                        child: Center(
+                      onTap: () async{
+                        var result=await Helper().showPlayerName(context, widget.teammodel.clubs[(index%4)-1], widget.teammodel.nations[(index~/4)-1]);
+                        print(result);
+                        if(result){
+                          WebSocketManager().send(jsonEncode({"index":index,"type":currentPlayer}));
                           
-                          child: (index==1 || index==2 || index==3) ?
-                          urls.isEmpty ? CircularProgressIndicator(): Image.network(urls[controlTeamIndex()])
-                          :(index==4 || index==8 || index==12) ?
-                          Image.network("https://flagsapi.com/"+teamobject.getCountry(widget.teammodel.nations[controlCountryIndex()])+"/flat/64.png")
-                          :
-                          Text(
-                            squares[index],
-                            style:TextStyle(fontSize: 20,fontWeight:FontWeight.bold),
-                          )
-                  //         squares[index].length > 1  ? FutureBuilder<String>(
-                  //   future: ApiService.getLogo(gamemode: widget.gamemode, countryname: widget.teammodel.clubs[controlTeamIndex()]), // Assuming this function fetches the image URL from an API
-                  //   builder: (BuildContext context, AsyncSnapshot<String> snapshot) {
-                  //     if (snapshot.connectionState == ConnectionState.waiting) {
-                  //       return CircularProgressIndicator(); // Show loading spinner while waiting for data
-                  //     } else if (snapshot.hasError) {
-                  //       return Icon(Icons.error); // Show error icon in case of an error
-                  //     } else {
-                  //       return Image.network(snapshot.data!); // Display the image from the URL
-                  //     }
-                  //   },
-                  // )
-                  //         :Text(
-                  //           squares[index],
-                  //           style: TextStyle(fontSize: 15),
-                  //         ),
+                    
+                          // makeMove(index);
+                          
+                    
+                        }
+                        else {
+                          WebSocketManager().send(jsonEncode({"index":-1,"type":currentPlayer}));
+                          // currentPlayer = (currentPlayer == 'X') ? 'O' : 'X';
+                    
+                        }
+                    
+                        // makeMove(index);
+                    
+                      
+                    
+                    
+                        
+                        // if (!checkWin('X') && !checkWin('O') && !isBoardFull()) {
+                        //   makeMove(index);
+                        //   if (checkWin('X')) {
+                        //     showDialog(
+                        //       context: context,
+                        //       builder: (_) => gameOverDialog('X'),
+                        //     );
+                        //   } else if (checkWin('O')) {
+                        //     showDialog(
+                        //       context: context,
+                        //       builder: (_) => gameOverDialog('O'),
+                        //     );
+                        //   } else if (isBoardFull()) {
+                        //     showDialog(
+                        //       context: context,
+                        //       builder: (_) => gameOverDialog('T'),
+                        //     );
+                        //   }
+                        // }
+                      },
+                      child: SizedBox(
+                        width: boxSize,
+                        height: boxSize,
+                        child: Container(
+                          decoration: BoxDecoration(
+                            border: Border.all(color: Colors.white),
+                          ),
+                          child: Center(
+                            
+                            child: (index==1 || index==2 || index==3) ?
+                            urls.isEmpty ? CircularProgressIndicator(): Image.network(urls[controlTeamIndex()])
+                            :(index==4 || index==8 || index==12) ?
+                            Image.network("https://flagsapi.com/"+teamobject.getCountry(widget.teammodel.nations[controlCountryIndex()])+"/flat/64.png")
+                            :
+                            Text(
+                              squares[index],
+                              style:TextStyle(fontSize: 20,fontWeight:FontWeight.bold),
+                            )
+                    //         squares[index].length > 1  ? FutureBuilder<String>(
+                    //   future: ApiService.getLogo(gamemode: widget.gamemode, countryname: widget.teammodel.clubs[controlTeamIndex()]), // Assuming this function fetches the image URL from an API
+                    //   builder: (BuildContext context, AsyncSnapshot<String> snapshot) {
+                    //     if (snapshot.connectionState == ConnectionState.waiting) {
+                    //       return CircularProgressIndicator(); // Show loading spinner while waiting for data
+                    //     } else if (snapshot.hasError) {
+                    //       return Icon(Icons.error); // Show error icon in case of an error
+                    //     } else {
+                    //       return Image.network(snapshot.data!); // Display the image from the URL
+                    //     }
+                    //   },
+                    // )
+                    //         :Text(
+                    //           squares[index],
+                    //           style: TextStyle(fontSize: 15),
+                    //         ),
+                          ),
                         ),
                       ),
                     ),

@@ -38,7 +38,7 @@ class _WaitingRoomState extends State<WaitingRoom> {
     super.initState();
     var room_id=widget.room_id;
     // Initialize the WebSocketChannel in initState using widget.room_id
-    WebSocketManager().connect('ws://192.168.81.212:8000/ws/$room_id', context, widget.teammodel, widget.gamemode);
+    WebSocketManager().connect('ws://192.168.0.11:8000/ws/$room_id', context, widget.teammodel, widget.gamemode);
     WebSocketManager().send(jsonEncode({"teammodel":widget.teammodel,"gamemode":widget.gamemode}));
   //   channel.stream.listen((message) {
   //   setState(() {

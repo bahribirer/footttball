@@ -102,7 +102,7 @@ class getTeamInfo{
   "Mali":"ML",
   "Senegal":"SN",
   "Kosovo":"XK",
-  "Greece":"GR"
+  "Greece":"GR",
 };
 
 }
