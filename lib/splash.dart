@@ -1,6 +1,7 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
-import 'package:footttball/startPage.dart';
+import 'package:footttball/Rooms/nameRoom.dart';
+import 'package:footttball/Rooms/startPage.dart';
 import 'Rooms/joinRoom.dart';
 import 'package:lottie/lottie.dart';
 
@@ -35,7 +36,7 @@ class _SplashScreenState extends State<SplashScreen> {
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
-          builder: (context) => StartPage(),
+          builder: (context) => NameRoom(),
         ),
       );
     });
@@ -50,7 +51,7 @@ class _SplashScreenState extends State<SplashScreen> {
             Navigator.pushReplacement(
               context,
               MaterialPageRoute(
-                builder: (context) => StartPage(),
+                builder: (context) => NameRoom(),
               ),
             );
           },

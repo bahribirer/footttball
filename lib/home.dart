@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
@@ -8,15 +9,22 @@ import 'package:footttball/Services/websocket.dart';
 import 'package:footttball/getInfo.dart';
 import 'package:footttball/main.dart';
 import 'package:footttball/Models/players.dart';
-import 'package:footttball/startPage.dart';
+import 'package:footttball/Rooms/startPage.dart';
 import 'dart:io';
 import 'package:http/http.dart' as http;
 
 class TikiTakaToeGame extends StatefulWidget {
   final TeamModel teammodel;
   final String gamemode;
+  final String player1Name;
+  final String player2Name;
 
-  TikiTakaToeGame({Key? key, required this.teammodel, required this.gamemode})
+  TikiTakaToeGame(
+      {Key? key,
+      required this.teammodel,
+      required this.gamemode,
+      required this.player1Name,
+      required this.player2Name})
       : super(key: key);
 
   @override
@@ -32,12 +40,51 @@ class _TikiTakaToeGameState extends State<TikiTakaToeGame> {
   int countryindex = -1;
   var teamobject = getTeamInfo();
 
+  late Timer _timer;
+  int _start = 30;
+
+  String player1Name = '';
+  String player2Name = '';
+
   @override
   void initState() {
     super.initState();
     WebSocketManager().makeMove = makeMove;
     getLogoUrl();
     resetGame();
+    startTimer();
+
+    player1Name = widget.player1Name;
+    player2Name = widget.player2Name;
+  }
+
+  void startTimer() {
+    const oneSec = Duration(seconds: 1);
+    _timer = Timer.periodic(
+      oneSec,
+      (Timer timer) {
+        if (_start == 0) {
+          setState(() {
+            timer.cancel();
+            _start = 30; // Süreyi sıfırla
+            startTimer(); // Yeniden başlat
+            // Süre dolduğunda burada bir şeyler yapabilirsiniz.
+            WebSocketManager().playerTurn =
+                !WebSocketManager().playerTurn; // Sırayı değiştir
+          });
+        } else {
+          setState(() {
+            _start--;
+          });
+        }
+      },
+    );
+  }
+
+  @override
+  void dispose() {
+    _timer.cancel();
+    super.dispose();
   }
 
   void getLogoUrl() async {
@@ -64,6 +111,7 @@ class _TikiTakaToeGameState extends State<TikiTakaToeGame> {
     //   print('Error fetching and showing grid information: $e');
     // }
   }
+
   int controlTeamIndex() {
     if (teamindex >= 2) {
       teamindex = 0;
@@ -217,27 +265,24 @@ class _TikiTakaToeGameState extends State<TikiTakaToeGame> {
                     ignoring: !WebSocketManager().playerTurn,
                     child: GestureDetector(
                       onTap: () async {
-
-                        if(squares[index]==""){
+                        if (squares[index] == "") {
                           var result = await Helper().showPlayerName(
-                            context,
-                            widget.teammodel.clubs[(index % 4) - 1],
-                            widget.teammodel.nations[(index ~/ 4) - 1]);
-                            print(result);
-                        if (result) {
-                          WebSocketManager().send(jsonEncode(
-                              {"index": index, "type": currentPlayer}));
+                              context,
+                              widget.teammodel.clubs[(index % 4) - 1],
+                              widget.teammodel.nations[(index ~/ 4) - 1]);
+                          print(result);
+                          if (result) {
+                            WebSocketManager().send(jsonEncode(
+                                {"index": index, "type": currentPlayer}));
 
-                          // makeMove(index);
-                        } else {
-                          WebSocketManager().send(
-                              jsonEncode({"index": -1, "type": currentPlayer}));
-                          // currentPlayer = (currentPlayer == 'X') ? 'O' : 'X';
+                            // makeMove(index);
+                          } else {
+                            WebSocketManager().send(jsonEncode(
+                                {"index": -1, "type": currentPlayer}));
+                            // currentPlayer = (currentPlayer == 'X') ? 'O' : 'X';
+                          }
                         }
 
-                        }
-                        
-                        
                         // makeMove(index);
 
                         // if (!checkWin('X') && !checkWin('O') && !isBoardFull()) {
@@ -320,7 +365,9 @@ class _TikiTakaToeGameState extends State<TikiTakaToeGame> {
                     width: 35.0, // Specify the width of the circle
                     height: 35.0, // Specify the height of the circle
                     decoration: BoxDecoration(
-                      color:WebSocketManager().playerTurn ? Colors.green :Colors.red, // Define the color of the circle
+                      color: WebSocketManager().playerTurn
+                          ? Colors.green
+                          : Colors.red, // Define the color of the circle
                       shape: BoxShape
                           .circle, // Define the shape of the container as a circle
                     ),
@@ -360,6 +407,20 @@ class _TikiTakaToeGameState extends State<TikiTakaToeGame> {
                 width: screenSize.width * 0.4,
                 height: screenSize.height * 0.2,
                 fit: BoxFit.contain,
+              ),
+            ),
+          ),
+          Positioned(
+            top: screenSize.height * 0.05,
+            child: Container(
+              padding: EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: Colors.black.withOpacity(0.5),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Text(
+                '$_start',
+                style: TextStyle(fontSize: 36, color: Colors.white),
               ),
             ),
           ),

@@ -39,6 +39,7 @@ dependencies:
   lottie: ^2.3.2
   http: ^0.13.3
   web_socket_channel: ^2.4.0
+  autocomplete_textfield: 2.0.1
   
 
 dev_dependencies:

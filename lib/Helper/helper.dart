@@ -61,9 +61,8 @@ class Helper {
   }
 
   Future<bool> showPlayerName(
-    
       BuildContext context, String club, String nationality) async {
-        playerName.text="";
+    playerName.text = "";
     Completer<bool> completer = Completer<bool>();
     showDialog(
       context: context,

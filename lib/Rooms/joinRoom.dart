@@ -11,7 +11,6 @@ import '../Services/api_service.dart';
 import '../splash.dart';
 import '../main.dart';
 
-
 class JoinRoomPage extends StatefulWidget {
   @override
   _JoinRoomPageState createState() => _JoinRoomPageState();
@@ -21,7 +20,7 @@ class _JoinRoomPageState extends State<JoinRoomPage> {
   String? roomCode;
   String selectedGameMode = ''; // Seçilen oyun modu
   late FocusNode _roomCodeFocusNode;
-  TextEditingController roomcode=new TextEditingController();
+  TextEditingController roomcode = new TextEditingController();
 
   @override
   void initState() {
@@ -47,24 +46,23 @@ class _JoinRoomPageState extends State<JoinRoomPage> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             TextField(
-            controller: roomcode,
-            decoration: InputDecoration(hintText: "Enter Room Code"),
-          ),
+              controller: roomcode,
+              decoration: InputDecoration(hintText: "Enter Room Code"),
+            ),
             SizedBox(height: 20),
-
             TextButton(
               child: Text('OK'),
               onPressed: () {
                 Navigator.push(
-                  
                   context,
-                  MaterialPageRoute(builder: (context) => WaitingRoom(room_id: roomcode.text,teammodel:TeamModel(nations: [""], clubs:[""]),gamemode:"")),
+                  MaterialPageRoute(
+                      builder: (context) => WaitingRoom(
+                          room_id: roomcode.text,
+                          teammodel: TeamModel(nations: [""], clubs: [""]),
+                          gamemode: "")),
                 );
-
-                
               },
             ),
-
           ],
         ),
       ),
@@ -79,7 +77,7 @@ class _JoinRoomPageState extends State<JoinRoomPage> {
         });
       },
       style: ElevatedButton.styleFrom(
-        primary: Colors.blue,
+        backgroundColor: Colors.blue,
         padding: EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       ),
       child: Text(mode),

@@ -96,7 +96,7 @@ class _CreateRoomPageState extends State<CreateRoomPage> {
         });
       },
       style: ElevatedButton.styleFrom(
-        primary: Colors.transparent,
+        backgroundColor: Colors.transparent,
         padding: EdgeInsets.all(0),
       ),
       child: Stack(
@@ -242,23 +242,29 @@ class _CreateRoomPageState extends State<CreateRoomPage> {
             SizedBox(height: 30),
             ElevatedButton(
               onPressed: () async {
-                print(selectedGameMode);
-                var result = await ApiService.getLeagueInfo(
-                    teamobject.getmap(selectedGameMode));
-                print(result.clubs);
-                print(result.nations);
+                {
+                  print(selectedGameMode);
+                  var result = await ApiService.getLeagueInfo(
+                      teamobject.getmap(selectedGameMode));
+                  print(result);
 
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => WaitingRoom(room_id: roomCode,teammodel:result,gamemode:teamobject.getmap(selectedGameMode),)),
-                );
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (context) => WaitingRoom(
+                              room_id: roomCode,
+                              teammodel: result!,
+                              gamemode: teamobject.getmap(selectedGameMode),
+                            )),
+                  );
+                }
                 // Navigator.push(
                 //   context,
                 //   MaterialPageRoute(builder: (context) => TikiTakaToeGame(teammodel:result,gamemode:teamobject.getmap(selectedGameMode),)),
                 // );
               },
               style: ElevatedButton.styleFrom(
-                primary: Colors.transparent,
+                backgroundColor: Colors.transparent,
                 padding: EdgeInsets.zero,
               ),
               child: Ink.image(

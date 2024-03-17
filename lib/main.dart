@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:footttball/home.dart';
 import 'package:footttball/Models/players.dart';
 import 'package:footttball/Rooms/joinRoom.dart';
-import 'package:footttball/startPage.dart';
+import 'package:footttball/Rooms/startPage.dart';
 import 'Services/api_service.dart';
 import 'Models/players.dart';
 
@@ -22,7 +22,6 @@ class TikiTakaToeApp extends StatelessWidget {
     );
   }
 }
-
 
 class BackgroundWidget extends StatelessWidget {
   const BackgroundWidget({Key? key}) : super(key: key);
