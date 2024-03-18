@@ -1,4 +1,4 @@
-// NameRoom.dart
+import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:footttball/Rooms/startPage.dart';
@@ -11,6 +11,7 @@ class NameRoom extends StatefulWidget {
 }
 
 class _NameRoomState extends State<NameRoom> {
+  bool _isLoading = false;
   TextEditingController _nameController = TextEditingController();
 
   @override
@@ -28,7 +29,7 @@ class _NameRoomState extends State<NameRoom> {
               ),
             ),
           ),
-          // İsim giriş kutusu
+
           Positioned(
             bottom: MediaQuery.of(context).size.height * 0.40,
             left: 0,
@@ -50,43 +51,14 @@ class _NameRoomState extends State<NameRoom> {
               ),
             ),
           ),
-          // Görüntü ve Gesture Detector
+
           Positioned(
             bottom: MediaQuery.of(context).size.height * 0.05,
             left: 0,
             right: 0,
             child: Center(
               child: GestureDetector(
-                onTap: () {
-                  // İsim kutusu boşsa uyarı göster
-                  if (_nameController.text.isEmpty) {
-                    showDialog(
-                      context: context,
-                      builder: (BuildContext context) {
-                        return AlertDialog(
-                          title: Text('Warning'),
-                          content: Text('Please Enter Your Name!'),
-                          actions: [
-                            TextButton(
-                              onPressed: () {
-                                Navigator.of(context).pop();
-                              },
-                              child: Text('Okay'),
-                            ),
-                          ],
-                        );
-                      },
-                    );
-                  } else {
-                    // İsim kutusu doluysa oyun sayfasına git ve ismi ileteceğiz
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => StartPage(),
-                      ),
-                    );
-                  }
-                },
+                onTap: _isLoading ? null : _navigateToStartPage,
                 child: Image.asset(
                   'images/play.PNG',
                   width: MediaQuery.of(context).size.width * 0.4,
@@ -96,9 +68,30 @@ class _NameRoomState extends State<NameRoom> {
               ),
             ),
           ),
+          if (_isLoading)
+            Center(
+              child: CircularProgressIndicator(),
+            ),
         ],
       ),
     );
+  }
+
+  void _navigateToStartPage() {
+    setState(() {
+      _isLoading = true;
+    });
+
+    Timer(Duration(seconds: 1), () {
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(
+          builder: (context) => StartPage(),
+        ),
+      );
+      setState(() {
+        _isLoading = false;
+      });
+    });
   }
 
   @override

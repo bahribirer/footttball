@@ -130,6 +130,12 @@ class _TikiTakaToeGameState extends State<TikiTakaToeGame> {
     return teamindex;
   }
 
+  void resetTimer() {
+    _timer.cancel();
+    _start = 30;
+    startTimer();
+  }
+
   void resetGame() {
     setState(() {
       squares = List.filled(16, '');
@@ -178,6 +184,7 @@ class _TikiTakaToeGameState extends State<TikiTakaToeGame> {
     if (player1 || player2) {
       setState(() {
         WebSocketManager().playerTurn == true;
+        resetTimer();
       });
     }
 
@@ -187,6 +194,7 @@ class _TikiTakaToeGameState extends State<TikiTakaToeGame> {
     if (!player1 && !player2) {
       setState(() {
         WebSocketManager().playerTurn = !WebSocketManager().playerTurn;
+        resetTimer();
       });
     }
   }
@@ -355,25 +363,33 @@ class _TikiTakaToeGameState extends State<TikiTakaToeGame> {
             ),
           ),
           Positioned(
-              left: screenSize.width * 0.40,
-              bottom: screenSize.height * 0.25,
-              child: Column(
-                children: [
-                  Text("TURN",
-                      style: TextStyle(color: Colors.white, fontSize: 30)),
-                  Container(
-                    width: 35.0, // Specify the width of the circle
-                    height: 35.0, // Specify the height of the circle
-                    decoration: BoxDecoration(
-                      color: WebSocketManager().playerTurn
-                          ? Colors.green
-                          : Colors.red, // Define the color of the circle
-                      shape: BoxShape
-                          .circle, // Define the shape of the container as a circle
-                    ),
-                  )
-                ],
-              )),
+            left: MediaQuery.of(context).size.width * 0.10,
+            bottom: MediaQuery.of(context).size.height * 0.70,
+            child: Column(
+              children: [
+                Text(
+                  "TURN",
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: MediaQuery.of(context).size.width *
+                        0.05, // Max. boyutu belirleyin
+                  ),
+                ),
+                Container(
+                  width:
+                      35.0, // Dairenin genişliğini sabit olarak tutabilirsiniz veya MediaQuery ile dinamik olarak ayarlayabilirsiniz
+                  height:
+                      35.0, // Dairenin yüksekliğini sabit olarak tutabilirsiniz veya MediaQuery ile dinamik olarak ayarlayabilirsiniz
+                  decoration: BoxDecoration(
+                    color: WebSocketManager().playerTurn
+                        ? Colors.green
+                        : Colors.red,
+                    shape: BoxShape.circle,
+                  ),
+                )
+              ],
+            ),
+          ),
           Positioned(
             left: screenSize.width * 0.55,
             bottom: screenSize.height * 0.05,
@@ -411,7 +427,8 @@ class _TikiTakaToeGameState extends State<TikiTakaToeGame> {
             ),
           ),
           Positioned(
-            top: screenSize.height * 0.05,
+            top: MediaQuery.of(context).size.height *
+                0.20, // Ekranın üst kısmına göre konumlandır
             child: Container(
               padding: EdgeInsets.all(10),
               decoration: BoxDecoration(
