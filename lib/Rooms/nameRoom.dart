@@ -51,7 +51,7 @@ class _NameRoomState extends State<NameRoom> {
               ),
             ),
           ),
-
+          //media query
           Positioned(
             bottom: MediaQuery.of(context).size.height * 0.05,
             left: 0,
