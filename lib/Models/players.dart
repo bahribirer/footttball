@@ -1,11 +1,9 @@
-
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:footttball/Models/players.dart';
 import '../Services/api_service.dart';
 import '../splash.dart';
 import '../main.dart';
-
 
 class Player {
   String name;

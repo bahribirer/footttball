@@ -10,8 +10,6 @@ import 'package:footttball/getInfo.dart';
 import 'package:footttball/main.dart';
 import 'package:footttball/Models/players.dart';
 import 'package:footttball/Rooms/startPage.dart';
-import 'dart:io';
-import 'package:http/http.dart' as http;
 
 class TikiTakaToeGame extends StatefulWidget {
   final TeamModel teammodel;
@@ -66,11 +64,9 @@ class _TikiTakaToeGameState extends State<TikiTakaToeGame> {
         if (_start == 0) {
           setState(() {
             timer.cancel();
-            _start = 30; // Süreyi sıfırla
-            startTimer(); // Yeniden başlat
-            // Süre dolduğunda burada bir şeyler yapabilirsiniz.
-            WebSocketManager().playerTurn =
-                !WebSocketManager().playerTurn; // Sırayı değiştir
+            _start = 30;
+            startTimer();
+            WebSocketManager().playerTurn = !WebSocketManager().playerTurn;
           });
         } else {
           setState(() {
@@ -94,22 +90,6 @@ class _TikiTakaToeGameState extends State<TikiTakaToeGame> {
       urls.add(value);
     }
     setState(() {});
-  }
-
-  void fetchAndShowGridInformation(String leagueId) async {
-    // try {
-    //   final leagueInfo = await apiService.getLeagueInfo(leagueId);
-    //   final players = await apiService.getPlayersByLeague(leagueInfo);
-    //   setState(() {
-    //     this.players = players.map((playerData) => Player(
-    //       name: playerData['name'],
-    //       nationality: playerData['nationality'],
-    //       club: playerData['club'],
-    //     )).toList();
-    //   });
-    // } catch (e) {
-    //   print('Error fetching and showing grid information: $e');
-    // }
   }
 
   int controlTeamIndex() {
@@ -140,50 +120,25 @@ class _TikiTakaToeGameState extends State<TikiTakaToeGame> {
     setState(() {
       squares = List.filled(16, '');
       currentPlayer = WebSocketManager().initialType;
-      print("MY TYPE IS " + currentPlayer);
     });
     squares[1] = "image";
     squares[2] = "image";
     squares[3] = "image";
-
-    // for(int i=0; i<squares.length; i++){
-    //   print(squares[i]);
-    // }
   }
 
   void makeMove(int index, String type) {
     int row = index ~/ 4;
     int col = index % 4;
 
-    // Sadece son satır ve son sütun harici hücrelere izin ver
     if (index != -1 && squares[index] == '' && row != 0 && col != 0) {
       squares[index] = type;
-      // currentPlayer = (currentPlayer == 'X') ? 'O' : 'X';
-
-      // Kazanan kontrolü burada yapılıyor
-      // if (checkWin('X')) {
-      //   showDialog(
-      //     context: context,
-      //     builder: (_) => gameOverDialog('X'),
-      //   );
-      // } else if (checkWin('O')) {
-      //   showDialog(
-      //     context: context,
-      //     builder: (_) => gameOverDialog('O'),
-      //   );
-      // } else if (isBoardFull()) {
-      //   showDialog(
-      //     context: context,
-      //     builder: (_) => gameOverDialog('T'),
-      //   );
-      // }
     }
     var player1 = checkWin("X");
     var player2 = checkWin("O");
 
     if (player1 || player2) {
       setState(() {
-        WebSocketManager().playerTurn == true;
+        WebSocketManager().playerTurn = true;
         resetTimer();
       });
     }
@@ -200,7 +155,6 @@ class _TikiTakaToeGameState extends State<TikiTakaToeGame> {
   }
 
   bool checkWin(String player) {
-    // Horizontal win conditions
     bool horizontalWin = (squares[5] == player &&
             squares[6] == player &&
             squares[7] == player) ||
@@ -211,7 +165,6 @@ class _TikiTakaToeGameState extends State<TikiTakaToeGame> {
             squares[14] == player &&
             squares[15] == player);
 
-    // Vertical win conditions
     bool verticalWin = (squares[5] == player &&
             squares[9] == player &&
             squares[13] == player) ||
@@ -222,7 +175,6 @@ class _TikiTakaToeGameState extends State<TikiTakaToeGame> {
             squares[11] == player &&
             squares[15] == player);
 
-    // Diagonal win conditions
     bool diagonalWin = (squares[5] == player &&
             squares[10] == player &&
             squares[15] == player) ||
@@ -278,40 +230,14 @@ class _TikiTakaToeGameState extends State<TikiTakaToeGame> {
                               context,
                               widget.teammodel.clubs[(index % 4) - 1],
                               widget.teammodel.nations[(index ~/ 4) - 1]);
-                          print(result);
                           if (result) {
                             WebSocketManager().send(jsonEncode(
                                 {"index": index, "type": currentPlayer}));
-
-                            // makeMove(index);
                           } else {
                             WebSocketManager().send(jsonEncode(
                                 {"index": -1, "type": currentPlayer}));
-                            // currentPlayer = (currentPlayer == 'X') ? 'O' : 'X';
                           }
                         }
-
-                        // makeMove(index);
-
-                        // if (!checkWin('X') && !checkWin('O') && !isBoardFull()) {
-                        //   makeMove(index);
-                        //   if (checkWin('X')) {
-                        //     showDialog(
-                        //       context: context,
-                        //       builder: (_) => gameOverDialog('X'),
-                        //     );
-                        //   } else if (checkWin('O')) {
-                        //     showDialog(
-                        //       context: context,
-                        //       builder: (_) => gameOverDialog('O'),
-                        //     );
-                        //   } else if (isBoardFull()) {
-                        //     showDialog(
-                        //       context: context,
-                        //       builder: (_) => gameOverDialog('T'),
-                        //     );
-                        //   }
-                        // }
                       },
                       child: SizedBox(
                         width: boxSize,
@@ -335,24 +261,7 @@ class _TikiTakaToeGameState extends State<TikiTakaToeGame> {
                                           style: TextStyle(
                                               fontSize: 20,
                                               fontWeight: FontWeight.bold),
-                                        )
-                              //         squares[index].length > 1  ? FutureBuilder<String>(
-                              //   future: ApiService.getLogo(gamemode: widget.gamemode, countryname: widget.teammodel.clubs[controlTeamIndex()]), // Assuming this function fetches the image URL from an API
-                              //   builder: (BuildContext context, AsyncSnapshot<String> snapshot) {
-                              //     if (snapshot.connectionState == ConnectionState.waiting) {
-                              //       return CircularProgressIndicator(); // Show loading spinner while waiting for data
-                              //     } else if (snapshot.hasError) {
-                              //       return Icon(Icons.error); // Show error icon in case of an error
-                              //     } else {
-                              //       return Image.network(snapshot.data!); // Display the image from the URL
-                              //     }
-                              //   },
-                              // )
-                              //         :Text(
-                              //           squares[index],
-                              //           style: TextStyle(fontSize: 15),
-                              //         ),
-                              ),
+                                        )),
                         ),
                       ),
                     ),
@@ -371,15 +280,12 @@ class _TikiTakaToeGameState extends State<TikiTakaToeGame> {
                   "TURN",
                   style: TextStyle(
                     color: Colors.white,
-                    fontSize: MediaQuery.of(context).size.width *
-                        0.05, // Max. boyutu belirleyin
+                    fontSize: MediaQuery.of(context).size.width * 0.05,
                   ),
                 ),
                 Container(
-                  width:
-                      35.0, // Dairenin genişliğini sabit olarak tutabilirsiniz veya MediaQuery ile dinamik olarak ayarlayabilirsiniz
-                  height:
-                      35.0, // Dairenin yüksekliğini sabit olarak tutabilirsiniz veya MediaQuery ile dinamik olarak ayarlayabilirsiniz
+                  width: 35.0,
+                  height: 35.0,
                   decoration: BoxDecoration(
                     color: WebSocketManager().playerTurn
                         ? Colors.green
@@ -413,9 +319,6 @@ class _TikiTakaToeGameState extends State<TikiTakaToeGame> {
             bottom: screenSize.height * 0.05,
             child: GestureDetector(
               onTap: () async {
-                // var object= new ApiService("http://localhost:8000");
-                // var value=await object.getFinalGrid("TR1");
-
                 resetGame();
               },
               child: Image.asset(
@@ -427,8 +330,7 @@ class _TikiTakaToeGameState extends State<TikiTakaToeGame> {
             ),
           ),
           Positioned(
-            top: MediaQuery.of(context).size.height *
-                0.20, // Ekranın üst kısmına göre konumlandır
+            top: MediaQuery.of(context).size.height * 0.20,
             child: Container(
               padding: EdgeInsets.all(10),
               decoration: BoxDecoration(
@@ -461,7 +363,6 @@ class _TikiTakaToeGameState extends State<TikiTakaToeGame> {
         TextButton(
           onPressed: () {
             resetGame();
-
             Navigator.of(context).pop();
           },
           child: Text('Yeniden Başla'),

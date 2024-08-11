@@ -1,9 +1,10 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:ui';
-
 import 'package:flutter/material.dart';
 import 'package:footttball/Services/api_service.dart';
 import 'package:footttball/Helper/constants.dart';
+import 'package:footttball/Services/websocket.dart';
 
 class Helper {
   Helper._privateConstructor();
@@ -13,15 +14,76 @@ class Helper {
     return _instance;
   }
 
-  double getDeviceWidth(BuildContext context) {
-    return MediaQuery.of(context).size.width;
-  }
+  TextEditingController playerName = TextEditingController();
 
-  double getDeviceHeight(BuildContext context) {
-    return MediaQuery.of(context).size.height;
-  }
+  Future<bool> showPlayerName(
+      BuildContext context, String club, String nationality) async {
+    playerName.text = "";
+    Completer<bool> completer = Completer<bool>();
 
-  TextEditingController playerName = new TextEditingController();
+    WebSocketManager wsManager = WebSocketManager();
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text(nationality + " " + club),
+          content: Autocomplete<String>(
+            optionsBuilder: (TextEditingValue textEditingValue) async {
+              if (textEditingValue.text == '') {
+                return const Iterable<String>.empty();
+              }
+              List<String> playerNames = await ApiService()
+                  .getPlayerNames(query: textEditingValue.text);
+              print('Autocomplete Names: $playerNames');
+              return playerNames;
+            },
+            onSelected: (String selection) {
+              playerName.text = selection;
+            },
+            fieldViewBuilder:
+                (context, controller, focusNode, onEditingComplete) {
+              return TextField(
+                controller: controller,
+                focusNode: focusNode,
+                decoration: InputDecoration(hintText: "Enter Player Name"),
+              );
+            },
+          ),
+          actions: <Widget>[
+            TextButton(
+              child: Text('Cancel'),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+            TextButton(
+              child: Text('OK'),
+              onPressed: () async {
+                var result = await ApiService.checkPlayer(
+                    player_name: playerName.text,
+                    nationality: nationality,
+                    club: club);
+                if (result == "true") {
+                  WebSocketManager().send(jsonEncode({
+                    "index": WebSocketManager().index,
+                    "type": WebSocketManager().type
+                  }));
+                  completer.complete(true);
+                } else {
+                  completer.complete(false);
+                }
+
+                Navigator.of(context).pop();
+              },
+            ),
+          ],
+        );
+      },
+    );
+
+    return completer.future;
+  }
 
   void showInfoDialog(BuildContext context, String title, String body) {
     showGeneralDialog(
@@ -32,7 +94,7 @@ class Helper {
       pageBuilder: (ctx, anim1, anim2) =>
           StatefulBuilder(builder: (context, setState) {
         return Container(
-          height: Helper().getDeviceHeight(context) / 4,
+          height: MediaQuery.of(context).size.height / 4,
           child: AlertDialog(
             backgroundColor: Constants().textColor,
             shape: RoundedRectangleBorder(
@@ -58,48 +120,5 @@ class Helper {
       ),
       context: context,
     );
-  }
-
-  Future<bool> showPlayerName(
-      BuildContext context, String club, String nationality) async {
-    playerName.text = "";
-    Completer<bool> completer = Completer<bool>();
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text(nationality + " " + club),
-          content: TextField(
-            controller: playerName,
-            decoration: InputDecoration(hintText: "Enter Player Name"),
-          ),
-          actions: <Widget>[
-            TextButton(
-              child: Text('Cancel'),
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-            ),
-            TextButton(
-              child: Text('OK'),
-              onPressed: () async {
-                var result = await ApiService.checkPlayer(
-                    player_name: playerName.text,
-                    nationality: nationality,
-                    club: club);
-                if (result == "true") {
-                  completer.complete(true);
-                } else {
-                  completer.complete(false);
-                }
-
-                Navigator.of(context).pop();
-              },
-            ),
-          ],
-        );
-      },
-    );
-    return completer.future;
   }
 }

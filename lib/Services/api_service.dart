@@ -1,22 +1,10 @@
 import 'dart:convert';
 import 'package:footttball/Models/teamModel.dart';
-
-import '../Models/players.dart';
 import '../Models/players.dart';
 import 'package:http/http.dart' as http;
 
 class ApiService {
-  static final String baseUrl = "http://192.168.0.27:8000";
-
-  // static  Future<Map<String, dynamic>> getFinalGrid(String leagueId) async {
-  //   final response = await http.get(Uri.parse('http://localhost:8000/api/v1/final_grid/$leagueId'));
-
-  //   if (response.statusCode == 200) {
-  //     return json.decode(response.body);
-  //   } else {
-  //     throw Exception('Failed to load final grid information');
-  //   }
-  // }
+  static final String baseUrl = "http://192.168.0.32:8000";
 
   Future<bool> makePlayerGuess(
       String playerName, String nationality, String club) async {
@@ -30,14 +18,14 @@ class ApiService {
     }
   }
 
-  Future<List> getPlayersByLeague(String leagueId) async {
+  Future<List<Player>> getPlayersByLeague(String leagueId) async {
     final response = await http
         .get(Uri.parse('$baseUrl/api/v1/players_by_league/$leagueId'));
 
     if (response.statusCode == 200) {
       final List<Map<String, dynamic>> playerDataList =
           List<Map<String, dynamic>>.from(json.decode(response.body));
-      final List players = playerDataList
+      final List<Player> players = playerDataList
           .map((playerData) => Player.fromJson(playerData))
           .toList();
       return players;
@@ -58,12 +46,11 @@ class ApiService {
   }
 
   static Future<TeamModel?> getLeagueInfo(String gameMode) async {
-    final response = await http
-        .get(Uri.parse("http://192.168.0.27:8000/api/v1/final_grid/$gameMode"));
+    final response =
+        await http.get(Uri.parse("$baseUrl/api/v1/final_grid/$gameMode"));
 
     try {
       if (response.statusCode == 200) {
-        print("SIKINTI YOK");
         String decodedBody = utf8.decode(response.bodyBytes);
         Map<String, dynamic> jsonMap = json.decode(decodedBody);
         return TeamModel.fromJson(jsonMap);
@@ -77,7 +64,6 @@ class ApiService {
   Future<Map<String, dynamic>> getPlayersAndCountriesByLeague(
       String leagueId) async {
     try {
-      // Oyuncu ve ülke bilgilerini alma
       final response = await http.get(Uri.parse(
           '$baseUrl/api/v1/players_and_countries_by_league/$leagueId'));
 
@@ -86,7 +72,7 @@ class ApiService {
 
         final List<Map<String, dynamic>> playerDataList =
             List<Map<String, dynamic>>.from(data['players']);
-        final List players = playerDataList
+        final List<Player> players = playerDataList
             .map((playerData) => Player.fromJson(playerData))
             .toList();
 
@@ -141,6 +127,29 @@ class ApiService {
       return response.body;
     } else {
       throw Exception('Failed to load league information');
+    }
+  }
+
+  Future<List<String>> getPlayerNames({required String query}) async {
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/api/v1/player_names?query=$query'),
+      );
+      print('Response: ${response.body}'); // Yanıtı konsola yazdır
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        final names = List<String>.from(data['player_names']);
+        print('Parsed Names: $names');
+        return names;
+      } else {
+        print(
+            'Failed to load player names with status: ${response.statusCode}');
+        throw Exception('Failed to load player names');
+      }
+    } catch (e) {
+      print('Error fetching player names: $e');
+      rethrow;
     }
   }
 }
