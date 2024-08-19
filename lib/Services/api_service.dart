@@ -4,7 +4,7 @@ import '../Models/players.dart';
 import 'package:http/http.dart' as http;
 
 class ApiService {
-  static final String baseUrl = "http://192.168.0.32:8000";
+  static final String baseUrl = "http://192.168.1.36:8000";
 
   Future<bool> makePlayerGuess(
       String playerName, String nationality, String club) async {

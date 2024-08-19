@@ -1,9 +1,9 @@
 import 'dart:math';
-
 import 'package:flutter/material.dart';
 import 'package:footttball/Services/api_service.dart';
 import 'package:footttball/Models/teamModel.dart';
 import 'package:footttball/Rooms/waitingRoom.dart';
+import 'package:footttball/Rooms/startPage.dart'; // Import StartPage to navigate back
 import 'package:footttball/getInfo.dart';
 import 'package:footttball/home.dart';
 import 'package:footttball/main.dart';
@@ -44,46 +44,6 @@ class _CreateRoomPageState extends State<CreateRoomPage> {
     int randomCode = 1000 + random.nextInt(9000);
     return randomCode.toString();
   }
-
-  void navigate() {
-    // if (selectedGameMode.isNotEmpty) {
-    //   try {
-    //     // Oyun moduna göre lig bilgilerini alma
-    //     print(teamobject.getmap(selectedGameMode));
-    //     final leagueInfo = await apiService.getLeagueInfo(teamobject.getmap(selectedGameMode));
-    //     print('League Information: $leagueInfo');
-
-    //     // Lig bilgilerini kullanarak oyuncu listesini ve ülkeleri alma
-    //     // final result = await apiService.getPlayersAndCountriesByLeague(leagueInfo);
-    //     // final players = result['players'] as List<Player>;
-    //     // final countries = result['countries'] as List<String>;
-
-    //     // print('Players in the selected league: $players');
-    //     // print('Countries in the selected league: $countries');
-
-    //     // // Oyuncu listesi ve ülkeleri kullanarak oyunu başlatma işlemleri burada yapılacak
-    //     // _startGameScreen(players, countries);
-    //   } catch (e) {
-    //     print('Error fetching league information: $e');
-    //   }
-    // } else {
-    //   _showModeNotSelectedDialog(context);
-    // }
-  }
-
-  // void _startGameScreen(List<Player> players, List<String> countries) {
-  //   // Oyun ekranına geçiş yapmak için Navigator kullanma
-  //   Navigator.of(context).pushReplacement(
-  //     MaterialPageRoute(
-  //       builder: (context) {
-  //         // Oyuncu listesi ve ülkeleri ileterek oyun sayfasına geçiş yapma
-  //         return TikiTakaToeGame(
-  //           gridInfo: {'players': players, 'countries': countries},
-  //         );
-  //       },
-  //     ),
-  //   );
-  // }
 
   Widget buildGameModeButton(String imagePath, String mode) {
     return ElevatedButton(
@@ -127,47 +87,12 @@ class _CreateRoomPageState extends State<CreateRoomPage> {
     showDialog(
       context: context,
       builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text('Please Choose The Mode'),
-          backgroundColor: Color.fromARGB(255, 210, 147, 221),
-          content:
-              Text('You need to choose a game mode before starting the game.'),
-          actions: [
-            ElevatedButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-              child: Text('OK'),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  void _showGameModeSelectionDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text('Select Game Mode'),
-          content: Container(
-            height: 200,
-            width: 200,
-            child: Wrap(
-              spacing: 10.0,
-              runSpacing: 10.0,
-              children: [
-                buildGameModeButton('images/eng.PNG', 'Premier League'),
-                buildGameModeButton('images/fran.PNG', 'Ligue1'),
-                buildGameModeButton('images/isp.PNG', 'LaLiga'),
-                buildGameModeButton('images/ger.PNG', 'Bundesliga'),
-                buildGameModeButton('images/tr.PNG', 'Super League'),
-                buildGameModeButton('images/seri.PNG', 'Serie A'),
-                buildGameModeButton('images/rand.PNG', 'Random'),
-              ],
-            ),
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
           ),
+          backgroundColor: Colors.transparent,
+          child: _AnimatedExclamationDialog(),
         );
       },
     );
@@ -176,107 +101,227 @@ class _CreateRoomPageState extends State<CreateRoomPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: null,
-      body: Container(
-        width: MediaQuery.of(context).size.width,
-        height: MediaQuery.of(context).size.height,
-        decoration: BoxDecoration(
-          image: DecorationImage(
-            image: AssetImage('images/arka1.png'),
-            fit: BoxFit.cover,
+      body: Stack(
+        children: [
+          // Background Image
+          Container(
+            width: MediaQuery.of(context).size.width,
+            height: MediaQuery.of(context).size.height,
+            decoration: BoxDecoration(
+              image: DecorationImage(
+                image: AssetImage('images/arka1.png'),
+                fit: BoxFit.cover,
+              ),
+            ),
           ),
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Stack(
-              alignment: Alignment.center,
-              children: [
-                Positioned(
-                  top: -20,
-                  child: GestureDetector(
-                    onTap: () {
-                      _showGameModeSelectionDialog(context);
-                    },
-                    child: Text(
-                      selectedGameMode.isNotEmpty
-                          ? 'Selected Game Mode: $selectedGameMode'
-                          : 'Choose Game Mode',
-                      style: TextStyle(
-                        color: Color.fromARGB(255, 0, 10, 0),
-                        fontSize: 16,
-                        fontWeight: FontWeight.w300,
-                      ),
+          // Back Button Positioned
+          Positioned(
+            top: 40,
+            left: 20,
+            child: GestureDetector(
+              onTap: () {
+                Navigator.of(context).pushReplacement(
+                  MaterialPageRoute(builder: (context) => StartPage()),
+                );
+              },
+              child: Container(
+                padding: EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.8),
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black26,
+                      blurRadius: 10,
+                      offset: Offset(0, 4),
                     ),
-                  ),
+                  ],
                 ),
-                Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 20),
-                  child: Column(
-                    children: [
-                      Text(
-                        'ROOM CODE: $roomCode',
-                        style: TextStyle(
-                          color: Colors.green,
-                          fontSize: 20,
-                          fontWeight: FontWeight.w600,
-                        ),
+                child: Icon(
+                  Icons.arrow_back,
+                  size: 30,
+                  color: Colors.black,
+                ),
+              ),
+            ),
+          ),
+          // Main Content
+          Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                SizedBox(height: 50),
+                // Positioned ROOM CODE just above Premier League
+                Text(
+                  'ROOM CODE: $roomCode',
+                  style: TextStyle(
+                    color: const Color.fromARGB(255, 232, 234, 233),
+                    fontSize: 26,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 2.0,
+                    shadows: [
+                      Shadow(
+                        blurRadius: 5.0,
+                        color: Colors.black45,
+                        offset: Offset(2.0, 2.0),
                       ),
                     ],
                   ),
                 ),
-              ],
-            ),
-            SizedBox(height: 150),
-            Column(
-              children: [
-                buildGameModeButton('images/eng.PNG', 'Premier League'),
-                buildGameModeButton('images/fran.PNG', 'Ligue1'),
-                buildGameModeButton('images/isp.PNG', 'LaLiga'),
-                buildGameModeButton('images/ger.PNG', 'Bundesliga'),
-                buildGameModeButton('images/tr.PNG', 'Super League'),
-                buildGameModeButton('images/seri.PNG', 'Serie A'),
-                buildGameModeButton('images/rand.PNG', 'Random'),
-              ],
-            ),
-            SizedBox(height: 30),
-            ElevatedButton(
-              onPressed: () async {
-                {
-                  print(selectedGameMode);
-                  var result = await ApiService.getLeagueInfo(
-                      teamobject.getmap(selectedGameMode));
-                  print(result);
+                SizedBox(height: 10),
+                Column(
+                  children: [
+                    buildGameModeButton('images/eng.PNG', 'Premier League'),
+                    buildGameModeButton('images/fran.PNG', 'Ligue1'),
+                    buildGameModeButton('images/isp.PNG', 'LaLiga'),
+                    buildGameModeButton('images/ger.PNG', 'Bundesliga'),
+                    buildGameModeButton('images/tr.PNG', 'Super League'),
+                    buildGameModeButton('images/seri.PNG', 'Serie A'),
+                    buildGameModeButton('images/rand.PNG', 'Random'),
+                  ],
+                ),
+                SizedBox(height: 30),
+                ElevatedButton(
+                  onPressed: () async {
+                    if (selectedGameMode.isEmpty) {
+                      _showModeNotSelectedDialog(context);
+                    } else {
+                      print(selectedGameMode);
+                      var result = await ApiService.getLeagueInfo(
+                          teamobject.getmap(selectedGameMode));
+                      print(result);
 
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                        builder: (context) => WaitingRoom(
-                              room_id: roomCode,
-                              teammodel: result!,
-                              gamemode: teamobject.getmap(selectedGameMode),
-                            )),
-                  );
-                }
-                // Navigator.push(
-                //   context,
-                //   MaterialPageRoute(builder: (context) => TikiTakaToeGame(teammodel:result,gamemode:teamobject.getmap(selectedGameMode),)),
-                // );
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.transparent,
-                padding: EdgeInsets.zero,
-              ),
-              child: Ink.image(
-                image: AssetImage('images/play.PNG'),
-                fit: BoxFit.contain,
-                width: MediaQuery.of(context).size.width * 0.46,
-                height: MediaQuery.of(context).size.height * 0.1,
-                child: InkWell(),
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => WaitingRoom(
+                            room_id: roomCode,
+                            teammodel: result!,
+                            gamemode: teamobject.getmap(selectedGameMode),
+                          ),
+                        ),
+                      );
+                    }
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.transparent,
+                    padding: EdgeInsets.zero,
+                  ),
+                  child: Ink.image(
+                    image: AssetImage('images/play.PNG'),
+                    fit: BoxFit.contain,
+                    width: MediaQuery.of(context).size.width * 0.46,
+                    height: MediaQuery.of(context).size.height * 0.1,
+                    child: InkWell(),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _AnimatedExclamationDialog extends StatefulWidget {
+  @override
+  __AnimatedExclamationDialogState createState() =>
+      __AnimatedExclamationDialogState();
+}
+
+class __AnimatedExclamationDialogState extends State<_AnimatedExclamationDialog>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _animation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      duration: const Duration(seconds: 1),
+      vsync: this,
+    )..repeat(reverse: true);
+    _animation = CurvedAnimation(
+      parent: _controller,
+      curve: Curves.easeInOut,
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black26,
+            blurRadius: 10,
+            offset: Offset(0, 5),
+          ),
+        ],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          ScaleTransition(
+            scale: _animation,
+            child: Icon(
+              Icons.warning_amber_rounded,
+              size: 50,
+              color: Colors.redAccent,
+            ),
+          ),
+          SizedBox(height: 15),
+          Text(
+            "Please Choose The Mode",
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.w600,
+              color: Colors.black87,
+            ),
+          ),
+          SizedBox(height: 15),
+          Text(
+            "You need to choose a game mode before starting the game.",
+            style: TextStyle(
+              fontSize: 16,
+              color: Colors.black54,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          SizedBox(height: 25),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              foregroundColor: Colors.white,
+              backgroundColor: Colors.redAccent, // text color
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
               ),
             ),
-          ],
-        ),
+            onPressed: () {
+              Navigator.of(context).pop();
+            },
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20.0),
+              child: Text(
+                "OK",
+                style: TextStyle(
+                  fontSize: 18,
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

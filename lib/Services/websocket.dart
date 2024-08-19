@@ -20,6 +20,9 @@ class WebSocketManager {
   bool playerTurn = false;
 
   Function(int index, String type)? makeMove;
+  Function()? onReplayRequest;
+  Function()? onReplayAccept;
+  Function()? onPlayerLeave;
 
   static final WebSocketManager _instance = WebSocketManager._internal();
 
@@ -41,17 +44,9 @@ class WebSocketManager {
       }
 
       if (message == "A player has left the room $room_id.") {
-        Helper().showInfoDialog(context, "WARNING", "USER HAS LEFT THE ROOM!");
-        close();
-
-        Future.delayed(const Duration(milliseconds: 3000), () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => StartPage()),
-          );
-        });
-
-        return;
+        if (onPlayerLeave != null) {
+          onPlayerLeave!();
+        }
       }
 
       if (message == "ready") {
@@ -71,6 +66,10 @@ class WebSocketManager {
                     player2Name: '',
                   )),
         );
+      } else if (message == "replayRequest") {
+        onReplayRequest?.call();
+      } else if (message == "replayAccept") {
+        onReplayAccept?.call();
       } else {
         if (message != "X" && message != "O") {
           Map<String, dynamic> decoded = jsonDecode(message);

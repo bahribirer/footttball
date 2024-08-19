@@ -20,7 +20,7 @@ class _NameRoomState extends State<NameRoom> {
       appBar: null,
       body: Stack(
         children: [
-          // Arka plan görüntüsü
+          // Background image
           Container(
             decoration: BoxDecoration(
               image: DecorationImage(
@@ -29,7 +29,6 @@ class _NameRoomState extends State<NameRoom> {
               ),
             ),
           ),
-
           Positioned(
             bottom: MediaQuery.of(context).size.height * 0.40,
             left: 0,
@@ -51,7 +50,6 @@ class _NameRoomState extends State<NameRoom> {
               ),
             ),
           ),
-          //media query
           Positioned(
             bottom: MediaQuery.of(context).size.height * 0.05,
             left: 0,
@@ -78,20 +76,44 @@ class _NameRoomState extends State<NameRoom> {
   }
 
   void _navigateToStartPage() {
-    setState(() {
-      _isLoading = true;
-    });
-
-    Timer(Duration(seconds: 1), () {
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(
-          builder: (context) => StartPage(),
-        ),
-      );
+    if (_nameController.text.isEmpty) {
+      _showNameNotEnteredDialog(context);
+    } else {
       setState(() {
-        _isLoading = false;
+        _isLoading = true;
       });
-    });
+
+      Timer(Duration(seconds: 1), () {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(
+            builder: (context) => StartPage(),
+          ),
+        );
+        setState(() {
+          _isLoading = false;
+        });
+      });
+    }
+  }
+
+  void _showNameNotEnteredDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('Please Enter Name'),
+          content: Text('You need to enter a name to proceed.'),
+          actions: [
+            ElevatedButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: Text('OK'),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   @override

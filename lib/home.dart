@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:convert';
-
 import 'package:flutter/material.dart';
 import 'package:footttball/Services/api_service.dart';
 import 'package:footttball/Helper/helper.dart';
@@ -29,7 +28,8 @@ class TikiTakaToeGame extends StatefulWidget {
   _TikiTakaToeGameState createState() => _TikiTakaToeGameState();
 }
 
-class _TikiTakaToeGameState extends State<TikiTakaToeGame> {
+class _TikiTakaToeGameState extends State<TikiTakaToeGame>
+    with SingleTickerProviderStateMixin {
   late List<Player> players;
   late String currentPlayer;
   late List<String> squares;
@@ -40,6 +40,9 @@ class _TikiTakaToeGameState extends State<TikiTakaToeGame> {
 
   late Timer _timer;
   int _start = 30;
+  bool isInputActive = false;
+
+  late AnimationController _animationController;
 
   String player1Name = '';
   String player2Name = '';
@@ -48,12 +51,17 @@ class _TikiTakaToeGameState extends State<TikiTakaToeGame> {
   void initState() {
     super.initState();
     WebSocketManager().makeMove = makeMove;
+    WebSocketManager().onPlayerLeave = handlePlayerLeave;
     getLogoUrl();
     resetGame();
     startTimer();
 
     player1Name = widget.player1Name;
     player2Name = widget.player2Name;
+
+    _animationController =
+        AnimationController(vsync: this, duration: Duration(seconds: 1))
+          ..repeat(reverse: true);
   }
 
   void startTimer() {
@@ -65,8 +73,9 @@ class _TikiTakaToeGameState extends State<TikiTakaToeGame> {
           setState(() {
             timer.cancel();
             _start = 30;
-            startTimer();
             WebSocketManager().playerTurn = !WebSocketManager().playerTurn;
+            isInputActive = false; // Close the input box if time runs out
+            startTimer();
           });
         } else {
           setState(() {
@@ -80,6 +89,7 @@ class _TikiTakaToeGameState extends State<TikiTakaToeGame> {
   @override
   void dispose() {
     _timer.cancel();
+    _animationController.dispose();
     super.dispose();
   }
 
@@ -149,6 +159,7 @@ class _TikiTakaToeGameState extends State<TikiTakaToeGame> {
     if (!player1 && !player2) {
       setState(() {
         WebSocketManager().playerTurn = !WebSocketManager().playerTurn;
+        isInputActive = false;
         resetTimer();
       });
     }
@@ -195,6 +206,19 @@ class _TikiTakaToeGameState extends State<TikiTakaToeGame> {
     }
   }
 
+  void handlePlayerLeave() {
+    Helper().showInfoDialog(
+        context, "User Left", "The other player has left the room.");
+    WebSocketManager().close();
+    Future.delayed(const Duration(seconds: 2), () {
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(builder: (context) => StartPage()),
+        (route) => false,
+      );
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     Size screenSize = MediaQuery.of(context).size;
@@ -206,13 +230,14 @@ class _TikiTakaToeGameState extends State<TikiTakaToeGame> {
         alignment: Alignment.center,
         children: [
           BackgroundWidget(),
+          // Centered Grid
           Positioned(
-            top: screenSize.height / 13 + boxSize * 2,
-            left: screenSize.width / 9,
-            right: screenSize.width / 9,
+            top: screenSize.height * 0.25,
+            left: screenSize.width * 0.05,
+            right: screenSize.width * 0.05,
             child: SizedBox(
-              width: boxSize * 4,
-              height: boxSize * 4,
+              width: screenSize.width * 0.9,
+              height: screenSize.width * 0.9, // Maintain square grid
               child: GridView.builder(
                 padding: EdgeInsets.all(0),
                 gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
@@ -226,6 +251,9 @@ class _TikiTakaToeGameState extends State<TikiTakaToeGame> {
                     child: GestureDetector(
                       onTap: () async {
                         if (squares[index] == "") {
+                          setState(() {
+                            isInputActive = true;
+                          });
                           var result = await Helper().showPlayerName(
                               context,
                               widget.teammodel.clubs[(index % 4) - 1],
@@ -237,6 +265,9 @@ class _TikiTakaToeGameState extends State<TikiTakaToeGame> {
                             WebSocketManager().send(jsonEncode(
                                 {"index": -1, "type": currentPlayer}));
                           }
+                          setState(() {
+                            isInputActive = false;
+                          });
                         }
                       },
                       child: SizedBox(
@@ -271,75 +302,95 @@ class _TikiTakaToeGameState extends State<TikiTakaToeGame> {
               ),
             ),
           ),
+          // Turn indicator with animation
           Positioned(
-            left: MediaQuery.of(context).size.width * 0.10,
-            bottom: MediaQuery.of(context).size.height * 0.70,
+            left: screenSize.width * 0.05,
+            top: screenSize.height * 0.15,
             child: Column(
               children: [
                 Text(
                   "TURN",
                   style: TextStyle(
                     color: Colors.white,
-                    fontSize: MediaQuery.of(context).size.width * 0.05,
+                    fontSize: screenSize.width * 0.05,
                   ),
                 ),
-                Container(
-                  width: 35.0,
-                  height: 35.0,
-                  decoration: BoxDecoration(
+                ScaleTransition(
+                  scale:
+                      Tween(begin: 1.0, end: 1.5).animate(_animationController),
+                  child: Icon(
+                    WebSocketManager().playerTurn ? Icons.person : Icons.group,
                     color: WebSocketManager().playerTurn
-                        ? Colors.green
-                        : Colors.red,
-                    shape: BoxShape.circle,
+                        ? Colors.greenAccent
+                        : Colors.redAccent,
+                    size: screenSize.width * 0.1,
                   ),
-                )
+                ),
               ],
             ),
           ),
+          // Timer in the top-right corner
+          Positioned(
+            top: screenSize.height * 0.10,
+            right: screenSize.width * 0.05,
+            child: Container(
+              width: screenSize.width * 0.15,
+              height: screenSize.width * 0.15,
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  CircularProgressIndicator(
+                    value: _start / 30,
+                    valueColor: AlwaysStoppedAnimation(Colors.blueAccent),
+                    backgroundColor: Colors.grey.shade200,
+                    strokeWidth: 5.0,
+                  ),
+                  Center(
+                    child: Text(
+                      '$_start',
+                      style: TextStyle(
+                          fontSize: 20.0, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          // Leave Room Button
           Positioned(
             left: screenSize.width * 0.55,
             bottom: screenSize.height * 0.05,
             child: GestureDetector(
               onTap: () {
-                Navigator.push(
+                WebSocketManager().close();
+                Navigator.pushAndRemoveUntil(
                   context,
                   MaterialPageRoute(builder: (context) => StartPage()),
+                  (route) => false,
                 );
               },
               child: Image.asset(
                 'images/leave.png',
-                width: screenSize.width * 0.4,
-                height: screenSize.height * 0.2,
+                width: screenSize.width * 0.3,
+                height: screenSize.height * 0.1,
                 fit: BoxFit.contain,
               ),
             ),
           ),
+          // Replay Button
           Positioned(
             right: screenSize.width * 0.55,
             bottom: screenSize.height * 0.05,
             child: GestureDetector(
               onTap: () async {
-                resetGame();
+                WebSocketManager().send("replayRequest");
               },
               child: Image.asset(
                 'images/replay.png',
-                width: screenSize.width * 0.4,
-                height: screenSize.height * 0.2,
+                width: screenSize.width * 0.3,
+                height: screenSize.height * 0.1,
                 fit: BoxFit.contain,
-              ),
-            ),
-          ),
-          Positioned(
-            top: MediaQuery.of(context).size.height * 0.20,
-            child: Container(
-              padding: EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: Colors.black.withOpacity(0.5),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Text(
-                '$_start',
-                style: TextStyle(fontSize: 36, color: Colors.white),
               ),
             ),
           ),
