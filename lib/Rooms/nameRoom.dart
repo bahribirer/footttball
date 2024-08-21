@@ -1,6 +1,6 @@
 import 'dart:async';
-
 import 'package:flutter/material.dart';
+import 'package:footttball/Helper/loading.dart'; // loading.dart dosyasını dahil edin
 import 'package:footttball/Rooms/startPage.dart';
 
 class NameRoom extends StatefulWidget {
@@ -29,6 +29,7 @@ class _NameRoomState extends State<NameRoom> {
               ),
             ),
           ),
+          // Name Input Field
           Positioned(
             bottom: MediaQuery.of(context).size.height * 0.40,
             left: 0,
@@ -50,6 +51,7 @@ class _NameRoomState extends State<NameRoom> {
               ),
             ),
           ),
+          // Play Button
           Positioned(
             bottom: MediaQuery.of(context).size.height * 0.05,
             left: 0,
@@ -66,10 +68,9 @@ class _NameRoomState extends State<NameRoom> {
               ),
             ),
           ),
+          // Loading Indicator
           if (_isLoading)
-            Center(
-              child: CircularProgressIndicator(),
-            ),
+            CustomLoadingIndicator(), // Burada loading.dart'taki animasyonu çağırıyoruz
         ],
       ),
     );
@@ -83,7 +84,7 @@ class _NameRoomState extends State<NameRoom> {
         _isLoading = true;
       });
 
-      Timer(Duration(seconds: 1), () {
+      Timer(Duration(seconds: 3), () {
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(
             builder: (context) => StartPage(),

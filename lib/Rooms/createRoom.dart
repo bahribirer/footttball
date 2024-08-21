@@ -177,7 +177,6 @@ class _CreateRoomPageState extends State<CreateRoomPage> {
                     buildGameModeButton('images/ger.PNG', 'Bundesliga'),
                     buildGameModeButton('images/tr.PNG', 'Super League'),
                     buildGameModeButton('images/seri.PNG', 'Serie A'),
-                    buildGameModeButton('images/rand.PNG', 'Random'),
                   ],
                 ),
                 SizedBox(height: 30),
