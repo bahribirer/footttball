@@ -4,7 +4,7 @@ import '../Models/players.dart';
 import 'package:http/http.dart' as http;
 
 class ApiService {
-  static final String baseUrl = "http://192.168.1.36:8000";
+  static final String baseUrl = "http://192.168.0.27:8000";
 
   Future<bool> makePlayerGuess(
       String playerName, String nationality, String club) async {
@@ -15,6 +15,21 @@ class ApiService {
       return response.body.toLowerCase() == 'true';
     } else {
       throw Exception('Failed to make player guess');
+    }
+  }
+
+  static Future<Map<String, List<String>>> fetchReplayData(
+      String leagueId) async {
+    final response =
+        await http.get(Uri.parse('$baseUrl/api/v1/replay_data/$leagueId'));
+
+    if (response.statusCode == 200) {
+      final data = json.decode(response.body);
+      List<String> nations = List<String>.from(data['nations']);
+      List<String> clubs = List<String>.from(data['clubs']);
+      return {"nations": nations, "clubs": clubs};
+    } else {
+      throw Exception("Failed to load replay data");
     }
   }
 

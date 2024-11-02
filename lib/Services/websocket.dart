@@ -6,12 +6,14 @@ import 'package:footttball/Rooms/startPage.dart';
 import 'package:footttball/home.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 import 'package:flutter/material.dart';
+import 'package:footttball/Services/api_service.dart';
 
 class WebSocketManager {
   WebSocketChannel? _channel;
   StreamController? _controller;
   bool control = true;
   String firstMessage = "";
+  String? _requestingPlayer;
 
   int index = 0;
   String type = "";
@@ -37,7 +39,7 @@ class WebSocketManager {
   void connect(String url, BuildContext context, TeamModel teammodel,
       String gamemode, String room_id) {
     _channel = WebSocketChannel.connect(Uri.parse(url));
-    _channel!.stream.listen((message) {
+    _channel!.stream.listen((message) async {
       if (control) {
         firstMessage = message;
         control = false;
@@ -47,9 +49,7 @@ class WebSocketManager {
         if (onPlayerLeave != null) {
           onPlayerLeave!();
         }
-      }
-
-      if (message == "ready") {
+      } else if (message == "ready") {
         Map<String, dynamic> decoded = jsonDecode(firstMessage);
 
         teammodel.nations = List<String>.from(decoded["teammodel"]["nations"]);
@@ -67,9 +67,36 @@ class WebSocketManager {
                   )),
         );
       } else if (message == "replayRequest") {
-        onReplayRequest?.call();
+        // Broadcast a request for replay data to the server
+        send("requestReplayData");
+
+        // Notify both clients about the replay request
+        if (onReplayRequest != null) {
+          onReplayRequest!();
+        }
       } else if (message == "replayAccept") {
-        onReplayAccept?.call();
+        // When replay is accepted, request updated data for all clients
+        send("requestReplayData");
+
+        // Notify both clients about replay acceptance
+        if (onReplayAccept != null) {
+          onReplayAccept!();
+        }
+      } else if (message.startsWith('{"type":"replayData"')) {
+        // Parse and apply the replay data to ensure both clients update their UI
+        Map<String, dynamic> decoded = jsonDecode(message);
+
+        teammodel.nations = List<String>.from(decoded["nations"]);
+        teammodel.clubs = List<String>.from(decoded["clubs"]);
+
+        // Explicitly trigger the UI update on both clients
+        if (onReplayAccept != null) {
+          onReplayAccept!();
+        }
+      } else if (message == "leaveRoom") {
+        if (onPlayerLeave != null) {
+          onPlayerLeave!();
+        }
       } else {
         if (message != "X" && message != "O") {
           Map<String, dynamic> decoded = jsonDecode(message);
@@ -82,14 +109,14 @@ class WebSocketManager {
           }
         } else {
           initialType = message;
-          if (initialType == "X") {
-            playerTurn = true;
-          } else {
-            playerTurn = false;
-          }
+          playerTurn = (initialType == "X");
         }
       }
     });
+  }
+
+  void sendLeaveRoom() {
+    send("leaveRoom");
   }
 
   void send(String message) {
@@ -101,5 +128,13 @@ class WebSocketManager {
   void close() {
     _channel?.sink.close();
     _controller?.close();
+  }
+
+  void sendReplayRequest() {
+    send("replayRequest");
+  }
+
+  void sendReplayAccept() {
+    send("replayAccept");
   }
 }

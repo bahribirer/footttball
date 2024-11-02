@@ -98,6 +98,39 @@ class _CreateRoomPageState extends State<CreateRoomPage> {
     );
   }
 
+  void _restartGame() async {
+    try {
+      // Seçilen oyun modu için yeni takım ve ülke bilgilerini getir
+      var replayData =
+          await ApiService.fetchReplayData(teamobject.getmap(selectedGameMode));
+
+      // Gelen verileri kontrol edin
+      if (replayData.isNotEmpty) {
+        // `TeamModel` nesnesi oluşturun veya güncelleyin
+        TeamModel updatedTeamModel = TeamModel(
+          nations: replayData['nations']!,
+          clubs: replayData['clubs']!,
+        );
+
+        // Yeni bilgilerle `WaitingRoom` veya ilgili sayfaya yönlendirme yapın
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => WaitingRoom(
+              room_id: roomCode,
+              teammodel: updatedTeamModel,
+              gamemode: teamobject.getmap(selectedGameMode),
+            ),
+          ),
+        );
+      } else {
+        print("Yeni bilgiler alınamadı.");
+      }
+    } catch (e) {
+      print("Hata oluştu: $e");
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(

@@ -52,6 +52,8 @@ class _TikiTakaToeGameState extends State<TikiTakaToeGame>
     super.initState();
     WebSocketManager().makeMove = makeMove;
     WebSocketManager().onPlayerLeave = handlePlayerLeave;
+    WebSocketManager().onReplayRequest = _showReplayDialog;
+    WebSocketManager().onReplayAccept = _restartGame;
     getLogoUrl();
     resetGame();
     startTimer();
@@ -75,6 +77,7 @@ class _TikiTakaToeGameState extends State<TikiTakaToeGame>
             _start = 30;
             WebSocketManager().playerTurn = !WebSocketManager().playerTurn;
             isInputActive = false; // Close the input box if time runs out
+            FocusScope.of(context).unfocus(); // Close the keyboard
             startTimer();
           });
         } else {
@@ -84,6 +87,60 @@ class _TikiTakaToeGameState extends State<TikiTakaToeGame>
         }
       },
     );
+  }
+
+  void _showReplayDialog() {
+    if (!WebSocketManager().playerTurn) {
+      // Replay talebinde bulunan oyuncu sadece karşı tarafa gösterir.
+      showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            title: Text("Replay Request"),
+            content: Text("Your opponent wants to replay. Do you accept?"),
+            actions: <Widget>[
+              TextButton(
+                child: Text("No"),
+                onPressed: () {
+                  Navigator.of(context).pop();
+                },
+              ),
+              TextButton(
+                child: Text("Yes"),
+                onPressed: () {
+                  Navigator.of(context).pop();
+                  WebSocketManager()
+                      .sendReplayAccept(); // Kabul et ve mesaj gönder
+                  _restartGame(); // Oyun sıfırlanır ve baştan başlar
+                },
+              ),
+            ],
+          );
+        },
+      );
+    }
+  }
+
+  void _restartGame() async {
+    try {
+      // Seçilen gamemode için replay verilerini al
+      var replayData = await ApiService.fetchReplayData(widget.gamemode);
+
+      // Gelen verilerle teammodel'ı güncelle
+      setState(() {
+        widget.teammodel.nations = replayData['nations']!;
+        widget.teammodel.clubs = replayData['clubs']!;
+        resetGame(); // Oyunun iç yapısını sıfırla
+        resetTimer(); // Timer'ı sıfırla
+        currentPlayer =
+            WebSocketManager().initialType; // Oyuncu sırasını sıfırla
+      });
+
+      // Yeni takım ve ülke logolarını yükleyin
+      getLogoUrl(); // Logoları getirmek için güncelleme çağrısı
+    } catch (e) {
+      print("Yeni takım ve ülke verileri alınırken hata oluştu: $e");
+    }
   }
 
   @override
@@ -137,6 +194,11 @@ class _TikiTakaToeGameState extends State<TikiTakaToeGame>
   }
 
   void makeMove(int index, String type) {
+    if (_start == 0 || !WebSocketManager().playerTurn) {
+      // If time has expired or it's not the player's turn, do nothing
+      return;
+    }
+
     int row = index ~/ 4;
     int col = index % 4;
 
@@ -207,16 +269,29 @@ class _TikiTakaToeGameState extends State<TikiTakaToeGame>
   }
 
   void handlePlayerLeave() {
-    Helper().showInfoDialog(
-        context, "User Left", "The other player has left the room.");
-    WebSocketManager().close();
-    Future.delayed(const Duration(seconds: 2), () {
-      Navigator.pushAndRemoveUntil(
-        context,
-        MaterialPageRoute(builder: (context) => StartPage()),
-        (route) => false,
-      );
-    });
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text("Player Left"),
+          content: Text("Your opponent has left the game."),
+          actions: <Widget>[
+            TextButton(
+              child: Text("OK"),
+              onPressed: () {
+                Navigator.of(context).pop();
+                WebSocketManager().close(); // WebSocket bağlantısını kapat
+                Navigator.pushAndRemoveUntil(
+                  context,
+                  MaterialPageRoute(builder: (context) => StartPage()),
+                  (route) => false,
+                );
+              },
+            ),
+          ],
+        );
+      },
+    );
   }
 
   @override
@@ -247,37 +322,41 @@ class _TikiTakaToeGameState extends State<TikiTakaToeGame>
                 ),
                 itemBuilder: (context, index) {
                   return IgnorePointer(
-                    ignoring: !WebSocketManager().playerTurn,
-                    child: GestureDetector(
-                      onTap: () async {
-                        if (squares[index] == "") {
-                          setState(() {
-                            isInputActive = true;
-                          });
-                          var result = await Helper().showPlayerName(
-                              context,
-                              widget.teammodel.clubs[(index % 4) - 1],
-                              widget.teammodel.nations[(index ~/ 4) - 1]);
-                          if (result) {
-                            WebSocketManager().send(jsonEncode(
-                                {"index": index, "type": currentPlayer}));
-                          } else {
-                            WebSocketManager().send(jsonEncode(
-                                {"index": -1, "type": currentPlayer}));
+                      ignoring: !WebSocketManager().playerTurn,
+                      child: GestureDetector(
+                        onTap: () async {
+                          if (squares[index] == "" &&
+                              WebSocketManager().playerTurn) {
+                            setState(() {
+                              isInputActive = true;
+                            });
+
+                            var result = await Helper().showPlayerName(
+                                context,
+                                widget.teammodel.clubs[(index % 4) - 1],
+                                widget.teammodel.nations[(index ~/ 4) - 1]);
+
+                            if (result) {
+                              WebSocketManager().send(jsonEncode(
+                                  {"index": index, "type": currentPlayer}));
+                            } else {
+                              WebSocketManager().send(jsonEncode(
+                                  {"index": -1, "type": currentPlayer}));
+                            }
+
+                            setState(() {
+                              isInputActive = false;
+                            });
                           }
-                          setState(() {
-                            isInputActive = false;
-                          });
-                        }
-                      },
-                      child: SizedBox(
-                        width: boxSize,
-                        height: boxSize,
-                        child: Container(
-                          decoration: BoxDecoration(
-                            border: Border.all(color: Colors.white),
-                          ),
-                          child: Center(
+                        },
+                        child: SizedBox(
+                          width: boxSize,
+                          height: boxSize,
+                          child: Container(
+                            decoration: BoxDecoration(
+                              border: Border.all(color: Colors.white),
+                            ),
+                            child: Center(
                               child: (index == 1 || index == 2 || index == 3)
                                   ? urls.isEmpty
                                       ? CircularProgressIndicator()
@@ -292,11 +371,11 @@ class _TikiTakaToeGameState extends State<TikiTakaToeGame>
                                           style: TextStyle(
                                               fontSize: 20,
                                               fontWeight: FontWeight.bold),
-                                        )),
+                                        ),
+                            ),
+                          ),
                         ),
-                      ),
-                    ),
-                  );
+                      ));
                 },
                 itemCount: 16,
               ),
@@ -363,7 +442,8 @@ class _TikiTakaToeGameState extends State<TikiTakaToeGame>
             bottom: screenSize.height * 0.05,
             child: GestureDetector(
               onTap: () {
-                WebSocketManager().close();
+                WebSocketManager()
+                    .sendLeaveRoom(); // Diğer oyuncuya da çıkma sinyali gönder
                 Navigator.pushAndRemoveUntil(
                   context,
                   MaterialPageRoute(builder: (context) => StartPage()),
@@ -378,13 +458,38 @@ class _TikiTakaToeGameState extends State<TikiTakaToeGame>
               ),
             ),
           ),
+
           // Replay Button
+          // Replay butonuna basıldığında replay isteği gönderilir
           Positioned(
             right: screenSize.width * 0.55,
             bottom: screenSize.height * 0.05,
             child: GestureDetector(
               onTap: () async {
-                WebSocketManager().send("replayRequest");
+                // Check if it's the player's turn before sending the replay request
+                if (WebSocketManager().playerTurn) {
+                  WebSocketManager().sendReplayRequest(); // Send replay request
+                } else {
+                  // Show an alert dialog if it's not the player's turn
+                  showDialog(
+                    context: context,
+                    builder: (BuildContext context) {
+                      return AlertDialog(
+                        title: Text("Not Your Turn"),
+                        content: Text(
+                            "It's not your turn to make a replay request."),
+                        actions: <Widget>[
+                          TextButton(
+                            child: Text("OK"),
+                            onPressed: () {
+                              Navigator.of(context).pop();
+                            },
+                          ),
+                        ],
+                      );
+                    },
+                  );
+                }
               },
               child: Image.asset(
                 'images/replay.png',
@@ -393,7 +498,7 @@ class _TikiTakaToeGameState extends State<TikiTakaToeGame>
                 fit: BoxFit.contain,
               ),
             ),
-          ),
+          )
         ],
       ),
     );
