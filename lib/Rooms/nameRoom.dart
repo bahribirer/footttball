@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:footttball/Helper/loading.dart'; // loading.dart dosyasını dahil edin
 import 'package:footttball/Rooms/startPage.dart';
+import 'package:footttball/Helper/globals.dart' as globals;
 
 class NameRoom extends StatefulWidget {
   const NameRoom({Key? key}) : super(key: key);
@@ -83,6 +84,9 @@ class _NameRoomState extends State<NameRoom> {
       setState(() {
         _isLoading = true;
       });
+
+      // Assign the entered name to the global variable
+      globals.player1Name = _nameController.text; // Player 1's name
 
       Timer(Duration(seconds: 3), () {
         Navigator.of(context).pushReplacement(

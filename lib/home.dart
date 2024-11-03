@@ -9,6 +9,7 @@ import 'package:footttball/getInfo.dart';
 import 'package:footttball/main.dart';
 import 'package:footttball/Models/players.dart';
 import 'package:footttball/Rooms/startPage.dart';
+import 'package:footttball/Helper/globals.dart' as globals;
 
 class TikiTakaToeGame extends StatefulWidget {
   final TeamModel teammodel;
@@ -44,11 +45,20 @@ class _TikiTakaToeGameState extends State<TikiTakaToeGame>
 
   late AnimationController _animationController;
 
-  String player1Name = '';
-  String player2Name = '';
-
+  late String player1Name;
+  late String player2Name;
+  @override
   @override
   void initState() {
+    // Eğer widget.player1Name boşsa globals değerini kullanarak atama yapıyoruz
+    player1Name =
+        widget.player1Name.isEmpty ? globals.player1Name : widget.player1Name;
+    player2Name =
+        widget.player2Name.isEmpty ? globals.player2Name : widget.player2Name;
+
+    print("Player 1 Name: $player1Name");
+    print("Player 2 Name: $player2Name");
+
     super.initState();
     WebSocketManager().makeMove = makeMove;
     WebSocketManager().onPlayerLeave = handlePlayerLeave;
@@ -57,9 +67,6 @@ class _TikiTakaToeGameState extends State<TikiTakaToeGame>
     getLogoUrl();
     resetGame();
     startTimer();
-
-    player1Name = widget.player1Name;
-    player2Name = widget.player2Name;
 
     _animationController =
         AnimationController(vsync: this, duration: Duration(seconds: 1))
@@ -382,32 +389,58 @@ class _TikiTakaToeGameState extends State<TikiTakaToeGame>
             ),
           ),
           // Turn indicator with animation
+          // Turn indicator with player names and animation
           Positioned(
             left: screenSize.width * 0.05,
-            top: screenSize.height * 0.15,
+            top: screenSize.height *
+                0.22, // Oyun tahtasının üst kısmına daha yakın konumlandırıldı
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  "TURN",
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: screenSize.width * 0.05,
-                  ),
+                // Player 1 with icon
+                Row(
+                  children: [
+                    Icon(
+                      Icons.person,
+                      color: WebSocketManager().playerTurn
+                          ? Colors.greenAccent
+                          : Colors.white,
+                      size: screenSize.width * 0.07, // Küçük ikon boyutu
+                    ),
+                    SizedBox(width: screenSize.width * 0.02),
+                    Text(
+                      player1Name,
+                      style: TextStyle(
+                        color: WebSocketManager().playerTurn
+                            ? Colors.greenAccent
+                            : Colors.white,
+                        fontSize: screenSize.width * 0.04,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
                 ),
-                ScaleTransition(
-                  scale:
-                      Tween(begin: 1.0, end: 1.5).animate(_animationController),
-                  child: Icon(
-                    WebSocketManager().playerTurn ? Icons.person : Icons.group,
-                    color: WebSocketManager().playerTurn
-                        ? Colors.greenAccent
-                        : Colors.redAccent,
-                    size: screenSize.width * 0.1,
-                  ),
+                SizedBox(height: screenSize.height * 0.015),
+                // Player 2 with icon
+                Row(
+                  children: [
+                    SizedBox(width: screenSize.width * 0.02),
+                    Text(
+                      player2Name,
+                      style: TextStyle(
+                        color: !WebSocketManager().playerTurn
+                            ? Colors.redAccent
+                            : Colors.white,
+                        fontSize: screenSize.width * 0.04,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
           ),
+
           // Timer in the top-right corner
           Positioned(
             top: screenSize.height * 0.10,
