@@ -1,7 +1,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.bahribirer.footttball">
    <application
-         android:label="XOX Football"
+         android:label="TikiTakaToe: Online XOX"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity
