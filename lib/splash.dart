@@ -1,6 +1,6 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
-import 'package:footttball/Rooms/nameRoom.dart';
+import 'package:footttball/onboarding.dart';
 import 'package:footttball/Rooms/startPage.dart';
 import 'Rooms/joinRoom.dart';
 import 'package:lottie/lottie.dart';
@@ -32,11 +32,11 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   void initState() {
     super.initState();
-    Future.delayed(Duration(seconds: 6), () {
+      Future.delayed(Duration(seconds: 6), () {
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
-          builder: (context) => NameRoom(),
+          builder: (context) => OnboardingScreen(),
         ),
       );
     });
@@ -45,24 +45,38 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Center(
-        child: GestureDetector(
-          onTap: () {
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(
-                builder: (context) => NameRoom(),
+      body: Stack(
+        children: [
+          // Background Image
+          Container(
+            decoration: BoxDecoration(
+              image: DecorationImage(
+                image: AssetImage('images/arka2.PNG'), // Dark/Space theme
+                fit: BoxFit.cover,
               ),
-            );
-          },
-          child: Lottie.network(
-            'https://lottie.host/adf8f905-7303-48b1-a372-94e27b62080e/7kL5Cen7Px.json',
-            errorBuilder: (context, error, stackTrace) {
-              print('Lottie Error: $error');
-              return Text('Error loading animation');
-            },
+            ),
           ),
-        ),
+          // Lottie Animation
+          Center(
+            child: GestureDetector(
+              onTap: () {
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => OnboardingScreen(),
+                  ),
+                );
+              },
+              child: Lottie.network(
+                'https://lottie.host/adf8f905-7303-48b1-a372-94e27b62080e/7kL5Cen7Px.json',
+                errorBuilder: (context, error, stackTrace) {
+                  print('Lottie Error: $error');
+                  return Text('Error loading animation');
+                },
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

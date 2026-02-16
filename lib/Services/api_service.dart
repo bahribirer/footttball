@@ -1,10 +1,11 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:footttball/Models/teamModel.dart';
 import '../Models/players.dart';
 import 'package:http/http.dart' as http;
 
 class ApiService {
-  static final String baseUrl = "http://192.168.0.27:8000";
+  static final String baseUrl = "https://tikitakatoe.com";
 
   Future<bool> makePlayerGuess(
       String playerName, String nationality, String club) async {
@@ -61,17 +62,20 @@ class ApiService {
   }
 
   static Future<TeamModel?> getLeagueInfo(String gameMode) async {
-    final response =
-        await http.get(Uri.parse("$baseUrl/api/v1/final_grid/$gameMode"));
-
+    print("DEBUG: Fetching league info for: $gameMode");
     try {
+      final response = await http.get(
+        Uri.parse("$baseUrl/api/v1/final_grid/$gameMode"),
+      ).timeout(Duration(seconds: 15));
+
       if (response.statusCode == 200) {
         String decodedBody = utf8.decode(response.bodyBytes);
         Map<String, dynamic> jsonMap = json.decode(decodedBody);
         return TeamModel.fromJson(jsonMap);
       }
+      return TeamModel(nations: [""], clubs: [""]);
     } catch (e) {
-      print(e);
+      print("DEBUG: getLeagueInfo error: $e");
       return TeamModel(nations: [""], clubs: [""]);
     }
   }
@@ -105,8 +109,8 @@ class ApiService {
   static Future<String> getLogo(
       {required String gamemode, required String countryname}) async {
     try {
-      final response = await http
-          .get(Uri.parse('$baseUrl/api/v1/club_logo/$gamemode/$countryname'));
+      final response = await http.get(Uri.parse(
+          '$baseUrl/api/v1/club_logo/$gamemode/${Uri.encodeComponent(countryname)}'));
 
       if (response.statusCode == 200) {
         String decodedBody = utf8.decode(response.bodyBytes);
@@ -145,18 +149,19 @@ class ApiService {
     }
   }
 
-  Future<List<String>> getPlayerNames({required String query}) async {
+  Future<List<Map<String, dynamic>>> getPlayerNames({required String query}) async {
     try {
       final response = await http.get(
-        Uri.parse('$baseUrl/api/v1/player_names?query=$query'),
-      );
+        Uri.parse('$baseUrl/api/v1/get_player_names?name=$query'),
+      ).timeout(Duration(seconds: 15));
       print('Response: ${response.body}'); // Yanıtı konsola yazdır
 
       if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        final names = List<String>.from(data['player_names']);
-        print('Parsed Names: $names');
-        return names;
+        // Backend returns a flat list of player maps
+        final data = json.decode(utf8.decode(response.bodyBytes));
+        final List<dynamic> players = data is List ? data : data['player_names'];
+        // Convert to List<Map<String, dynamic>>
+        return players.map((e) => e as Map<String, dynamic>).toList();
       } else {
         print(
             'Failed to load player names with status: ${response.statusCode}');
@@ -164,6 +169,31 @@ class ApiService {
       }
     } catch (e) {
       print('Error fetching player names: $e');
+      rethrow;
+    }
+  }
+
+  static Future<Map<String, dynamic>> checkRoom(String roomId) async {
+    final url = '$baseUrl/check_room/$roomId';
+    print("DEBUG: checkRoom request to: $url");
+    try {
+      final response = await http.get(
+        Uri.parse(url),
+      ).timeout(Duration(seconds: 15));
+      
+      print("DEBUG: checkRoom response status: ${response.statusCode}");
+      print("DEBUG: checkRoom response body: ${response.body}");
+
+      if (response.statusCode == 200) {
+        return json.decode(response.body);
+      } else {
+        throw Exception('Server Error: ${response.statusCode}');
+      }
+    } catch (e) {
+      print("DEBUG: checkRoom ERROR for room $roomId: $e");
+      if (e is SocketException) {
+        print("CRITICAL: Network issue! Ensure device is on $baseUrl network and Firewall is off.");
+      }
       rethrow;
     }
   }

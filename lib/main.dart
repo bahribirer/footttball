@@ -6,7 +6,7 @@ import 'package:footttball/Rooms/joinRoom.dart';
 import 'package:footttball/Rooms/startPage.dart';
 import 'Services/api_service.dart';
 import 'Models/players.dart';
-
+import 'package:footttball/splash.dart';
 void main() {
   runApp(const TikiTakaToeApp(gridInfo: {}));
 }
@@ -18,7 +18,8 @@ class TikiTakaToeApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      home: StartPage(),
+      debugShowCheckedModeBanner: false,
+      home: SplashScreen(),
     );
   }
 }
