@@ -46,8 +46,9 @@ class _VsScreenState extends State<VsScreen> with TickerProviderStateMixin {
         duration: const Duration(milliseconds: 700), vsync: this);
     _flash = AnimationController(
         duration: const Duration(milliseconds: 550), vsync: this);
-    _rays = AnimationController(duration: const Duration(seconds: 12), vsync: this)
-      ..repeat();
+    _rays =
+        AnimationController(duration: const Duration(seconds: 12), vsync: this)
+          ..repeat();
 
     _play();
   }
@@ -77,8 +78,10 @@ class _VsScreenState extends State<VsScreen> with TickerProviderStateMixin {
             nations: (payload['nations'] as List?)?.cast<String>() ?? const [],
             clubs: (payload['clubs'] as List?)?.cast<String>() ?? const [],
           ),
-          leagueId: payload['league_id'] as String? ?? Session.instance.leagueId,
-          roundCount: payload['round_count'] as int? ?? Session.instance.roundCount,
+          leagueId:
+              payload['league_id'] as String? ?? Session.instance.leagueId,
+          roundCount:
+              payload['round_count'] as int? ?? Session.instance.roundCount,
         ),
       GameMode.playerGuess => const PlayerGuessScreen(),
       GameMode.lastLetter => const LastLetterScreen(),
@@ -110,91 +113,99 @@ class _VsScreenState extends State<VsScreen> with TickerProviderStateMixin {
     final socket = GameSocket.instance;
     final accent = widget.mode.colors.last;
 
-    return Scaffold(
-      body: Stack(
-        alignment: Alignment.center,
-        children: [
-          PlainBackground(accent: widget.mode.colors.first),
+    // Oyun zaten başladı; buradan geri dönmek bekleme odasına düşürüp
+    // bağlantıyı bozardı. Animasyon bitince oyun ekranına geçilir.
+    return PopScope(
+      canPop: false,
+      child: Scaffold(
+        body: Stack(
+          alignment: Alignment.center,
+          children: [
+            PlainBackground(accent: widget.mode.colors.first),
 
-          // Merkezden yayılan, yavaşça dönen ışık huzmeleri
-          AnimatedBuilder(
-            animation: _rays,
-            builder: (context, _) => CustomPaint(
-              size: Size.infinite,
-              painter: _RayPainter(
-                progress: _rays.value,
-                color: accent.withOpacity(0.10),
+            // Merkezden yayılan, yavaşça dönen ışık huzmeleri
+            AnimatedBuilder(
+              animation: _rays,
+              builder: (context, _) => CustomPaint(
+                size: Size.infinite,
+                painter: _RayPainter(
+                  progress: _rays.value,
+                  color: accent.withOpacity(0.10),
+                ),
               ),
             ),
-          ),
 
-          // VS belirdiğinde tek seferlik parlama
-          AnimatedBuilder(
-            animation: _flash,
-            builder: (context, _) {
-              final t = Curves.easeOutCubic.transform(_flash.value);
-              if (t == 0) return const SizedBox.shrink();
-              return IgnorePointer(
-                child: Opacity(
-                  opacity: (1 - t) * 0.5,
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      gradient: RadialGradient(
-                        radius: 0.35 + t * 1.1,
-                        colors: [accent.withOpacity(0.65), Colors.transparent],
+            // VS belirdiğinde tek seferlik parlama
+            AnimatedBuilder(
+              animation: _flash,
+              builder: (context, _) {
+                final t = Curves.easeOutCubic.transform(_flash.value);
+                if (t == 0) return const SizedBox.shrink();
+                return IgnorePointer(
+                  child: Opacity(
+                    opacity: (1 - t) * 0.5,
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        gradient: RadialGradient(
+                          radius: 0.35 + t * 1.1,
+                          colors: [
+                            accent.withOpacity(0.65),
+                            Colors.transparent
+                          ],
+                        ),
                       ),
-                    ),
-                    child: const SizedBox.expand(),
-                  ),
-                ),
-              );
-            },
-          ),
-
-          SafeArea(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Spacer(),
-                _ModeBanner(mode: widget.mode, controller: _badge),
-                const SizedBox(height: 34),
-                _PlayerSide(
-                  name: socket.myName,
-                  subtitle: 'SEN',
-                  accent: Colors.cyanAccent,
-                  controller: _left,
-                  fromLeft: true,
-                ),
-                const SizedBox(height: 6),
-                _VsBadge(controller: _badge, accent: accent),
-                const SizedBox(height: 6),
-                _PlayerSide(
-                  name: socket.opponentName,
-                  subtitle: 'RAKİP',
-                  accent: accent,
-                  controller: _right,
-                  fromLeft: false,
-                ),
-                const Spacer(),
-                FadeTransition(
-                  opacity: _badge,
-                  child: Padding(
-                    padding: const EdgeInsets.only(bottom: 34),
-                    child: Text(
-                      'MAÇ BAŞLIYOR',
-                      style: TextStyle(
-                        color: Colors.white.withOpacity(0.5),
-                        fontSize: 12.5,
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: 5,
-                      ),
+                      child: const SizedBox.expand(),
                     ),
                   ),
-                ),
-              ],
+                );
+              },
             ),
-          ),
-        ],
+
+            SafeArea(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Spacer(),
+                  _ModeBanner(mode: widget.mode, controller: _badge),
+                  const SizedBox(height: 34),
+                  _PlayerSide(
+                    name: socket.myName,
+                    subtitle: 'SEN',
+                    accent: Colors.cyanAccent,
+                    controller: _left,
+                    fromLeft: true,
+                  ),
+                  const SizedBox(height: 6),
+                  _VsBadge(controller: _badge, accent: accent),
+                  const SizedBox(height: 6),
+                  _PlayerSide(
+                    name: socket.opponentName,
+                    subtitle: 'RAKİP',
+                    accent: accent,
+                    controller: _right,
+                    fromLeft: false,
+                  ),
+                  const Spacer(),
+                  FadeTransition(
+                    opacity: _badge,
+                    child: Padding(
+                      padding: const EdgeInsets.only(bottom: 34),
+                      child: Text(
+                        'MAÇ BAŞLIYOR',
+                        style: TextStyle(
+                          color: Colors.white.withOpacity(0.5),
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 5,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -217,7 +228,8 @@ class _ModeBanner extends StatelessWidget {
           gradient: LinearGradient(colors: mode.colors),
           borderRadius: BorderRadius.circular(24),
           boxShadow: [
-            BoxShadow(color: mode.colors.last.withOpacity(0.45), blurRadius: 20),
+            BoxShadow(
+                color: mode.colors.last.withOpacity(0.45), blurRadius: 20),
           ],
         ),
         child: Row(
@@ -276,7 +288,8 @@ class _PlayerSide extends StatelessWidget {
       child: Center(
         child: Text(
           name.isNotEmpty ? name[0].toUpperCase() : '?',
-          style: TextStyle(color: accent, fontSize: 26, fontWeight: FontWeight.w900),
+          style: TextStyle(
+              color: accent, fontSize: 26, fontWeight: FontWeight.w900),
         ),
       ),
     );
@@ -315,7 +328,8 @@ class _PlayerSide extends StatelessWidget {
       child: Container(
         constraints: const BoxConstraints(maxWidth: 330),
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-        margin: EdgeInsets.only(right: fromLeft ? 40 : 0, left: fromLeft ? 0 : 40),
+        margin:
+            EdgeInsets.only(right: fromLeft ? 40 : 0, left: fromLeft ? 0 : 40),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.horizontal(
             left: Radius.circular(fromLeft ? 0 : 44),
@@ -391,7 +405,10 @@ class _VsBadge extends StatelessWidget {
                     fontSize: 42,
                     color: Colors.white,
                     shadows: [
-                      Shadow(color: Colors.black45, offset: Offset(2, 3), blurRadius: 6),
+                      Shadow(
+                          color: Colors.black45,
+                          offset: Offset(2, 3),
+                          blurRadius: 6),
                     ],
                   ),
                 ),

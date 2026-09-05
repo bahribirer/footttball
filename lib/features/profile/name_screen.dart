@@ -134,7 +134,8 @@ class _NameRoomState extends State<NameRoom> with TickerProviderStateMixin {
   Widget _fade(int order, Widget child) {
     final animation = CurvedAnimation(
       parent: _intro,
-      curve: Interval((order * 0.1).clamp(0, 0.6), 1, curve: Curves.easeOutCubic),
+      curve:
+          Interval((order * 0.1).clamp(0, 0.6), 1, curve: Curves.easeOutCubic),
     );
     return AnimatedBuilder(
       animation: animation,
@@ -176,7 +177,8 @@ class _NameRoomState extends State<NameRoom> with TickerProviderStateMixin {
           ),
           border: Border.all(color: Colors.white.withOpacity(0.2), width: 2),
         ),
-        child: const Icon(Icons.sports_soccer_rounded, color: Colors.white, size: 52),
+        child: const Icon(Icons.sports_soccer_rounded,
+            color: Colors.white, size: 52),
       ),
     );
   }
@@ -231,7 +233,8 @@ class _NameRoomState extends State<NameRoom> with TickerProviderStateMixin {
               letterSpacing: 2,
             ),
             border: InputBorder.none,
-            contentPadding: const EdgeInsets.symmetric(vertical: 20, horizontal: 18),
+            contentPadding:
+                const EdgeInsets.symmetric(vertical: 20, horizontal: 18),
             prefixIcon: Icon(Icons.person_rounded, color: accent, size: 24),
           ),
         ),
@@ -247,7 +250,8 @@ class _NameRoomState extends State<NameRoom> with TickerProviderStateMixin {
 
     return Text(
       text,
-      style: TextStyle(color: color, fontSize: 12.5, fontWeight: FontWeight.w600),
+      style:
+          TextStyle(color: color, fontSize: 12.5, fontWeight: FontWeight.w600),
     );
   }
 }

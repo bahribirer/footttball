@@ -61,7 +61,9 @@ void main() {
     await waitFor(t, find.text('ODA KODU'));
 
     final code = find
-        .descendant(of: find.byType(CreateRoomScreen), matching: find.byType(Text))
+        .descendant(
+            of: find.byKey(const ValueKey('room_code')),
+            matching: find.byType(Text))
         .evaluate()
         .map((e) => (e.widget as Text).data ?? '')
         .where((s) => s.length == 1 && int.tryParse(s) != null)
@@ -69,9 +71,12 @@ void main() {
 
     await t.tap(find.byKey(const ValueKey('league_Premier League')));
     await hold(t, const Duration(milliseconds: 400));
-    await t.tap(find.byKey(const ValueKey('btn_play')));
     await waitFor(t, find.text('SERİ UZUNLUĞU'));
+    await t.ensureVisible(find.byKey(const ValueKey('rounds_1')));
     await t.tap(find.byKey(const ValueKey('rounds_1')));
+    await hold(t, const Duration(milliseconds: 300));
+    await t.ensureVisible(find.byKey(const ValueKey('btn_play')));
+    await t.tap(find.byKey(const ValueKey('btn_play')));
     await waitFor(t, find.byType(WaitingRoomScreen));
 
     final rival = WebSocketChannel.connect(Uri.parse(
@@ -85,7 +90,8 @@ void main() {
   }
 
   /// Rakip adına hamle gönderir.
-  void rivalMove(WebSocketChannel rival, int index, {String name = 'Rakip Oyuncu'}) {
+  void rivalMove(WebSocketChannel rival, int index,
+      {String name = 'Rakip Oyuncu'}) {
     final symbol = GameSocket.instance.mySlot == 0 ? 'O' : 'X';
     rival.sink.add(jsonEncode({
       'type': 'relay',
@@ -100,14 +106,16 @@ void main() {
     expect(socket.playerTurn, isTrue, reason: 'kurucu ilk oynar');
 
     // Hamleyi aktarım kanalına yaz: sunucu geri yolladığında tahtaya işlenmeli.
-    socket.relay({'index': 5, 'symbol': socket.mySymbol, 'playerName': 'Harry Kane'});
+    socket.relay(
+        {'index': 5, 'symbol': socket.mySymbol, 'playerName': 'Harry Kane'});
     await hold(t, const Duration(seconds: 3));
 
     expect(find.text(socket.mySymbol), findsWidgets,
         reason: 'kendi hamlesi tahtada görünmeli');
     expect(find.text('Harry Kane'), findsOneWidget,
         reason: 'kutuda futbolcunun adı yazmalı');
-    expect(socket.playerTurn, isFalse, reason: 'hamleden sonra sıra rakibe geçmeli');
+    expect(socket.playerTurn, isFalse,
+        reason: 'hamleden sonra sıra rakibe geçmeli');
 
     await rival.sink.close();
     await socket.disconnect();
@@ -119,13 +127,15 @@ void main() {
     final rivalSymbol = socket.mySlot == 0 ? 'O' : 'X';
 
     // Kendi hamlem
-    socket.relay({'index': 5, 'symbol': socket.mySymbol, 'playerName': 'Harry Kane'});
+    socket.relay(
+        {'index': 5, 'symbol': socket.mySymbol, 'playerName': 'Harry Kane'});
     await hold(t, const Duration(seconds: 2));
 
     // Rakip başka kutuya oynar
     rivalMove(rival, 6, name: 'Bukayo Saka');
     await hold(t, const Duration(seconds: 2));
-    expect(find.text(rivalSymbol), findsWidgets, reason: 'rakip hamlesi tahtada olmalı');
+    expect(find.text(rivalSymbol), findsWidgets,
+        reason: 'rakip hamlesi tahtada olmalı');
     expect(socket.playerTurn, isTrue, reason: 'sıra bana dönmeli');
 
     // Rakip benim kutumu çalar

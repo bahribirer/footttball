@@ -58,6 +58,24 @@ enum GameMode {
   /// Lig seçimi yalnızca Tiki Taka Toe için anlamlı.
   bool get needsLeague => this == GameMode.tikiTakaToe;
 
+  /// Kurucunun tur sayısı belirlediği modlar.
+  bool get needsRoundCount =>
+      this == GameMode.tikiTakaToe || this == GameMode.playerGuess;
+
+  /// Satranç saatiyle oynanan modlar: oyuncu başına süre seçilir.
+  bool get isClockBased =>
+      this == GameMode.lastLetter || this == GameMode.categoryRace;
+
+  /// Kurucunun kategoriyi seçtiği mod.
+  bool get needsCategory => this == GameMode.categoryRace;
+
+  /// Tur seçenekleri ve her birinin adı — oda kurma ekranında gösterilir.
+  List<int> get roundOptions =>
+      this == GameMode.tikiTakaToe ? const [1, 3, 5] : const [3, 5, 7];
+
+  /// Saat seçenekleri (saniye).
+  List<int> get clockOptions => const [30, 50, 80];
+
   /// Oyun mantığı sunucuda yürüyen modlar.
   bool get isServerDriven => this != GameMode.tikiTakaToe;
 

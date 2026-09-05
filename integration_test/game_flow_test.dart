@@ -73,15 +73,19 @@ void main() {
     await pumpFor(tester, const Duration(milliseconds: 500));
 
     await tester.tap(find.byKey(ValueKey('play_${mode.id}')));
-    await pumpUntil(tester, find.byType(StartPage), label: 'oda kur/katıl ekranı');
+    await pumpUntil(tester, find.byType(StartPage),
+        label: 'oda kur/katıl ekranı');
 
     await tester.tap(find.byKey(const ValueKey('btn_create_room')));
-    await pumpUntil(tester, find.byType(CreateRoomScreen), label: 'oda kurma ekranı');
+    await pumpUntil(tester, find.byType(CreateRoomScreen),
+        label: 'oda kurma ekranı');
     await pumpUntil(tester, find.text('ODA KODU'), label: 'oda kodu');
 
     // Kod, her hanesi ayrı kutuda gösterildiği için birleştirilir.
     final digits = find
-        .descendant(of: find.byType(CreateRoomScreen), matching: find.byType(Text))
+        .descendant(
+            of: find.byKey(const ValueKey('room_code')),
+            matching: find.byType(Text))
         .evaluate()
         .map((element) => (element.widget as Text).data ?? '')
         .where((text) => text.length == 1 && int.tryParse(text) != null)
@@ -109,7 +113,8 @@ void main() {
       ..roundCount = 1;
   });
 
-  testWidgets('Açılış akışı: onboarding, isim girişi ve mod menüsü', (tester) async {
+  testWidgets('Açılış akışı: onboarding, isim girişi ve mod menüsü',
+      (tester) async {
     await tester.pumpWidget(const TikiTakaToeApp());
 
     await pumpUntil(tester, find.byType(OnboardingScreen),
@@ -136,8 +141,10 @@ void main() {
     await openMenu(tester);
     final code = await createRoom(tester, GameMode.lastLetter);
 
+    await tester.ensureVisible(find.byKey(const ValueKey('btn_play')));
     await tester.tap(find.byKey(const ValueKey('btn_play')));
-    await pumpUntil(tester, find.byType(WaitingRoomScreen), label: 'bekleme odası');
+    await pumpUntil(tester, find.byType(WaitingRoomScreen),
+        label: 'bekleme odası');
     expect(
       find.descendant(
         of: find.byType(WaitingRoomScreen),
@@ -179,7 +186,8 @@ void main() {
     expect(rivalMessages.any((m) => m['type'] == 'start'), isTrue,
         reason: 'Rakip start mesajını almalı');
     expect(
-      rivalMessages.any((m) => m['event'] == 'accepted' || m['event'] == 'rejected'),
+      rivalMessages
+          .any((m) => m['event'] == 'accepted' || m['event'] == 'rejected'),
       isTrue,
       reason: 'Gönderilen cevap sunucuda değerlendirilmeli',
     );
@@ -187,12 +195,36 @@ void main() {
     await rival.sink.close();
   });
 
-  testWidgets('Kategori Yarışı: kategori sunucudan gelir', (tester) async {
+  testWidgets('Kategori Yarışı: kurucunun seçtiği kategoriyle başlar',
+      (tester) async {
     await openMenu(tester);
     final code = await createRoom(tester, GameMode.categoryRace);
 
+    // Kurucuya beş kategori sunulur; seçimi sunucuya işlenmeli.
+    await pumpUntil(tester, find.text('KATEGORİ SEÇ'),
+        timeout: const Duration(seconds: 20), label: 'kategori seçenekleri');
+
+    final options = find.byWidgetPredicate((widget) =>
+        widget.key is ValueKey<String> &&
+        (widget.key as ValueKey<String>).value.startsWith('category_') &&
+        (widget.key as ValueKey<String>).value != 'category_surprise');
+    expect(options, findsNWidgets(5),
+        reason: 'Kurucuya beş kategori seçeneği gösterilmeli');
+
+    // İlk seçeneğin etiketi, oyun ekranında da görünmesi gereken kategoridir.
+    final chosenLabel = tester
+        .widgetList<Text>(find.descendant(of: options.first, matching: find.byType(Text)))
+        .map((t) => t.data ?? '')
+        .firstWhere((t) => t.length > 3, orElse: () => '');
+
+    await tester.ensureVisible(options.first);
+    await tester.tap(options.first);
+    await pumpFor(tester, const Duration(milliseconds: 400));
+
+    await tester.ensureVisible(find.byKey(const ValueKey('btn_play')));
     await tester.tap(find.byKey(const ValueKey('btn_play')));
-    await pumpUntil(tester, find.byType(WaitingRoomScreen), label: 'bekleme odası');
+    await pumpUntil(tester, find.byType(WaitingRoomScreen),
+        label: 'bekleme odası');
 
     final rival = await joinAsRival(code, GameMode.categoryRace);
     await pumpUntil(tester, find.byType(CategoryRaceScreen),
@@ -202,6 +234,11 @@ void main() {
     expect(find.text('Kategori yükleniyor...'), findsNothing,
         reason: 'Kategori etiketi dolu gelmeli');
 
+    final state = GameSocket.instance.lastState;
+    final served = (state['category'] as Map?)?['label'] as String?;
+    expect(served, chosenLabel,
+        reason: 'Oyun, kurucunun seçtiği kategoriyle başlamalı');
+
     await rival.sink.close();
   });
 
@@ -209,8 +246,10 @@ void main() {
     await openMenu(tester);
     final code = await createRoom(tester, GameMode.playerGuess);
 
+    await tester.ensureVisible(find.byKey(const ValueKey('btn_play')));
     await tester.tap(find.byKey(const ValueKey('btn_play')));
-    await pumpUntil(tester, find.byType(WaitingRoomScreen), label: 'bekleme odası');
+    await pumpUntil(tester, find.byType(WaitingRoomScreen),
+        label: 'bekleme odası');
 
     final rival = await joinAsRival(code, GameMode.playerGuess);
     await pumpUntil(tester, find.byType(PlayerGuessScreen),
@@ -240,17 +279,24 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('league_Premier League')));
     await pumpFor(tester, const Duration(milliseconds: 400));
 
-    await tester.tap(find.byKey(const ValueKey('btn_play')));
+    // Ayarlar artık ayrı bir diyalogda değil, oda kurma ekranında seçilir.
     await pumpUntil(tester, find.text('SERİ UZUNLUĞU'), label: 'seri seçimi');
-
+    await tester.ensureVisible(find.byKey(const ValueKey('rounds_3')));
     await tester.tap(find.byKey(const ValueKey('rounds_3')));
-    await pumpUntil(tester, find.byType(WaitingRoomScreen), label: 'bekleme odası');
+    await pumpFor(tester, const Duration(milliseconds: 300));
+
+    await tester.ensureVisible(find.byKey(const ValueKey('btn_play')));
+    await tester.ensureVisible(find.byKey(const ValueKey('btn_play')));
+    await tester.tap(find.byKey(const ValueKey('btn_play')));
+    await pumpUntil(tester, find.byType(WaitingRoomScreen),
+        label: 'bekleme odası');
 
     final rival = await joinAsRival(code, GameMode.tikiTakaToe);
     await pumpUntil(tester, find.byType(TikiTakaToeScreen),
         timeout: const Duration(seconds: 30), label: 'oyun tahtası');
 
-    expect(find.byType(GridView), findsOneWidget, reason: '4x4 tahta çizilmeli');
+    expect(find.byType(GridView), findsOneWidget,
+        reason: '4x4 tahta çizilmeli');
 
     // Kurucunun lig ve tur seçimi sunucudaki odaya işlenmiş olmalı.
     // (Oda kodu seçimden önce rezerve edildiği için bu bir kez atlanmıştı.)

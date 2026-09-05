@@ -66,6 +66,19 @@ for i in $(seq 1 30); do
   sleep 2
 done
 
+# --- Güncel kadrolar --------------------------------------------------
+# Oyuncu veritabanı sezon anlık görüntülerinden oluşuyor ve son transfer
+# dönemini kapsamıyor. Kadro katmanı Wikipedia'dan haftalık tazelenir;
+# container veritabanını salt okunur bağladığı için betik host'ta çalışır.
+CRON_LINE="0 4 * * 1 cd $(pwd) && /usr/bin/python3 backend/scripts/sync_current_squads.py >> /var/log/tikitakatoe-squads.log 2>&1"
+if ! crontab -l 2>/dev/null | grep -qF "sync_current_squads.py"; then
+  echo "▶ Haftalık kadro güncellemesi zamanlanıyor"
+  (crontab -l 2>/dev/null; echo "$CRON_LINE") | crontab -
+  echo "✓ Pazartesi 04:00 için cron kaydı eklendi"
+else
+  echo "✓ Kadro güncelleme cron kaydı zaten var"
+fi
+
 echo "▶ Dışarıdan erişim kontrolü"
 curl -fsS https://tikitakatoe.com/ping > /dev/null && echo "✓ https://tikitakatoe.com/ping yanıt veriyor"
 

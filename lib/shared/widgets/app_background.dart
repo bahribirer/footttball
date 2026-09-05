@@ -243,7 +243,8 @@ class GlassBackButton extends StatelessWidget {
           ],
         ),
         child: const Center(
-          child: Icon(Icons.arrow_back_ios_new_rounded, size: 20, color: Colors.white),
+          child: Icon(Icons.arrow_back_ios_new_rounded,
+              size: 20, color: Colors.white),
         ),
       ),
     );
@@ -282,7 +283,8 @@ class PrimaryButton extends StatelessWidget {
               end: Alignment.bottomRight,
             ),
             borderRadius: BorderRadius.circular(28),
-            border: Border.all(color: Colors.white.withOpacity(0.2), width: 1.5),
+            border:
+                Border.all(color: Colors.white.withOpacity(0.2), width: 1.5),
             boxShadow: [
               BoxShadow(
                 color: colors.first.withOpacity(0.5),
@@ -291,24 +293,29 @@ class PrimaryButton extends StatelessWidget {
               ),
             ],
           ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              if (icon != null) ...[
-                Icon(icon, color: Colors.white, size: 22),
-                const SizedBox(width: 10),
-              ],
-              Text(
-                label,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 20,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: 2,
+          // Dar ekranlarda uzun etiketler ("OYUNU BAŞLAT") butonu taşırıyordu;
+          // içerik sığmadığında orantılı olarak küçülür.
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (icon != null) ...[
+                  Icon(icon, color: Colors.white, size: 22),
+                  const SizedBox(width: 10),
+                ],
+                Text(
+                  label,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 20,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 2,
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),

@@ -167,7 +167,8 @@ class _PlayerSuggestionFieldState extends State<PlayerSuggestionField> {
     final country = player['country'] as String?;
     final clubs = ((player['clubs'] as List?) ?? const []).cast<String>();
     // Oyun eski takımları da kabul ettiği için kulüp geçmişi gösterilir.
-    final clubLine = clubs.isEmpty ? (player['club'] as String? ?? '') : clubs.join(' • ');
+    final clubLine =
+        clubs.isEmpty ? (player['club'] as String? ?? '') : clubs.join(' • ');
 
     return InkWell(
       onTap: () => _submit(name),
@@ -266,7 +267,8 @@ class _PlayerSuggestionFieldState extends State<PlayerSuggestionField> {
                 hintText: widget.enabled ? widget.hint : 'Rakibin sırası...',
                 hintStyle: const TextStyle(color: Colors.white30, fontSize: 14),
                 filled: true,
-                fillColor: Colors.white.withOpacity(widget.enabled ? 0.09 : 0.04),
+                fillColor:
+                    Colors.white.withOpacity(widget.enabled ? 0.09 : 0.04),
                 contentPadding:
                     const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                 border: OutlineInputBorder(
@@ -289,7 +291,8 @@ class _PlayerSuggestionFieldState extends State<PlayerSuggestionField> {
           ),
           const SizedBox(width: 10),
           GestureDetector(
-            onTap: widget.enabled ? () => _submit(widget.controller.text) : null,
+            onTap:
+                widget.enabled ? () => _submit(widget.controller.text) : null,
             child: Container(
               width: 52,
               height: 52,

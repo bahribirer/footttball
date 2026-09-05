@@ -50,12 +50,15 @@ void main() {
     await waitFor(t, find.text('ODA KODU'));
 
     final code = find
-        .descendant(of: find.byType(CreateRoomScreen), matching: find.byType(Text))
+        .descendant(
+            of: find.byKey(const ValueKey('room_code')),
+            matching: find.byType(Text))
         .evaluate()
         .map((e) => (e.widget as Text).data ?? '')
         .where((s) => s.length == 1 && int.tryParse(s) != null)
         .join();
 
+    await t.ensureVisible(find.byKey(const ValueKey('btn_play')));
     await t.tap(find.byKey(const ValueKey('btn_play')));
     await waitFor(t, find.byType(WaitingRoomScreen));
 
@@ -75,7 +78,7 @@ void main() {
 
     expect(find.textContaining('Haaland'), findsWidgets,
         reason: 'öneri listesinde eşleşen futbolcu görünmeli');
-    await hold(t, const Duration(seconds: 6));  // ekran görüntüsü için
+    await hold(t, const Duration(seconds: 6)); // ekran görüntüsü için
 
     await rival.sink.close();
     await GameSocket.instance.disconnect();

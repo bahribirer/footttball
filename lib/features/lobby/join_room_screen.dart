@@ -142,7 +142,8 @@ class _JoinRoomScreenState extends State<JoinRoomScreen>
                   padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
                   child: Row(
                     children: [
-                      GlassBackButton(onTap: () => Navigator.of(context).maybePop()),
+                      GlassBackButton(
+                          onTap: () => Navigator.of(context).maybePop()),
                       const Spacer(),
                       _ModeChip(mode: _mode),
                     ],
@@ -273,63 +274,71 @@ class _JoinRoomScreenState extends State<JoinRoomScreen>
       builder: (context, child) {
         // Hatalı kodda kutular kısa süre titrer.
         final t = _shake.value;
-        final offset = t == 0 ? 0.0 : 10 * (1 - t) * ((t * 8).floor().isEven ? 1 : -1);
+        final offset =
+            t == 0 ? 0.0 : 10 * (1 - t) * ((t * 8).floor().isEven ? 1 : -1);
         return Transform.translate(offset: Offset(offset, 0), child: child);
       },
       child: GestureDetector(
         onTap: () => _focus.requestFocus(),
         behavior: HitTestBehavior.opaque,
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: List.generate(_codeLength, (index) {
-            final filled = index < _code.length;
-            final active = index == _code.length && _focus.hasFocus;
-            final digit = filled ? _code[index] : '';
+        // Dört kutu dar ekranlara sığmıyordu; birlikte küçülürler.
+        child: FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: List.generate(_codeLength, (index) {
+              final filled = index < _code.length;
+              final active = index == _code.length && _focus.hasFocus;
+              final digit = filled ? _code[index] : '';
 
-            return AnimatedContainer(
-              duration: const Duration(milliseconds: 180),
-              margin: const EdgeInsets.symmetric(horizontal: 6),
-              width: 62,
-              height: 78,
-              decoration: BoxDecoration(
-                color: Colors.black.withOpacity(filled ? 0.5 : 0.3),
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(
-                  color: filled
-                      ? accent
-                      : (active ? accent.withOpacity(0.7) : Colors.white12),
-                  width: filled || active ? 2 : 1.3,
+              return AnimatedContainer(
+                duration: const Duration(milliseconds: 180),
+                margin: const EdgeInsets.symmetric(horizontal: 6),
+                width: 62,
+                height: 78,
+                decoration: BoxDecoration(
+                  color: Colors.black.withOpacity(filled ? 0.5 : 0.3),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: filled
+                        ? accent
+                        : (active ? accent.withOpacity(0.7) : Colors.white12),
+                    width: filled || active ? 2 : 1.3,
+                  ),
+                  boxShadow: filled
+                      ? [
+                          BoxShadow(
+                              color: accent.withOpacity(0.3), blurRadius: 14)
+                        ]
+                      : null,
                 ),
-                boxShadow: filled
-                    ? [BoxShadow(color: accent.withOpacity(0.3), blurRadius: 14)]
-                    : null,
-              ),
-              child: Center(
-                child: filled
-                    ? Text(
-                        digit,
-                        style: TextStyle(
-                          fontSize: 34,
-                          fontWeight: FontWeight.w900,
-                          color: Colors.white,
-                          shadows: [Shadow(color: accent, blurRadius: 12)],
-                        ),
-                      )
-                    : AnimatedOpacity(
-                        opacity: active ? 1 : 0.25,
-                        duration: const Duration(milliseconds: 200),
-                        child: Container(
-                          width: 18,
-                          height: 3,
-                          decoration: BoxDecoration(
-                            color: active ? accent : Colors.white24,
-                            borderRadius: BorderRadius.circular(2),
+                child: Center(
+                  child: filled
+                      ? Text(
+                          digit,
+                          style: TextStyle(
+                            fontSize: 34,
+                            fontWeight: FontWeight.w900,
+                            color: Colors.white,
+                            shadows: [Shadow(color: accent, blurRadius: 12)],
+                          ),
+                        )
+                      : AnimatedOpacity(
+                          opacity: active ? 1 : 0.25,
+                          duration: const Duration(milliseconds: 200),
+                          child: Container(
+                            width: 18,
+                            height: 3,
+                            decoration: BoxDecoration(
+                              color: active ? accent : Colors.white24,
+                              borderRadius: BorderRadius.circular(2),
+                            ),
                           ),
                         ),
-                      ),
-              ),
-            );
-          }),
+                ),
+              );
+            }),
+          ),
         ),
       ),
     );
@@ -341,7 +350,8 @@ class _JoinRoomScreenState extends State<JoinRoomScreen>
       children: [
         TextButton.icon(
           onPressed: _paste,
-          icon: const Icon(Icons.content_paste_rounded, size: 16, color: Colors.white54),
+          icon: const Icon(Icons.content_paste_rounded,
+              size: 16, color: Colors.white54),
           label: const Text(
             'Panodan yapıştır',
             style: TextStyle(color: Colors.white54, fontSize: 13),
@@ -353,7 +363,8 @@ class _JoinRoomScreenState extends State<JoinRoomScreen>
               _controller.clear();
               _focus.requestFocus();
             },
-            icon: const Icon(Icons.backspace_outlined, size: 16, color: Colors.white54),
+            icon: const Icon(Icons.backspace_outlined,
+                size: 16, color: Colors.white54),
             label: const Text(
               'Temizle',
               style: TextStyle(color: Colors.white54, fontSize: 13),

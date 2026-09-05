@@ -20,6 +20,12 @@ class Session {
   /// Seri uzunluğu / tur sayısı.
   int roundCount = 1;
 
+  /// Saat tabanlı modlarda oyuncu başına süre (saniye).
+  int clockSeconds = 50;
+
+  /// Kategori Yarışı'nda kurucunun seçtiği kategori; boşsa sunucu rastgele seçer.
+  String? categoryId;
+
   bool get hasName => playerName.trim().isNotEmpty;
 
   String get displayName => hasName ? playerName.trim() : 'Oyuncu';

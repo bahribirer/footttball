@@ -85,7 +85,9 @@ class _PlayerGuessScreenState extends State<PlayerGuessScreen> {
     switch (event.event) {
       case 'correct_answer':
         _showFlash(
-          slot == _socket.mySlot ? 'Doğru! $answer 🎉' : 'Rakibin bildi: $answer',
+          slot == _socket.mySlot
+              ? 'Doğru! $answer 🎉'
+              : 'Rakibin bildi: $answer',
           slot == _socket.mySlot ? Colors.greenAccent : Colors.orangeAccent,
         );
         _answerController.clear();
@@ -175,7 +177,8 @@ class _PlayerGuessScreenState extends State<PlayerGuessScreen> {
                   _buildHeader(),
                   _buildScoreboard(),
                   if (_flash != null) _buildFlash(),
-                  Expanded(child: SingleChildScrollView(child: _buildPhaseBody())),
+                  Expanded(
+                      child: SingleChildScrollView(child: _buildPhaseBody())),
                 ],
               ),
             ),
@@ -256,7 +259,8 @@ class _PlayerGuessScreenState extends State<PlayerGuessScreen> {
       child: Text(
         _flash!,
         textAlign: TextAlign.center,
-        style: TextStyle(color: _flashColor, fontSize: 13, fontWeight: FontWeight.bold),
+        style: TextStyle(
+            color: _flashColor, fontSize: 13, fontWeight: FontWeight.bold),
       ),
     );
   }
@@ -272,7 +276,8 @@ class _PlayerGuessScreenState extends State<PlayerGuessScreen> {
       'revealing' => _CountdownView(
           seconds: _state.countdown,
           title: 'BAŞLIYOR',
-          subtitle: '${CountryCatalog.turkish(_state.selectedNation)} × ${_state.selectedClub ?? '?'}',
+          subtitle:
+              '${CountryCatalog.turkish(_state.selectedNation)} × ${_state.selectedClub ?? '?'}',
         ),
       'answering' => _buildAnswering(),
       'round_over' => _buildRoundOver(),
@@ -288,9 +293,8 @@ class _PlayerGuessScreenState extends State<PlayerGuessScreen> {
   Widget _buildPicking() {
     final myTurn = _iPickNation || _iPickClub;
     final options = _iPickNation ? _state.nations : _state.clubs;
-    final alreadyPicked =
-        (_iPickNation && _state.selectedNation != null) ||
-            (_iPickClub && _state.selectedClub != null);
+    final alreadyPicked = (_iPickNation && _state.selectedNation != null) ||
+        (_iPickClub && _state.selectedClub != null);
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
@@ -337,9 +341,10 @@ class _PlayerGuessScreenState extends State<PlayerGuessScreen> {
                   label: option,
                   isNation: _iPickNation,
                   disabled: alreadyPicked,
-                  selected: option == (_iPickNation
-                      ? _state.selectedNation
-                      : _state.selectedClub),
+                  selected: option ==
+                      (_iPickNation
+                          ? _state.selectedNation
+                          : _state.selectedClub),
                   onTap: () => _pick(option),
                 ),
               ),
@@ -556,7 +561,8 @@ class _CountdownView extends StatelessWidget {
             tween: Tween(begin: 1.35, end: 1),
             duration: const Duration(milliseconds: 400),
             curve: Curves.easeOutBack,
-            builder: (context, scale, child) => Transform.scale(scale: scale, child: child),
+            builder: (context, scale, child) =>
+                Transform.scale(scale: scale, child: child),
             child: Container(
               width: 120,
               height: 120,
@@ -625,7 +631,9 @@ class _PickTile extends StatelessWidget {
           duration: const Duration(milliseconds: 200),
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
           decoration: BoxDecoration(
-            color: selected ? accent.withOpacity(0.3) : Colors.black.withOpacity(0.55),
+            color: selected
+                ? accent.withOpacity(0.3)
+                : Colors.black.withOpacity(0.55),
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
               color: selected ? accent : accent.withOpacity(0.3),
@@ -734,7 +742,8 @@ class _MatchupCard extends StatelessWidget {
               ],
             ),
           ),
-          const Text('×', style: TextStyle(color: Colors.white38, fontSize: 22)),
+          const Text('×',
+              style: TextStyle(color: Colors.white38, fontSize: 22)),
           Expanded(
             child: Column(
               children: [

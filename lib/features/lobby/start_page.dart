@@ -57,7 +57,8 @@ class _StartPageState extends State<StartPage> with TickerProviderStateMixin {
                   padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
                   child: Row(
                     children: [
-                      GlassBackButton(onTap: () => Navigator.of(context).maybePop()),
+                      GlassBackButton(
+                          onTap: () => Navigator.of(context).maybePop()),
                     ],
                   ),
                 ),
@@ -88,7 +89,10 @@ class _StartPageState extends State<StartPage> with TickerProviderStateMixin {
                             title: 'ODAYA KATIL',
                             subtitle: 'Sana verilen kodu gir',
                             icon: Icons.login_rounded,
-                            colors: const [Color(0xFF1F1B3A), Color(0xFF2C2652)],
+                            colors: const [
+                              Color(0xFF1F1B3A),
+                              Color(0xFF2C2652)
+                            ],
                             borderColor: _mode.colors.last,
                             glow: _glow,
                             onTap: () => _open(const JoinRoomScreen()),
@@ -136,7 +140,8 @@ class _StartPageState extends State<StartPage> with TickerProviderStateMixin {
               shape: BoxShape.circle,
               boxShadow: [
                 BoxShadow(
-                  color: _mode.colors.last.withOpacity(0.22 + 0.18 * _glow.value),
+                  color:
+                      _mode.colors.last.withOpacity(0.22 + 0.18 * _glow.value),
                   blurRadius: 38 + 16 * _glow.value,
                   spreadRadius: 2,
                 ),
@@ -154,7 +159,8 @@ class _StartPageState extends State<StartPage> with TickerProviderStateMixin {
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
-              border: Border.all(color: Colors.white.withOpacity(0.22), width: 2),
+              border:
+                  Border.all(color: Colors.white.withOpacity(0.22), width: 2),
             ),
             child: Icon(_mode.icon, color: Colors.white, size: 44),
           ),
@@ -232,7 +238,8 @@ class _ActionCardState extends State<_ActionCard> {
               borderRadius: BorderRadius.circular(24),
               boxShadow: [
                 BoxShadow(
-                  color: widget.colors.last.withOpacity(0.2 + 0.14 * widget.glow.value),
+                  color: widget.colors.last
+                      .withOpacity(0.2 + 0.14 * widget.glow.value),
                   blurRadius: 22,
                   offset: const Offset(0, 10),
                 ),

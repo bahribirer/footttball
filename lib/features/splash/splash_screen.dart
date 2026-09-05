@@ -110,7 +110,10 @@ class _SplashScreenState extends State<SplashScreen>
                       ),
                       border: Border.all(color: Colors.white24, width: 2.5),
                       boxShadow: const [
-                        BoxShadow(color: Color(0x882575FC), blurRadius: 46, spreadRadius: 4),
+                        BoxShadow(
+                            color: Color(0x882575FC),
+                            blurRadius: 46,
+                            spreadRadius: 4),
                       ],
                     ),
                     child: const Icon(Icons.sports_soccer_rounded,

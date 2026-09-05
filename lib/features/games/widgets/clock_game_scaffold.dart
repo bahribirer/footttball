@@ -30,7 +30,8 @@ class ClockGameScaffold extends StatefulWidget {
   final GameMode mode;
 
   /// Modun ortasında görünen bilgi paneli (gerekli harf / kategori).
-  final Widget Function(BuildContext context, ClockGameState state) buildInfoPanel;
+  final Widget Function(BuildContext context, ClockGameState state)
+      buildInfoPanel;
 
   final String inputHint;
   final String emptyHistoryText;
@@ -137,7 +138,8 @@ class _ClockGameScaffoldState extends State<ClockGameScaffold> {
 
       case 'rejected':
         if (slot == _socket.mySlot) {
-          _flash(_rejectionText(event.value<String>('reason')), Colors.redAccent);
+          _flash(
+              _rejectionText(event.value<String>('reason')), Colors.redAccent);
         }
         break;
 
@@ -319,7 +321,8 @@ class _ClockGameScaffoldState extends State<ClockGameScaffold> {
             ? const SizedBox.shrink()
             : Container(
                 margin: const EdgeInsets.symmetric(horizontal: 24),
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
                 decoration: BoxDecoration(
                   color: _flashColor.withOpacity(0.16),
                   borderRadius: BorderRadius.circular(14),
@@ -382,7 +385,8 @@ class _ClockGameScaffoldState extends State<ClockGameScaffold> {
             decoration: BoxDecoration(
               color: accent.withOpacity(latest ? 0.2 : 0.09),
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: accent.withOpacity(latest ? 0.6 : 0.22)),
+              border:
+                  Border.all(color: accent.withOpacity(latest ? 0.6 : 0.22)),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
@@ -405,7 +409,8 @@ class _ClockGameScaffoldState extends State<ClockGameScaffold> {
                         style: TextStyle(
                           color: Colors.white.withOpacity(latest ? 1 : 0.75),
                           fontSize: latest ? 15 : 14,
-                          fontWeight: latest ? FontWeight.bold : FontWeight.w500,
+                          fontWeight:
+                              latest ? FontWeight.bold : FontWeight.w500,
                         ),
                       ),
                       if (subtitle.isNotEmpty) ...[
@@ -413,13 +418,15 @@ class _ClockGameScaffoldState extends State<ClockGameScaffold> {
                         Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            if (entry.country != null && entry.country!.isNotEmpty) ...[
+                            if (entry.country != null &&
+                                entry.country!.isNotEmpty) ...[
                               CountryFlag(country: entry.country!, width: 18),
                               const SizedBox(width: 6),
                             ],
                             Flexible(
                               child: Text(
-                                entry.club ?? CountryCatalog.turkish(entry.country),
+                                entry.club ??
+                                    CountryCatalog.turkish(entry.country),
                                 overflow: TextOverflow.ellipsis,
                                 style: TextStyle(
                                   color: Colors.white.withOpacity(0.5),
@@ -474,7 +481,8 @@ class _ClockGameScaffoldState extends State<ClockGameScaffold> {
               const Text(
                 'Oyundan çıkmak istiyor musun?\nRakibin hükmen kazanır.',
                 textAlign: TextAlign.center,
-                style: TextStyle(color: Colors.white70, fontSize: 14, height: 1.4),
+                style:
+                    TextStyle(color: Colors.white70, fontSize: 14, height: 1.4),
               ),
               const SizedBox(height: 18),
               Row(
@@ -483,15 +491,19 @@ class _ClockGameScaffoldState extends State<ClockGameScaffold> {
                   TextButton(
                     onPressed: () => Navigator.of(dialogContext).pop(),
                     child: const Text('DEVAM ET',
-                        style: TextStyle(color: Colors.white60, fontWeight: FontWeight.bold)),
+                        style: TextStyle(
+                            color: Colors.white60,
+                            fontWeight: FontWeight.bold)),
                   ),
                   ElevatedButton(
                     onPressed: () {
                       Navigator.of(dialogContext).pop();
                       _exitToMenu();
                     },
-                    style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent),
-                    child: const Text('ÇIK', style: TextStyle(fontWeight: FontWeight.bold)),
+                    style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.redAccent),
+                    child: const Text('ÇIK',
+                        style: TextStyle(fontWeight: FontWeight.bold)),
                   ),
                 ],
               ),

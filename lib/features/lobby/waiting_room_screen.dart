@@ -88,8 +88,8 @@ class _WaitingRoomScreenState extends State<WaitingRoomScreen>
         break;
 
       case 'error':
-        setState(() =>
-            _error = event.value<String>('message') ?? 'Beklenmeyen bir hata oluştu.');
+        setState(() => _error =
+            event.value<String>('message') ?? 'Beklenmeyen bir hata oluştu.');
         break;
 
       case 'closed':
@@ -154,7 +154,8 @@ class _WaitingRoomScreenState extends State<WaitingRoomScreen>
                       child: _error != null
                           ? Padding(
                               padding: const EdgeInsets.only(top: 60),
-                              child: _ErrorCard(message: _error!, onExit: _leave),
+                              child:
+                                  _ErrorCard(message: _error!, onExit: _leave),
                             )
                           : Column(
                               children: [
@@ -266,7 +267,8 @@ class _WaitingRoomScreenState extends State<WaitingRoomScreen>
                   decoration: BoxDecoration(
                     color: Colors.black.withOpacity(0.45),
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: _accent.withOpacity(0.4), width: 1.4),
+                    border:
+                        Border.all(color: _accent.withOpacity(0.4), width: 1.4),
                   ),
                   child: Center(
                     child: Text(
@@ -287,7 +289,8 @@ class _WaitingRoomScreenState extends State<WaitingRoomScreen>
               onTap: _copyCode,
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 200),
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 11),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 20, vertical: 11),
                 decoration: BoxDecoration(
                   color: _copied
                       ? Colors.greenAccent.withOpacity(0.18)
@@ -327,8 +330,10 @@ class _WaitingRoomScreenState extends State<WaitingRoomScreen>
   }
 
   Widget _buildPlayers() {
-    RoomPlayer? at(int slot) =>
-        _players.where((player) => player.slot == slot).cast<RoomPlayer?>().firstOrNull;
+    RoomPlayer? at(int slot) => _players
+        .where((player) => player.slot == slot)
+        .cast<RoomPlayer?>()
+        .firstOrNull;
 
     final me = at(_socket.mySlot);
     final rival = at(_socket.opponentSlot);
@@ -388,7 +393,8 @@ class _WaitingRoomScreenState extends State<WaitingRoomScreen>
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Icons.check_circle, color: Colors.greenAccent, size: 16),
+              const Icon(Icons.check_circle,
+                  color: Colors.greenAccent, size: 16),
               const SizedBox(width: 8),
               Text(
                 'Oyun başlıyor...',
@@ -533,13 +539,22 @@ class _RulesCard extends StatelessWidget {
 
   List<(IconData, String)> get _rules => switch (mode) {
         GameMode.tikiTakaToe => [
-            (Icons.grid_3x3_rounded, 'Kulüp ve millet kesişimine uyan futbolcuyu yaz'),
+            (
+              Icons.grid_3x3_rounded,
+              'Kulüp ve millet kesişimine uyan futbolcuyu yaz'
+            ),
             (Icons.timer_outlined, 'Her hamle için 30 saniyen var'),
             (Icons.swap_horiz_rounded, 'Rakibin kutusunu çalma hakkın 3 kez'),
           ],
         GameMode.playerGuess => [
-            (Icons.flag_rounded, 'Biriniz milli takımı, diğeriniz kulübü seçer'),
-            (Icons.bolt_rounded, 'Eşleşmeye uyan futbolcuyu ilk bilen turu alır'),
+            (
+              Icons.flag_rounded,
+              'Biriniz milli takımı, diğeriniz kulübü seçer'
+            ),
+            (
+              Icons.bolt_rounded,
+              'Eşleşmeye uyan futbolcuyu ilk bilen turu alır'
+            ),
             (Icons.favorite_rounded, 'Tur başına 3 deneme hakkın var'),
           ],
         GameMode.lastLetter => [
@@ -548,9 +563,18 @@ class _RulesCard extends StatelessWidget {
             (Icons.remove_circle_outline, 'Yanlış cevap 3 saniye götürür'),
           ],
         GameMode.categoryRace => [
-            (Icons.category_rounded, 'Verilen kategoriye uyan futbolcuları yaz'),
-            (Icons.hourglass_bottom_rounded, 'Sırayla oynanır, herkesin 50 saniyesi var'),
-            (Icons.remove_circle_outline, 'Yanlış ya da tekrar eden isim 3 saniye götürür'),
+            (
+              Icons.category_rounded,
+              'Verilen kategoriye uyan futbolcuları yaz'
+            ),
+            (
+              Icons.hourglass_bottom_rounded,
+              'Sırayla oynanır, herkesin 50 saniyesi var'
+            ),
+            (
+              Icons.remove_circle_outline,
+              'Yanlış ya da tekrar eden isim 3 saniye götürür'
+            ),
           ],
       };
 
@@ -645,7 +669,8 @@ class _TypingDots extends StatelessWidget {
                   shape: BoxShape.circle,
                   color: color.withOpacity(0.35 + 0.55 * wave),
                   boxShadow: [
-                    BoxShadow(color: color.withOpacity(0.5 * wave), blurRadius: 10),
+                    BoxShadow(
+                        color: color.withOpacity(0.5 * wave), blurRadius: 10),
                   ],
                 ),
               ),
@@ -675,7 +700,8 @@ class _ErrorCard extends StatelessWidget {
           Text(
             message,
             textAlign: TextAlign.center,
-            style: const TextStyle(color: Colors.white, fontSize: 14.5, height: 1.4),
+            style: const TextStyle(
+                color: Colors.white, fontSize: 14.5, height: 1.4),
           ),
           const SizedBox(height: 18),
           PrimaryButton(

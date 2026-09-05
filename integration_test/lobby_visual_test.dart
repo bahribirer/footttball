@@ -40,19 +40,21 @@ void main() {
     await waitFor(t, find.text('OYUN MODU SEÇ'));
 
     await t.tap(find.byKey(const ValueKey('mode_card_tiki_taka_toe')));
-    await hold(t, const Duration(seconds: 6));   // [1] açılmış mod kartı
+    await hold(t, const Duration(seconds: 6)); // [1] açılmış mod kartı
 
     await t.tap(find.byKey(const ValueKey('play_tiki_taka_toe')));
     await waitFor(t, find.byType(StartPage));
-    await hold(t, const Duration(seconds: 6));   // [2] oda kur / katıl
+    await hold(t, const Duration(seconds: 6)); // [2] oda kur / katıl
 
     await t.tap(find.byKey(const ValueKey('btn_create_room')));
     await waitFor(t, find.byType(CreateRoomScreen));
     await waitFor(t, find.text('ODA KODU'));
-    await hold(t, const Duration(seconds: 8));   // [3] oda kurma + lig listesi
+    await hold(t, const Duration(seconds: 8)); // [3] oda kurma + lig listesi
 
     final code = find
-        .descendant(of: find.byType(CreateRoomScreen), matching: find.byType(Text))
+        .descendant(
+            of: find.byKey(const ValueKey('room_code')),
+            matching: find.byType(Text))
         .evaluate()
         .map((e) => (e.widget as Text).data ?? '')
         .where((s) => s.length == 1 && int.tryParse(s) != null)
@@ -60,19 +62,22 @@ void main() {
 
     await t.tap(find.byKey(const ValueKey('league_Premier League')));
     await hold(t, const Duration(seconds: 3));
-    await t.tap(find.byKey(const ValueKey('btn_play')));
     await waitFor(t, find.text('SERİ UZUNLUĞU'));
-    await hold(t, const Duration(seconds: 6));   // [4] seri seçimi
+    await hold(t, const Duration(seconds: 6)); // [4] seri seçimi
 
+    await t.ensureVisible(find.byKey(const ValueKey('rounds_3')));
     await t.tap(find.byKey(const ValueKey('rounds_3')));
+    await hold(t, const Duration(milliseconds: 500));
+    await t.ensureVisible(find.byKey(const ValueKey('btn_play')));
+    await t.tap(find.byKey(const ValueKey('btn_play')));
     await waitFor(t, find.byType(WaitingRoomScreen));
-    await hold(t, const Duration(seconds: 8));   // [5] bekleme odası (tek kişi)
+    await hold(t, const Duration(seconds: 8)); // [5] bekleme odası (tek kişi)
 
     final rival = WebSocketChannel.connect(Uri.parse(
         '${AppConfig.wsBase}/ws/v2/$code?name=Rakip&mode=tiki_taka_toe'));
     await rival.ready;
-    await hold(t, const Duration(seconds: 10));  // [6] VS ekranı + oyuna geçiş
-    await hold(t, const Duration(seconds: 8));   // [7] oyun tahtası
+    await hold(t, const Duration(seconds: 10)); // [6] VS ekranı + oyuna geçiş
+    await hold(t, const Duration(seconds: 8)); // [7] oyun tahtası
 
     await rival.sink.close();
     await GameSocket.instance.disconnect();

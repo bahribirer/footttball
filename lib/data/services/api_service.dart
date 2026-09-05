@@ -89,6 +89,7 @@ class ApiService {
     String? leagueId,
     int? roundCount,
     int? clockSeconds,
+    String? categoryId,
   }) async {
     final response = await http
         .post(
@@ -99,15 +100,18 @@ class ApiService {
             if (leagueId != null) 'league_id': leagueId,
             if (roundCount != null) 'round_count': roundCount,
             if (clockSeconds != null) 'clock_seconds': clockSeconds,
+            if (categoryId != null) 'category_id': categoryId,
           }),
         )
         .timeout(AppConfig.requestTimeout);
 
     if (response.statusCode != 200) {
-      throw ApiException('Oda oluşturulamadı (${response.statusCode})', _uri('/api/v1/rooms'));
+      throw ApiException(
+          'Oda oluşturulamadı (${response.statusCode})', _uri('/api/v1/rooms'));
     }
 
-    final json = jsonDecode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>;
+    final json =
+        jsonDecode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>;
     return RoomTicket(
       code: json['code'] as String,
       mode: GameMode.fromId(json['mode'] as String?),
@@ -124,6 +128,7 @@ class ApiService {
     String? leagueId,
     int? roundCount,
     int? clockSeconds,
+    String? categoryId,
   }) async {
     final response = await http
         .patch(
@@ -134,6 +139,7 @@ class ApiService {
             if (leagueId != null) 'league_id': leagueId,
             if (roundCount != null) 'round_count': roundCount,
             if (clockSeconds != null) 'clock_seconds': clockSeconds,
+            if (categoryId != null) 'category_id': categoryId,
           }),
         )
         .timeout(AppConfig.requestTimeout);
@@ -152,7 +158,8 @@ class ApiService {
     return RoomStatus(
       exists: json['room_exists'] as bool? ?? false,
       joinable: json['is_joinable'] as bool? ?? false,
-      mode: json['mode'] != null ? GameMode.fromId(json['mode'] as String) : null,
+      mode:
+          json['mode'] != null ? GameMode.fromId(json['mode'] as String) : null,
       players: json['players'] as int? ?? 0,
     );
   }

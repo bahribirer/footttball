@@ -1,4 +1,3 @@
-
 /// Lig kodları ve ülke -> ISO eşlemeleri.
 class LeagueCatalog {
   static final LeagueCatalog instance = LeagueCatalog._internal();
@@ -8,6 +7,7 @@ class LeagueCatalog {
 
   // Factory constructor to return the same instance.
   factory LeagueCatalog() => instance;
+
   /// Görünen lig adından backend lig kodunu verir.
   String leagueId(String leagueName) => teams[leagueName] ?? 'RANDOM';
 

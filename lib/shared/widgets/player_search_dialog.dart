@@ -93,9 +93,12 @@ class _PlayerSearchDialogState extends State<PlayerSearchDialog> {
                         const Padding(
                           padding: EdgeInsets.symmetric(horizontal: 6),
                           child: Text('×',
-                              style: TextStyle(color: Colors.white54, fontSize: 18)),
+                              style: TextStyle(
+                                  color: Colors.white54, fontSize: 18)),
                         ),
-                        Flexible(child: _Chip(text: widget.club, color: Colors.purpleAccent)),
+                        Flexible(
+                            child: _Chip(
+                                text: widget.club, color: Colors.purpleAccent)),
                       ],
                     ),
                     const SizedBox(height: 12),
@@ -108,14 +111,16 @@ class _PlayerSearchDialogState extends State<PlayerSearchDialog> {
                       decoration: InputDecoration(
                         hintText: 'Futbolcu ara...',
                         hintStyle: const TextStyle(color: Colors.white38),
-                        prefixIcon: const Icon(Icons.search, color: Colors.cyanAccent),
+                        prefixIcon:
+                            const Icon(Icons.search, color: Colors.cyanAccent),
                         filled: true,
                         fillColor: Colors.white.withOpacity(0.08),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(14),
                           borderSide: BorderSide.none,
                         ),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+                        contentPadding:
+                            const EdgeInsets.symmetric(horizontal: 16),
                       ),
                     ),
                   ],
@@ -145,7 +150,8 @@ class _PlayerSearchDialogState extends State<PlayerSearchDialog> {
   Widget _buildResults() {
     if (_loading) {
       return const Center(
-        child: CircularProgressIndicator(color: Colors.cyanAccent, strokeWidth: 3),
+        child:
+            CircularProgressIndicator(color: Colors.cyanAccent, strokeWidth: 3),
       );
     }
 
@@ -167,14 +173,16 @@ class _PlayerSearchDialogState extends State<PlayerSearchDialog> {
     return ListView.separated(
       padding: const EdgeInsets.symmetric(horizontal: 10),
       itemCount: _results.length,
-      separatorBuilder: (_, __) => Divider(color: Colors.white.withOpacity(0.06), height: 1),
+      separatorBuilder: (_, __) =>
+          Divider(color: Colors.white.withOpacity(0.06), height: 1),
       itemBuilder: (context, index) {
         final player = _results[index];
         final name = player['name'] as String? ?? '';
 
         return ListTile(
           dense: true,
-          leading: _Avatar(imageUrl: player['image_url'] as String?, name: name),
+          leading:
+              _Avatar(imageUrl: player['image_url'] as String?, name: name),
           title: Text(
             name,
             style: const TextStyle(
@@ -205,7 +213,8 @@ class _Avatar extends StatelessWidget {
       backgroundColor: Colors.white12,
       child: Text(
         name.isNotEmpty ? name[0].toUpperCase() : '?',
-        style: const TextStyle(color: Colors.white70, fontWeight: FontWeight.bold),
+        style:
+            const TextStyle(color: Colors.white70, fontWeight: FontWeight.bold),
       ),
     );
 
@@ -242,7 +251,8 @@ class _Chip extends StatelessWidget {
         text,
         overflow: TextOverflow.ellipsis,
         textAlign: TextAlign.center,
-        style: TextStyle(color: color, fontSize: 13, fontWeight: FontWeight.bold),
+        style:
+            TextStyle(color: color, fontSize: 13, fontWeight: FontWeight.bold),
       ),
     );
   }

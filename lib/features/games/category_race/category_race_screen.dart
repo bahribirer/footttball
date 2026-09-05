@@ -37,7 +37,10 @@ class _CategoryPanel extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
         decoration: BoxDecoration(
           gradient: LinearGradient(
-            colors: [colors.first.withOpacity(0.7), colors.last.withOpacity(0.7)],
+            colors: [
+              colors.first.withOpacity(0.7),
+              colors.last.withOpacity(0.7)
+            ],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
@@ -52,7 +55,8 @@ class _CategoryPanel extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(Icons.category_rounded, color: Colors.white70, size: 15),
+                const Icon(Icons.category_rounded,
+                    color: Colors.white70, size: 15),
                 const SizedBox(width: 6),
                 Text(
                   'KATEGORİ',
@@ -96,14 +100,16 @@ class _CategoryPanel extends StatelessWidget {
                 runSpacing: 6,
                 children: state.examples
                     .map((name) => Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 9, vertical: 4),
                           decoration: BoxDecoration(
                             color: Colors.black.withOpacity(0.3),
                             borderRadius: BorderRadius.circular(10),
                           ),
                           child: Text(
                             name,
-                            style: const TextStyle(color: Colors.white70, fontSize: 11.5),
+                            style: const TextStyle(
+                                color: Colors.white70, fontSize: 11.5),
                           ),
                         ))
                     .toList(),

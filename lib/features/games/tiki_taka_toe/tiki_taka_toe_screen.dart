@@ -50,7 +50,7 @@ class _TikiTakaToeScreenState extends State<TikiTakaToeScreen>
 
   late String myName;
   String opponentName = "...";
-  
+
   // Scoreboard Variables
   int myScore = 0;
   int opponentScore = 0;
@@ -140,10 +140,10 @@ class _TikiTakaToeScreenState extends State<TikiTakaToeScreen>
         if (_start <= 1) {
           // Time's up!
           timer.cancel();
-          
+
           // Force close dialog if open
           if (isInputActive && mounted) {
-             Navigator.of(context).pop(); 
+            Navigator.of(context).pop();
           }
 
           setState(() {
@@ -268,18 +268,25 @@ class _TikiTakaToeScreenState extends State<TikiTakaToeScreen>
     // Steal Logic Detection
     bool isSteal = false;
     String? victimType;
-    if (index != -1 && index < 16 && squares[index] != '' && squares[index] != type) {
+    if (index != -1 &&
+        index < 16 &&
+        squares[index] != '' &&
+        squares[index] != type) {
       isSteal = true;
       victimType = squares[index];
     }
 
     // Allow move if empty OR if it's a valid steal
-    if (index != -1 && index < 16 && (squares[index] == '' || isSteal) && row != 0 && col != 0) {
+    if (index != -1 &&
+        index < 16 &&
+        (squares[index] == '' || isSteal) &&
+        row != 0 &&
+        col != 0) {
       squares[index] = type;
       if (playerName != null) {
         squareNames[index] = playerName;
       }
-      
+
       // Handle Steal Consequences
       if (isSteal) {
         // Sayaçlar negatife düşmemeli; iki cihaz da aynı mesajı işler.
@@ -313,7 +320,8 @@ class _TikiTakaToeScreenState extends State<TikiTakaToeScreen>
         isRoundOverDialogOpen = true;
         _currentRoundWasDraw = true;
         _suppressNextRoundTrigger = false;
-        GameDialogs.showInfo(context, title: "BERABERE", message: "Oyun berabere bitti!", onDismiss: () {
+        GameDialogs.showInfo(context,
+            title: "BERABERE", message: "Oyun berabere bitti!", onDismiss: () {
           isRoundOverDialogOpen = false;
           if (_suppressNextRoundTrigger) {
             _suppressNextRoundTrigger = false;
@@ -324,10 +332,10 @@ class _TikiTakaToeScreenState extends State<TikiTakaToeScreen>
         return;
       }
       // No win — switch turns
-      
+
       // Safety: If turn switches from external source and dialog is open
       if (isInputActive && mounted) {
-         Navigator.of(context).pop();
+        Navigator.of(context).pop();
       }
 
       setState(() {
@@ -396,21 +404,22 @@ class _TikiTakaToeScreenState extends State<TikiTakaToeScreen>
 
     // 1. Close dialog if open (i.e. if I didn't click it yet)
     if (isRoundOverDialogOpen && mounted) {
-      _suppressNextRoundTrigger = true; // Prevent onDismiss from triggering fetch
+      _suppressNextRoundTrigger =
+          true; // Prevent onDismiss from triggering fetch
       Navigator.of(context).pop();
       isRoundOverDialogOpen = false;
     }
-    
+
     // 2. Update Data
     widget.teammodel.nations = List<String>.from(decoded["nations"]);
     widget.teammodel.clubs = List<String>.from(decoded["clubs"]);
 
     // 3. Reset Game State with Explicit Round
     setState(() {
-       currentRound = incomingRound; // Set explicit value
-       _currentRoundWasDraw = false; // Reset draw flag
-       resetGame();
-       getLogoUrl(); // Refresh logos
+      currentRound = incomingRound; // Set explicit value
+      _currentRoundWasDraw = false; // Reset draw flag
+      resetGame();
+      getLogoUrl(); // Refresh logos
     });
     startTimer();
   }
@@ -430,7 +439,7 @@ class _TikiTakaToeScreenState extends State<TikiTakaToeScreen>
 
       // Check for Series Win (First to X)
       bool seriesOver = false;
-      
+
       // If roundCount is 1, it's a single game.
       // If roundCount > 1, it implies "First to X wins"
       if (myScore >= widget.roundCount || opponentScore >= widget.roundCount) {
@@ -438,24 +447,34 @@ class _TikiTakaToeScreenState extends State<TikiTakaToeScreen>
       }
 
       if (seriesOver) {
-         String seriesWinner = myScore > opponentScore ? myName : (opponentScore > myScore ? opponentName : "Draw");
-         GameDialogs.showInfo(context, title: "SERİ BİTTİ", message: "$seriesWinner seriyi $myScore - $opponentScore kazandı!", onDismiss: () {
-             Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const ModeSelectScreen()));
-         });
+        String seriesWinner = myScore > opponentScore
+            ? myName
+            : (opponentScore > myScore ? opponentName : "Draw");
+        GameDialogs.showInfo(context,
+            title: "SERİ BİTTİ",
+            message: "$seriesWinner seriyi $myScore - $opponentScore kazandı!",
+            onDismiss: () {
+          Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                  builder: (context) => const ModeSelectScreen()));
+        });
       } else {
-         isRoundOverDialogOpen = true;
-         _suppressNextRoundTrigger = false; // Reset flag when opening
-         GameDialogs.showInfo(context, title: "TUR BİTTİ", message: "$roundWinnerName bu turu kazandı!", onDismiss: () {
-             isRoundOverDialogOpen = false;
-             
-             // Check if we should suppress the trigger (because we closed programmatically)
-             if (_suppressNextRoundTrigger) {
-               _suppressNextRoundTrigger = false;
-               return;
-             }
-             
-             _onNextRoundClicked();
-         });
+        isRoundOverDialogOpen = true;
+        _suppressNextRoundTrigger = false; // Reset flag when opening
+        GameDialogs.showInfo(context,
+            title: "TUR BİTTİ",
+            message: "$roundWinnerName bu turu kazandı!", onDismiss: () {
+          isRoundOverDialogOpen = false;
+
+          // Check if we should suppress the trigger (because we closed programmatically)
+          if (_suppressNextRoundTrigger) {
+            _suppressNextRoundTrigger = false;
+            return;
+          }
+
+          _onNextRoundClicked();
+        });
       }
     }
   }
@@ -536,7 +555,8 @@ class _TikiTakaToeScreenState extends State<TikiTakaToeScreen>
                         _socket.disconnect();
                         Navigator.pushAndRemoveUntil(
                           ctx,
-                          MaterialPageRoute(builder: (context) => const ModeSelectScreen()),
+                          MaterialPageRoute(
+                              builder: (context) => const ModeSelectScreen()),
                           (route) => false,
                         );
                       },
@@ -592,629 +612,814 @@ class _TikiTakaToeScreenState extends State<TikiTakaToeScreen>
     }
   }
 
+  /// Odadan ayrılmadan önce onay ister.
+  ///
+  /// Hem "ODADAN ÇIK" düğmesi hem de sistem geri tuşu buradan geçer; aksi
+  /// halde geri tuşuyla çıkan oyuncu `leave` göndermiyor ve rakip boş odada
+  /// beklemeye devam ediyordu.
+  void _confirmExit() {
+    showDialog(
+      context: context,
+      builder: (dialogContext) => Dialog(
+        backgroundColor: Colors.transparent,
+        child: NeonPanel(
+          colors: const [Colors.redAccent, Colors.orangeAccent],
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text('🚪', style: TextStyle(fontSize: 38)),
+              const SizedBox(height: 10),
+              const Text(
+                'Odadan çıkmak istiyor musun?\nRakibin hükmen kazanır.',
+                textAlign: TextAlign.center,
+                style:
+                    TextStyle(color: Colors.white70, fontSize: 14, height: 1.4),
+              ),
+              const SizedBox(height: 18),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  TextButton(
+                    onPressed: () => Navigator.of(dialogContext).pop(),
+                    child: const Text('DEVAM ET',
+                        style: TextStyle(
+                            color: Colors.white60,
+                            fontWeight: FontWeight.bold)),
+                  ),
+                  TextButton(
+                    onPressed: () {
+                      Navigator.of(dialogContext).pop();
+                      _exitToMenu();
+                    },
+                    child: const Text('ÇIK',
+                        style: TextStyle(
+                            color: Colors.redAccent,
+                            fontWeight: FontWeight.bold)),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _exitToMenu() {
+    _socket.leave();
+    Navigator.pushAndRemoveUntil(
+      context,
+      MaterialPageRoute(builder: (context) => const ModeSelectScreen()),
+      (route) => false,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     Size screenSize = MediaQuery.of(context).size;
     double boxSize = screenSize.width / 4 * 0.8;
 
-    return Scaffold(
-      appBar: null,
-      body: Stack(
-        alignment: Alignment.center,
-        children: [
-          const BoardBackground(dim: 0.35),
-          // Centered Grid
-          Positioned(
-            top: screenSize.height * 0.10,
-            left: screenSize.width * 0.05,
-            right: screenSize.width * 0.05,
-            child: SizedBox(
-              width: screenSize.width * 0.9,
-              height: screenSize.width * 0.9, // Maintain square grid
-              child: GridView.builder(
-                padding: EdgeInsets.all(0),
-                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 4,
-                  mainAxisSpacing: 0,
-                  crossAxisSpacing: 0,
-                ),
-                itemBuilder: (context, index) {
-                  return IgnorePointer(
-                      ignoring: !_socket.playerTurn,
-                      child: GestureDetector(
-                        onTap: () async {
-                          final row = index ~/ 4;
-                          final col = index % 4;
-                          // Üst satır ve sol sütun başlıktır, oynanmaz.
-                          if (row == 0 || col == 0) return;
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) _confirmExit();
+      },
+      child: Scaffold(
+        appBar: null,
+        body: Stack(
+          alignment: Alignment.center,
+          children: [
+            const BoardBackground(dim: 0.35),
+            // Centered Grid
+            Positioned(
+              top: screenSize.height * 0.10,
+              left: screenSize.width * 0.05,
+              right: screenSize.width * 0.05,
+              child: SizedBox(
+                width: screenSize.width * 0.9,
+                height: screenSize.width * 0.9, // Maintain square grid
+                child: GridView.builder(
+                  padding: EdgeInsets.all(0),
+                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 4,
+                    mainAxisSpacing: 0,
+                    crossAxisSpacing: 0,
+                  ),
+                  itemBuilder: (context, index) {
+                    return IgnorePointer(
+                        ignoring: !_socket.playerTurn,
+                        child: GestureDetector(
+                          onTap: () async {
+                            final row = index ~/ 4;
+                            final col = index % 4;
+                            // Üst satır ve sol sütun başlıktır, oynanmaz.
+                            if (row == 0 || col == 0) return;
 
-                          bool isOpponentCell = (squares[index] != "" && squares[index] != currentPlayer);
-                          bool canSteal = isOpponentCell && myStealRights > 0;
+                            bool isOpponentCell = (squares[index] != "" &&
+                                squares[index] != currentPlayer);
+                            bool canSteal = isOpponentCell && myStealRights > 0;
 
-                          // Hakkı bitmiş oyuncu neden oynayamadığını görmeli.
-                          if (isOpponentCell && myStealRights == 0) {
-                            GameDialogs.showWarning(
-                              context,
-                              title: 'ÇALMA HAKKIN BİTTİ',
-                              message:
-                                  'Rakibin kutularını almak için hakkın kalmadı.\nBoş bir kutu seç.',
-                            );
-                            return;
-                          }
-
-                          if (squares[index] == currentPlayer) {
-                            GameDialogs.showWarning(
-                              context,
-                              title: 'BURASI SENİN',
-                              message: 'Bu kutuyu zaten kazandın. Başka bir kutu seç.',
-                            );
-                            return;
-                          }
-
-                          if ((squares[index] == "" || canSteal) &&
-                              _socket.playerTurn) {
-                            setState(() {
-                              isInputActive = true;
-                            });
-
-                            // Broadcast selection to opponent
-                            _socket.relay({'type': 'selectCell', 'index': index});
-
-                            final result = await GameDialogs.pickPlayer(
-                              context,
-                              club: widget.teammodel.clubs[(index % 4) - 1],
-                              nationality: widget.teammodel.nations[(index ~/ 4) - 1],
-                            );
-
-                            // Broadcast deselect
-                            _socket.relay({'type': 'deselectCell'});
-
-                            if (result == true) {
-                              // Correct guess — send the move
-                              _socket.relay({
-                                'index': index,
-                                'symbol': currentPlayer,
-                                'playerName': GameDialogs.lastPickedPlayer,
-                              });
-                            } else if (result == false) {
-                              // Wrong guess — send turn switch
-                              _socket.relay({'index': -1, 'symbol': currentPlayer});
+                            // Hakkı bitmiş oyuncu neden oynayamadığını görmeli.
+                            if (isOpponentCell && myStealRights == 0) {
+                              GameDialogs.showWarning(
+                                context,
+                                title: 'ÇALMA HAKKIN BİTTİ',
+                                message:
+                                    'Rakibin kutularını almak için hakkın kalmadı.\nBoş bir kutu seç.',
+                              );
+                              return;
                             }
-                            // result == null means cancel — do nothing, keep turn
 
-                            setState(() {
-                              isInputActive = false;
-                            });
-                          }
-                        },
-                        child: SizedBox(
-                          width: boxSize,
-                          height: boxSize,
-                          child: Container(
-                            decoration: BoxDecoration(
-                              border: Border.all(
-                                color: (index == opponentSelectionIndex) 
-                                    ? Colors.purpleAccent 
-                                    : Colors.white,
-                                width: (index == opponentSelectionIndex) ? 3 : 1,
-                              ),
-                              boxShadow: (index == opponentSelectionIndex)
-                                  ? [
-                                      BoxShadow(
-                                        color: Colors.purpleAccent.withOpacity(0.6),
-                                        blurRadius: 15,
-                                        spreadRadius: 2,
-                                      )
-                                    ]
-                                  : [],
-                            ),
-                            child: Center(
-                              child: (index == 1 || index == 2 || index == 3)
-                                  ? urls.length < 3
-                                      ? CircularProgressIndicator()
-                                      : Image.network(
-                                          urls[(index % 4) - 1],
-                                          headers: const {
-                                            "User-Agent": "TikiTaka/1.0"
-                                          },
-                                          errorBuilder:
-                                              (context, error, stackTrace) {
-                                            final clubIdx = (index % 4) - 1;
-                                            return _buildFallbackShield(
-                                                clubIdx <
-                                                        widget.teammodel.clubs
-                                                            .length
-                                                    ? widget.teammodel
-                                                        .clubs[clubIdx]
-                                                    : '?');
-                                          },
+                            if (squares[index] == currentPlayer) {
+                              GameDialogs.showWarning(
+                                context,
+                                title: 'BURASI SENİN',
+                                message:
+                                    'Bu kutuyu zaten kazandın. Başka bir kutu seç.',
+                              );
+                              return;
+                            }
+
+                            if ((squares[index] == "" || canSteal) &&
+                                _socket.playerTurn) {
+                              setState(() {
+                                isInputActive = true;
+                              });
+
+                              // Broadcast selection to opponent
+                              _socket.relay(
+                                  {'type': 'selectCell', 'index': index});
+
+                              final result = await GameDialogs.pickPlayer(
+                                context,
+                                club: widget.teammodel.clubs[(index % 4) - 1],
+                                nationality:
+                                    widget.teammodel.nations[(index ~/ 4) - 1],
+                              );
+
+                              // Broadcast deselect
+                              _socket.relay({'type': 'deselectCell'});
+
+                              if (result == true) {
+                                // Correct guess — send the move
+                                _socket.relay({
+                                  'index': index,
+                                  'symbol': currentPlayer,
+                                  'playerName': GameDialogs.lastPickedPlayer,
+                                });
+                              } else if (result == false) {
+                                // Wrong guess — send turn switch
+                                _socket.relay(
+                                    {'index': -1, 'symbol': currentPlayer});
+                              }
+                              // result == null means cancel — do nothing, keep turn
+
+                              setState(() {
+                                isInputActive = false;
+                              });
+                            }
+                          },
+                          child: SizedBox(
+                            width: boxSize,
+                            height: boxSize,
+                            child: Container(
+                              decoration: BoxDecoration(
+                                border: Border.all(
+                                  color: (index == opponentSelectionIndex)
+                                      ? Colors.purpleAccent
+                                      : Colors.white,
+                                  width:
+                                      (index == opponentSelectionIndex) ? 3 : 1,
+                                ),
+                                boxShadow: (index == opponentSelectionIndex)
+                                    ? [
+                                        BoxShadow(
+                                          color: Colors.purpleAccent
+                                              .withOpacity(0.6),
+                                          blurRadius: 15,
+                                          spreadRadius: 2,
                                         )
-                                  : (index == 4 || index == 8 || index == 12)
-                                      ? widget.teammodel.nations.length >= 3
-                                          // Bayrak ve ülkenin Türkçe adı birlikte gösterilir.
-                                          ? Padding(
-                                              padding: const EdgeInsets.all(4),
-                                              child: CountryLabel(
-                                                country: widget.teammodel
-                                                    .nations[(index ~/ 4) - 1],
-                                                axis: Axis.vertical,
-                                                flagWidth: 42,
-                                                fontSize: 10.5,
-                                              ),
-                                            )
-                                          : const CircularProgressIndicator()
-                                      : index == 0
-                                          ? SizedBox.expand(
-                                              child: Image.asset(
-                                                "images/app_logo.png",
-                                                fit: BoxFit.cover,
-                                              ),
-                                            )
-                                          : squares[index] == "X"
-                                              ? Container(
-                                                  decoration: BoxDecoration(
-                                                    color: Colors.green.withOpacity(0.15),
-                                                    borderRadius: BorderRadius.circular(8),
-                                                  ),
-                                                  child: Stack(
-                                                    alignment: Alignment.center,
-                                                    children: [
-                                                      Center(
-                                                        child: Text(
-                                                          "X",
-                                                          style: TextStyle(
-                                                            fontSize: 55,
-                                                            fontWeight: FontWeight.w900,
-                                                            color: Colors.greenAccent,
-                                                            shadows: [
-                                                              Shadow(
-                                                                blurRadius: 12,
-                                                                color: Colors.greenAccent.withOpacity(0.8),
-                                                                offset: Offset(0, 0),
-                                                              ),
-                                                              Shadow(
-                                                                blurRadius: 24,
-                                                                color: Colors.green.withOpacity(0.4),
-                                                                offset: Offset(0, 0),
-                                                              ),
-                                                            ],
+                                      ]
+                                    : [],
+                              ),
+                              child: Center(
+                                child: (index == 1 || index == 2 || index == 3)
+                                    ? urls.length < 3
+                                        ? CircularProgressIndicator()
+                                        : Image.network(
+                                            urls[(index % 4) - 1],
+                                            headers: const {
+                                              "User-Agent": "TikiTaka/1.0"
+                                            },
+                                            errorBuilder:
+                                                (context, error, stackTrace) {
+                                              final clubIdx = (index % 4) - 1;
+                                              return _buildFallbackShield(
+                                                  clubIdx <
+                                                          widget.teammodel.clubs
+                                                              .length
+                                                      ? widget.teammodel
+                                                          .clubs[clubIdx]
+                                                      : '?');
+                                            },
+                                          )
+                                    : (index == 4 || index == 8 || index == 12)
+                                        ? widget.teammodel.nations.length >= 3
+                                            // Bayrak ve ülkenin Türkçe adı birlikte gösterilir.
+                                            ? Padding(
+                                                padding:
+                                                    const EdgeInsets.all(4),
+                                                child: CountryLabel(
+                                                  country:
+                                                      widget.teammodel.nations[
+                                                          (index ~/ 4) - 1],
+                                                  axis: Axis.vertical,
+                                                  flagWidth: 42,
+                                                  fontSize: 10.5,
+                                                ),
+                                              )
+                                            : const CircularProgressIndicator()
+                                        : index == 0
+                                            ? SizedBox.expand(
+                                                child: Image.asset(
+                                                  "images/app_logo.png",
+                                                  fit: BoxFit.cover,
+                                                ),
+                                              )
+                                            : squares[index] == "X"
+                                                ? Container(
+                                                    decoration: BoxDecoration(
+                                                      color: Colors.green
+                                                          .withOpacity(0.15),
+                                                      borderRadius:
+                                                          BorderRadius.circular(
+                                                              8),
+                                                    ),
+                                                    child: Stack(
+                                                      alignment:
+                                                          Alignment.center,
+                                                      children: [
+                                                        Center(
+                                                          child: Text(
+                                                            "X",
+                                                            style: TextStyle(
+                                                              fontSize: 55,
+                                                              fontWeight:
+                                                                  FontWeight
+                                                                      .w900,
+                                                              color: Colors
+                                                                  .greenAccent,
+                                                              shadows: [
+                                                                Shadow(
+                                                                  blurRadius:
+                                                                      12,
+                                                                  color: Colors
+                                                                      .greenAccent
+                                                                      .withOpacity(
+                                                                          0.8),
+                                                                  offset:
+                                                                      Offset(
+                                                                          0, 0),
+                                                                ),
+                                                                Shadow(
+                                                                  blurRadius:
+                                                                      24,
+                                                                  color: Colors
+                                                                      .green
+                                                                      .withOpacity(
+                                                                          0.4),
+                                                                  offset:
+                                                                      Offset(
+                                                                          0, 0),
+                                                                ),
+                                                              ],
+                                                            ),
                                                           ),
                                                         ),
-                                                      ),
-                                                      if (squareNames.length > index && squareNames[index].isNotEmpty)
-                                                        Positioned(
-                                                          bottom: 0,
-                                                          left: 0,
-                                                          right: 0,
-                                                          height: 28,
-                                                          child: Container(
-                                                            decoration: BoxDecoration(
-                                                              gradient: LinearGradient(
-                                                                begin: Alignment.bottomCenter,
-                                                                end: Alignment.topCenter,
-                                                                colors: [
-                                                                  Colors.black.withOpacity(0.9),
-                                                                  Colors.transparent,
-                                                                ],
+                                                        if (squareNames.length >
+                                                                index &&
+                                                            squareNames[index]
+                                                                .isNotEmpty)
+                                                          Positioned(
+                                                            bottom: 0,
+                                                            left: 0,
+                                                            right: 0,
+                                                            height: 28,
+                                                            child: Container(
+                                                              decoration:
+                                                                  BoxDecoration(
+                                                                gradient:
+                                                                    LinearGradient(
+                                                                  begin: Alignment
+                                                                      .bottomCenter,
+                                                                  end: Alignment
+                                                                      .topCenter,
+                                                                  colors: [
+                                                                    Colors.black
+                                                                        .withOpacity(
+                                                                            0.9),
+                                                                    Colors
+                                                                        .transparent,
+                                                                  ],
+                                                                ),
+                                                                borderRadius: BorderRadius.only(
+                                                                    bottomLeft:
+                                                                        Radius.circular(
+                                                                            8),
+                                                                    bottomRight:
+                                                                        Radius.circular(
+                                                                            8)),
                                                               ),
-                                                              borderRadius: BorderRadius.only(
-                                                                  bottomLeft: Radius.circular(8),
-                                                                  bottomRight: Radius.circular(8)),
+                                                              alignment: Alignment
+                                                                  .bottomCenter,
+                                                              padding: EdgeInsets
+                                                                  .only(
+                                                                      bottom:
+                                                                          4),
+                                                              child: Text(
+                                                                squareNames[
+                                                                    index],
+                                                                textAlign:
+                                                                    TextAlign
+                                                                        .center,
+                                                                style: TextStyle(
+                                                                    color: Colors
+                                                                        .white,
+                                                                    fontSize: 10,
+                                                                    fontWeight: FontWeight.bold,
+                                                                    shadows: [
+                                                                      Shadow(
+                                                                          blurRadius:
+                                                                              2,
+                                                                          color: Colors
+                                                                              .black,
+                                                                          offset: Offset(
+                                                                              0,
+                                                                              1))
+                                                                    ]),
+                                                                maxLines: 1,
+                                                                overflow:
+                                                                    TextOverflow
+                                                                        .ellipsis,
+                                                              ),
                                                             ),
-                                                            alignment: Alignment.bottomCenter,
-                                                            padding: EdgeInsets.only(bottom: 4),
-                                                            child: Text(
-                                                              squareNames[index],
-                                                              textAlign: TextAlign.center,
-                                                              style: TextStyle(
-                                                                  color: Colors.white,
-                                                                  fontSize: 10,
-                                                                  fontWeight: FontWeight.bold,
-                                                                  shadows: [
-                                                                    Shadow(
-                                                                        blurRadius: 2,
-                                                                        color: Colors.black,
-                                                                        offset: Offset(0, 1))
-                                                                  ]),
-                                                              maxLines: 1,
-                                                              overflow: TextOverflow.ellipsis,
-                                                            ),
-                                                          ),
-                                                        )
-                                                    ],
-                                                  ),
-                                                )
-                                          : squares[index] == "O"
-                                              ? Container(
-                                                  decoration: BoxDecoration(
-                                                    color: Colors.red.withOpacity(0.15),
-                                                    borderRadius: BorderRadius.circular(8),
-                                                  ),
-                                                  child: Stack(
-                                                    alignment: Alignment.center,
-                                                    children: [
-                                                      Center(
-                                                        child: Text(
-                                                          "O",
-                                                          style: TextStyle(
-                                                            fontSize: 55,
-                                                            fontWeight: FontWeight.w900,
-                                                            color: Colors.redAccent,
-                                                            shadows: [
-                                                              Shadow(
-                                                                blurRadius: 12,
-                                                                color: Colors.redAccent.withOpacity(0.8),
-                                                                offset: Offset(0, 0),
-                                                              ),
-                                                              Shadow(
-                                                                blurRadius: 24,
-                                                                color: Colors.red.withOpacity(0.4),
-                                                                offset: Offset(0, 0),
-                                                              ),
-                                                            ],
-                                                          ),
+                                                          )
+                                                      ],
+                                                    ),
+                                                  )
+                                                : squares[index] == "O"
+                                                    ? Container(
+                                                        decoration:
+                                                            BoxDecoration(
+                                                          color: Colors.red
+                                                              .withOpacity(
+                                                                  0.15),
+                                                          borderRadius:
+                                                              BorderRadius
+                                                                  .circular(8),
                                                         ),
-                                                      ),
-                                                      if (squareNames.length > index && squareNames[index].isNotEmpty)
-                                                        Positioned(
-                                                          bottom: 0,
-                                                          left: 0,
-                                                          right: 0,
-                                                          height: 28,
-                                                          child: Container(
-                                                            decoration: BoxDecoration(
-                                                              gradient: LinearGradient(
-                                                                begin: Alignment.bottomCenter,
-                                                                end: Alignment.topCenter,
-                                                                colors: [
-                                                                  Colors.black.withOpacity(0.9),
-                                                                  Colors.transparent,
-                                                                ],
-                                                              ),
-                                                              borderRadius: BorderRadius.only(
-                                                                  bottomLeft: Radius.circular(8),
-                                                                  bottomRight: Radius.circular(8)),
-                                                            ),
-                                                            alignment: Alignment.bottomCenter,
-                                                            padding: EdgeInsets.only(bottom: 4),
-                                                            child: Text(
-                                                              squareNames[index],
-                                                              textAlign: TextAlign.center,
-                                                              style: TextStyle(
-                                                                  color: Colors.white,
-                                                                  fontSize: 10,
-                                                                  fontWeight: FontWeight.bold,
+                                                        child: Stack(
+                                                          alignment:
+                                                              Alignment.center,
+                                                          children: [
+                                                            Center(
+                                                              child: Text(
+                                                                "O",
+                                                                style:
+                                                                    TextStyle(
+                                                                  fontSize: 55,
+                                                                  fontWeight:
+                                                                      FontWeight
+                                                                          .w900,
+                                                                  color: Colors
+                                                                      .redAccent,
                                                                   shadows: [
                                                                     Shadow(
-                                                                        blurRadius: 2,
-                                                                        color: Colors.black,
-                                                                        offset: Offset(0, 1))
-                                                                  ]),
-                                                              maxLines: 1,
-                                                              overflow: TextOverflow.ellipsis,
+                                                                      blurRadius:
+                                                                          12,
+                                                                      color: Colors
+                                                                          .redAccent
+                                                                          .withOpacity(
+                                                                              0.8),
+                                                                      offset:
+                                                                          Offset(
+                                                                              0,
+                                                                              0),
+                                                                    ),
+                                                                    Shadow(
+                                                                      blurRadius:
+                                                                          24,
+                                                                      color: Colors
+                                                                          .red
+                                                                          .withOpacity(
+                                                                              0.4),
+                                                                      offset:
+                                                                          Offset(
+                                                                              0,
+                                                                              0),
+                                                                    ),
+                                                                  ],
+                                                                ),
+                                                              ),
                                                             ),
-                                                          ),
-                                                        )
-                                                    ],
-                                                  ),
-                                                )
-                                              : SizedBox(),
+                                                            if (squareNames
+                                                                        .length >
+                                                                    index &&
+                                                                squareNames[
+                                                                        index]
+                                                                    .isNotEmpty)
+                                                              Positioned(
+                                                                bottom: 0,
+                                                                left: 0,
+                                                                right: 0,
+                                                                height: 28,
+                                                                child:
+                                                                    Container(
+                                                                  decoration:
+                                                                      BoxDecoration(
+                                                                    gradient:
+                                                                        LinearGradient(
+                                                                      begin: Alignment
+                                                                          .bottomCenter,
+                                                                      end: Alignment
+                                                                          .topCenter,
+                                                                      colors: [
+                                                                        Colors
+                                                                            .black
+                                                                            .withOpacity(0.9),
+                                                                        Colors
+                                                                            .transparent,
+                                                                      ],
+                                                                    ),
+                                                                    borderRadius: BorderRadius.only(
+                                                                        bottomLeft:
+                                                                            Radius.circular(
+                                                                                8),
+                                                                        bottomRight:
+                                                                            Radius.circular(8)),
+                                                                  ),
+                                                                  alignment:
+                                                                      Alignment
+                                                                          .bottomCenter,
+                                                                  padding: EdgeInsets
+                                                                      .only(
+                                                                          bottom:
+                                                                              4),
+                                                                  child: Text(
+                                                                    squareNames[
+                                                                        index],
+                                                                    textAlign:
+                                                                        TextAlign
+                                                                            .center,
+                                                                    style: TextStyle(
+                                                                        color: Colors
+                                                                            .white,
+                                                                        fontSize: 10,
+                                                                        fontWeight: FontWeight.bold,
+                                                                        shadows: [
+                                                                          Shadow(
+                                                                              blurRadius: 2,
+                                                                              color: Colors.black,
+                                                                              offset: Offset(0, 1))
+                                                                        ]),
+                                                                    maxLines: 1,
+                                                                    overflow:
+                                                                        TextOverflow
+                                                                            .ellipsis,
+                                                                  ),
+                                                                ),
+                                                              )
+                                                          ],
+                                                        ),
+                                                      )
+                                                    : SizedBox(),
+                              ),
                             ),
                           ),
-                        ),
-                      ));
-                },
-                itemCount: 16,
-              ),
-            ),
-          ),
-          // Turn indicator with animation
-          // Premium Scoreboard — BELOW the board, above the timer
-          Positioned(
-            left: 30,
-            right: 30,
-            bottom: screenSize.height * 0.25,
-            child: Container(
-              padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    Colors.deepPurple.withOpacity(0.7),
-                    Colors.purple.withOpacity(0.5),
-                  ],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
+                        ));
+                  },
+                  itemCount: 16,
                 ),
-                borderRadius: BorderRadius.circular(18),
-                border: Border.all(color: Colors.white.withOpacity(0.3), width: 1.5),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.deepPurple.withOpacity(0.4),
-                    blurRadius: 12,
-                    offset: Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  // ME (left side - green when my turn)
-                  Expanded(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.sports_soccer,
-                                color: _socket.playerTurn
-                                    ? Colors.greenAccent
-                                    : Colors.white60,
-                                size: 14),
-                            SizedBox(width: 4),
-                            Text(
-                              myName.length > 7
-                                  ? myName.substring(0, 7) + ".."
-                                  : myName,
-                              style: TextStyle(
-                                color: _socket.playerTurn
-                                    ? Colors.greenAccent
-                                    : Colors.white,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 13,
-                              ),
-                            ),
-                          ],
-                        ),
-                        SizedBox(height: 2),
-                        // Steal Rights (ME)
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: List.generate(3, (i) {
-                            return Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 1.0),
-                              child: Icon(
-                                Icons.sports_soccer,
-                                size: 14,
-                                color: i < myStealRights 
-                                    ? Colors.greenAccent 
-                                    : Colors.white12,
-                              ),
-                            );
-                          }),
-                        ),
-                        SizedBox(height: 4),
-                        Text(
-                          "$myScore",
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w900,
-                            fontSize: 26,
-                            shadows: [
-                              Shadow(
-                                blurRadius: 8.0,
-                                color: Colors.white.withOpacity(0.4),
-                                offset: Offset(0, 0),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  // Round Info
-                  Container(
-                    padding: EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.15),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          "ROUND",
-                          style: TextStyle(
-                            color: Colors.amberAccent,
-                            fontSize: 9,
-                            fontWeight: FontWeight.bold,
-                            letterSpacing: 1.5,
-                          ),
-                        ),
-                        Text(
-                          (widget.roundCount == 1 && currentRound == 1) 
-                              ? "MATCH" 
-                              : (currentRound > widget.roundCount ? "EXTRA" : "$currentRound/${widget.roundCount}"),
-                          style: TextStyle(
-                            color: Colors.amberAccent,
-                            fontSize: 16,
-                            fontWeight: FontWeight.w900,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  // OPPONENT (right side - red when their turn)
-                  Expanded(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Text(
-                              opponentName.length > 7
-                                  ? opponentName.substring(0, 7) + ".."
-                                  : opponentName,
-                              style: TextStyle(
-                                color: !_socket.playerTurn
-                                    ? Colors.redAccent
-                                    : Colors.white,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 13,
-                              ),
-                            ),
-                            SizedBox(width: 4),
-                            Icon(Icons.sports_soccer,
-                                color: !_socket.playerTurn
-                                    ? Colors.redAccent
-                                    : Colors.white60,
-                                size: 14),
-                          ],
-                        ),
-                        SizedBox(height: 2),
-                        // Steal Rights (OPPONENT)
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: List.generate(3, (i) {
-                            return Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 1.0),
-                              child: Icon(
-                                Icons.sports_soccer,
-                                size: 14,
-                                color: i < opponentStealRights 
-                                    ? Colors.greenAccent 
-                                    : Colors.white12,
-                              ),
-                            );
-                          }),
-                        ),
-                        SizedBox(height: 4),
-                        Text(
-                          "$opponentScore",
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w900,
-                            fontSize: 26,
-                            shadows: [
-                              Shadow(
-                                blurRadius: 8.0,
-                                color: Colors.white.withOpacity(0.4),
-                                offset: Offset(0, 0),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
               ),
             ),
-          ),
-
-          // Premium Timer — BELOW scoreboard, above replay/leave buttons
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: screenSize.height * 0.155,
-            child: Center(
+            // Turn indicator with animation
+            // Premium Scoreboard — BELOW the board, above the timer
+            Positioned(
+              left: 30,
+              right: 30,
+              bottom: screenSize.height * 0.25,
               child: Container(
-                width: 60,
-                height: 60,
+                padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 decoration: BoxDecoration(
-                  shape: BoxShape.circle,
                   gradient: LinearGradient(
-                    colors: _start <= 10
-                        ? [Colors.red.shade800, Colors.redAccent]
-                        : [Color(0xFF6A11CB), Color(0xFF2575FC)],
+                    colors: [
+                      Colors.deepPurple.withOpacity(0.7),
+                      Colors.purple.withOpacity(0.5),
+                    ],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(
+                      color: Colors.white.withOpacity(0.3), width: 1.5),
                   boxShadow: [
                     BoxShadow(
-                      color: _start <= 10
-                          ? Colors.redAccent.withOpacity(0.6)
-                          : Colors.blueAccent.withOpacity(0.5),
-                      blurRadius: 15,
-                      offset: Offset(0, 5),
+                      color: Colors.deepPurple.withOpacity(0.4),
+                      blurRadius: 12,
+                      offset: Offset(0, 4),
                     ),
                   ],
-                  border: Border.all(
-                    color: Colors.white.withOpacity(0.4),
-                    width: 2,
-                  ),
                 ),
-                child: Stack(
-                  fit: StackFit.expand,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
-                    Padding(
-                      padding: EdgeInsets.all(4),
-                      child: CircularProgressIndicator(
-                        value: _start / 30,
-                        valueColor: AlwaysStoppedAnimation(Colors.white.withOpacity(0.8)),
-                        backgroundColor: Colors.white.withOpacity(0.2),
-                        strokeWidth: 3.5,
+                    // ME (left side - green when my turn)
+                    Expanded(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.sports_soccer,
+                                  color: _socket.playerTurn
+                                      ? Colors.greenAccent
+                                      : Colors.white60,
+                                  size: 14),
+                              SizedBox(width: 4),
+                              Text(
+                                myName.length > 7
+                                    ? myName.substring(0, 7) + ".."
+                                    : myName,
+                                style: TextStyle(
+                                  color: _socket.playerTurn
+                                      ? Colors.greenAccent
+                                      : Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 13,
+                                ),
+                              ),
+                            ],
+                          ),
+                          SizedBox(height: 2),
+                          // Steal Rights (ME)
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: List.generate(3, (i) {
+                              return Padding(
+                                padding:
+                                    const EdgeInsets.symmetric(horizontal: 1.0),
+                                child: Icon(
+                                  Icons.sports_soccer,
+                                  size: 14,
+                                  color: i < myStealRights
+                                      ? Colors.greenAccent
+                                      : Colors.white12,
+                                ),
+                              );
+                            }),
+                          ),
+                          SizedBox(height: 4),
+                          Text(
+                            "$myScore",
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w900,
+                              fontSize: 26,
+                              shadows: [
+                                Shadow(
+                                  blurRadius: 8.0,
+                                  color: Colors.white.withOpacity(0.4),
+                                  offset: Offset(0, 0),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                    Center(
-                      child: Text(
-                        '$_start',
-                        style: TextStyle(
-                          fontSize: 22,
-                          fontWeight: FontWeight.w900,
-                          color: Colors.white,
-                          shadows: [
-                            Shadow(
-                              blurRadius: 5.0,
-                              color: Colors.black38,
-                              offset: Offset(1, 1),
+                    // Round Info
+                    Container(
+                      padding:
+                          EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.15),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            "ROUND",
+                            style: TextStyle(
+                              color: Colors.amberAccent,
+                              fontSize: 9,
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: 1.5,
                             ),
-                          ],
-                        ),
+                          ),
+                          Text(
+                            (widget.roundCount == 1 && currentRound == 1)
+                                ? "MATCH"
+                                : (currentRound > widget.roundCount
+                                    ? "EXTRA"
+                                    : "$currentRound/${widget.roundCount}"),
+                            style: TextStyle(
+                              color: Colors.amberAccent,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w900,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    // OPPONENT (right side - red when their turn)
+                    Expanded(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              // Uzun adlar dar ekranda satırı taşırıyordu.
+                              Flexible(
+                                child: Text(
+                                  opponentName.length > 7
+                                      ? opponentName.substring(0, 7) + ".."
+                                      : opponentName,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    color: !_socket.playerTurn
+                                        ? Colors.redAccent
+                                        : Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 13,
+                                  ),
+                                ),
+                              ),
+                              SizedBox(width: 4),
+                              Icon(Icons.sports_soccer,
+                                  color: !_socket.playerTurn
+                                      ? Colors.redAccent
+                                      : Colors.white60,
+                                  size: 14),
+                            ],
+                          ),
+                          SizedBox(height: 2),
+                          // Steal Rights (OPPONENT)
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: List.generate(3, (i) {
+                              return Padding(
+                                padding:
+                                    const EdgeInsets.symmetric(horizontal: 1.0),
+                                child: Icon(
+                                  Icons.sports_soccer,
+                                  size: 14,
+                                  color: i < opponentStealRights
+                                      ? Colors.greenAccent
+                                      : Colors.white12,
+                                ),
+                              );
+                            }),
+                          ),
+                          SizedBox(height: 4),
+                          Text(
+                            "$opponentScore",
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w900,
+                              fontSize: 26,
+                              shadows: [
+                                Shadow(
+                                  blurRadius: 8.0,
+                                  color: Colors.white.withOpacity(0.4),
+                                  offset: Offset(0, 0),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ],
                 ),
               ),
             ),
-          ),
 
-          // Alt eylem düğmeleri — görsel yerine Türkçe, mod paletiyle çizilir.
-          Positioned(
-            left: 24,
-            right: 24,
-            bottom: screenSize.height * 0.045,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                _GameActionButton(
-                  label: 'RÖVANŞ',
-                  icon: Icons.refresh_rounded,
-                  colors: const [Color(0xFF6A11CB), Color(0xFF2575FC)],
-                  faded: _replayRequestSent,
-                  onTap: () {
-                    if (_replayRequestSent) return;
-                    if (_socket.playerTurn) {
-                      setState(() => _replayRequestSent = true);
-                      _socket.relay({'type': 'replayRequest'});
-                    } else {
-                      GameDialogs.showWarning(
-                        context,
-                        title: 'SIRA SENDE DEĞİL',
-                        message:
-                            'Rövanş istemek için rakibinin hamlesini beklemelisin.',
-                      );
-                    }
-                  },
+            // Premium Timer — BELOW scoreboard, above replay/leave buttons
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: screenSize.height * 0.155,
+              child: Center(
+                child: Container(
+                  width: 60,
+                  height: 60,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: LinearGradient(
+                      colors: _start <= 10
+                          ? [Colors.red.shade800, Colors.redAccent]
+                          : [Color(0xFF6A11CB), Color(0xFF2575FC)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: _start <= 10
+                            ? Colors.redAccent.withOpacity(0.6)
+                            : Colors.blueAccent.withOpacity(0.5),
+                        blurRadius: 15,
+                        offset: Offset(0, 5),
+                      ),
+                    ],
+                    border: Border.all(
+                      color: Colors.white.withOpacity(0.4),
+                      width: 2,
+                    ),
+                  ),
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      Padding(
+                        padding: EdgeInsets.all(4),
+                        child: CircularProgressIndicator(
+                          value: _start / 30,
+                          valueColor: AlwaysStoppedAnimation(
+                              Colors.white.withOpacity(0.8)),
+                          backgroundColor: Colors.white.withOpacity(0.2),
+                          strokeWidth: 3.5,
+                        ),
+                      ),
+                      Center(
+                        child: Text(
+                          '$_start',
+                          style: TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.w900,
+                            color: Colors.white,
+                            shadows: [
+                              Shadow(
+                                blurRadius: 5.0,
+                                color: Colors.black38,
+                                offset: Offset(1, 1),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-                _GameActionButton(
-                  label: 'ODADAN ÇIK',
-                  icon: Icons.logout_rounded,
-                  colors: const [Color(0xFFB3261E), Color(0xFFE04A3A)],
-                  onTap: () {
-                    _socket.leave();
-                    Navigator.pushAndRemoveUntil(
-                      context,
-                      MaterialPageRoute(builder: (context) => const ModeSelectScreen()),
-                      (route) => false,
-                    );
-                  },
-                ),
-              ],
+              ),
             ),
-          ),
-        ],
+
+            // Alt eylem düğmeleri — görsel yerine Türkçe, mod paletiyle çizilir.
+            Positioned(
+              left: 24,
+              right: 24,
+              bottom: screenSize.height * 0.045,
+              // Dar ekranlarda iki düğme yan yana sığmıyordu; eşit paylaşıp
+              // içerikleri gerektiğinde küçülür.
+              child: Row(
+                children: [
+                  Expanded(
+                    child: _GameActionButton(
+                      label: 'RÖVANŞ',
+                      icon: Icons.refresh_rounded,
+                      colors: const [Color(0xFF6A11CB), Color(0xFF2575FC)],
+                      faded: _replayRequestSent,
+                      onTap: () {
+                        if (_replayRequestSent) return;
+                        if (_socket.playerTurn) {
+                          setState(() => _replayRequestSent = true);
+                          _socket.relay({'type': 'replayRequest'});
+                        } else {
+                          GameDialogs.showWarning(
+                            context,
+                            title: 'SIRA SENDE DEĞİL',
+                            message:
+                                'Rövanş istemek için rakibinin hamlesini beklemelisin.',
+                          );
+                        }
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _GameActionButton(
+                      label: 'ODADAN ÇIK',
+                      icon: Icons.logout_rounded,
+                      colors: const [Color(0xFFB3261E), Color(0xFFE04A3A)],
+                      onTap: _confirmExit,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -1249,12 +1454,12 @@ class _TikiTakaToeScreenState extends State<TikiTakaToeScreen>
       if (words.length > 1) {
         initials = "${words[0][0]}${words[1][0]}".toUpperCase();
       } else {
-        initials = words[0].length > 1 
-            ? "${words[0][0]}${words[0][1]}".toUpperCase() 
+        initials = words[0].length > 1
+            ? "${words[0][0]}${words[0][1]}".toUpperCase()
             : words[0].toUpperCase();
       }
     } else {
-        initials = "FC";
+      initials = "FC";
     }
 
     return Container(
@@ -1290,7 +1495,6 @@ class _TikiTakaToeScreenState extends State<TikiTakaToeScreen>
     );
   }
 
-
   /// "Kutun çalındı" bildirimi.
   ///
   /// Diyalog yerine katman (overlay) kullanılır: eskiden bu bildirim
@@ -1321,11 +1525,13 @@ class _TikiTakaToeScreenState extends State<TikiTakaToeScreen>
             child: Material(
               color: Colors.transparent,
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
                 decoration: BoxDecoration(
                   color: const Color(0xFF3A0F1C).withOpacity(0.96),
                   borderRadius: BorderRadius.circular(18),
-                  border: Border.all(color: Colors.redAccent.withOpacity(0.8), width: 1.6),
+                  border: Border.all(
+                      color: Colors.redAccent.withOpacity(0.8), width: 1.6),
                   boxShadow: [
                     BoxShadow(
                       color: Colors.redAccent.withOpacity(0.35),
@@ -1337,7 +1543,8 @@ class _TikiTakaToeScreenState extends State<TikiTakaToeScreen>
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: const [
-                    Icon(Icons.gpp_bad_rounded, color: Colors.redAccent, size: 26),
+                    Icon(Icons.gpp_bad_rounded,
+                        color: Colors.redAccent, size: 26),
                     SizedBox(width: 12),
                     Expanded(
                       child: Text(
@@ -1394,7 +1601,8 @@ class _GameActionButton extends StatelessWidget {
               end: Alignment.bottomRight,
             ),
             borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: Colors.white.withOpacity(0.18), width: 1.4),
+            border:
+                Border.all(color: Colors.white.withOpacity(0.18), width: 1.4),
             boxShadow: [
               BoxShadow(
                 color: colors.last.withOpacity(0.4),
@@ -1403,21 +1611,24 @@ class _GameActionButton extends StatelessWidget {
               ),
             ],
           ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(icon, color: Colors.white, size: 17),
-              const SizedBox(width: 9),
-              Text(
-                label,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: 1.1,
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(icon, color: Colors.white, size: 17),
+                const SizedBox(width: 9),
+                Text(
+                  label,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 1.1,
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),

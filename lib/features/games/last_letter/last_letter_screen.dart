@@ -62,7 +62,8 @@ class _LetterPanel extends StatelessWidget {
                   ? null
                   : [
                       BoxShadow(
-                        color: GameMode.lastLetter.colors.last.withOpacity(0.55),
+                        color:
+                            GameMode.lastLetter.colors.last.withOpacity(0.55),
                         blurRadius: 26,
                         spreadRadius: 2,
                       ),
@@ -85,7 +86,8 @@ class _LetterPanel extends StatelessWidget {
             RichText(
               textAlign: TextAlign.center,
               text: TextSpan(
-                style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 12.5),
+                style: TextStyle(
+                    color: Colors.white.withOpacity(0.5), fontSize: 12.5),
                 children: [
                   const TextSpan(text: 'Son yazılan: '),
                   TextSpan(

@@ -60,16 +60,19 @@ class _ModeSelectScreenState extends State<ModeSelectScreen>
                     children: [
                       Flexible(
                         child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 14, vertical: 7),
                           decoration: BoxDecoration(
                             color: Colors.black.withOpacity(0.35),
                             borderRadius: BorderRadius.circular(20),
-                            border: Border.all(color: Colors.cyanAccent.withOpacity(0.35)),
+                            border: Border.all(
+                                color: Colors.cyanAccent.withOpacity(0.35)),
                           ),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              const Icon(Icons.person, color: Colors.cyanAccent, size: 17),
+                              const Icon(Icons.person,
+                                  color: Colors.cyanAccent, size: 17),
                               const SizedBox(width: 7),
                               Flexible(
                                 child: Text(
@@ -245,8 +248,9 @@ class _ModeCard extends StatelessWidget {
             ),
             AnimatedCrossFade(
               duration: const Duration(milliseconds: 220),
-              crossFadeState:
-                  expanded ? CrossFadeState.showSecond : CrossFadeState.showFirst,
+              crossFadeState: expanded
+                  ? CrossFadeState.showSecond
+                  : CrossFadeState.showFirst,
               firstChild: const SizedBox(width: double.infinity),
               secondChild: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,

@@ -20,7 +20,8 @@ class GameSocket {
   WebSocketChannel? _channel;
   StreamSubscription? _subscription;
   Timer? _heartbeat;
-  StreamController<SocketEvent> _events = StreamController<SocketEvent>.broadcast();
+  StreamController<SocketEvent> _events =
+      StreamController<SocketEvent>.broadcast();
 
   /// Bu cihazın oda içindeki yeri: 0 = kurucu (X), 1 = katılan (O).
   int mySlot = 0;
@@ -147,7 +148,8 @@ class GameSocket {
   }
 
   /// Oyun mantığı istemcide olan modlarda ham mesaj aktarımı.
-  void relay(Map<String, dynamic> data) => send({'type': 'relay', 'data': data});
+  void relay(Map<String, dynamic> data) =>
+      send({'type': 'relay', 'data': data});
 
   void requestRematch() => send({'type': 'rematch'});
 
@@ -181,13 +183,15 @@ class GameSocket {
         break;
 
       case 'start':
-        startPayload = (message['payload'] as Map?)?.cast<String, dynamic>() ?? const {};
+        startPayload =
+            (message['payload'] as Map?)?.cast<String, dynamic>() ?? const {};
         lastState = startPayload;
         _updatePlayers(startPayload['players']);
         break;
 
       case 'state':
-        lastState = (message['payload'] as Map?)?.cast<String, dynamic>() ?? const {};
+        lastState =
+            (message['payload'] as Map?)?.cast<String, dynamic>() ?? const {};
         break;
 
       case 'relay':

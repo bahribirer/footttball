@@ -80,7 +80,8 @@ class GameDialogs {
   }
 
   /// Rakip oyundan ayrıldığında gösterilir; kapatınca geri çağrı çalışır.
-  static void showDisconnected(BuildContext context, {required VoidCallback onExit}) {
+  static void showDisconnected(BuildContext context,
+      {required VoidCallback onExit}) {
     _show(
       context,
       emoji: '💔',
@@ -123,7 +124,10 @@ class GameDialogs {
             borderRadius: BorderRadius.circular(24),
             border: Border.all(color: accent.withOpacity(0.4), width: 2),
             boxShadow: [
-              BoxShadow(color: accent.withOpacity(0.3), blurRadius: 30, spreadRadius: 2),
+              BoxShadow(
+                  color: accent.withOpacity(0.3),
+                  blurRadius: 30,
+                  spreadRadius: 2),
             ],
           ),
           child: Material(
@@ -142,7 +146,9 @@ class GameDialogs {
                     fontSize: 22,
                     fontWeight: FontWeight.w900,
                     letterSpacing: 1.8,
-                    shadows: [Shadow(blurRadius: 12, color: accent.withOpacity(0.5))],
+                    shadows: [
+                      Shadow(blurRadius: 12, color: accent.withOpacity(0.5))
+                    ],
                   ),
                 ),
                 const SizedBox(height: 14),
@@ -239,7 +245,8 @@ class RematchRequestDialog extends StatelessWidget {
             const Text(
               'Rakibin yeniden oynamak istiyor.\nMeydan okumayı kabul ediyor musun?',
               textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.white70, fontSize: 14, height: 1.4),
+              style:
+                  TextStyle(color: Colors.white70, fontSize: 14, height: 1.4),
             ),
             const SizedBox(height: 22),
             Row(
@@ -248,7 +255,8 @@ class RematchRequestDialog extends StatelessWidget {
                 TextButton(
                   onPressed: onDecline,
                   style: TextButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 12),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 22, vertical: 12),
                     backgroundColor: Colors.white12,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
@@ -256,13 +264,15 @@ class RematchRequestDialog extends StatelessWidget {
                   ),
                   child: const Text(
                     'REDDET',
-                    style: TextStyle(color: Colors.white60, fontWeight: FontWeight.bold),
+                    style: TextStyle(
+                        color: Colors.white60, fontWeight: FontWeight.bold),
                   ),
                 ),
                 ElevatedButton(
                   onPressed: onAccept,
                   style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 14),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 22, vertical: 14),
                     backgroundColor: const Color(0xFF2575FC),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
@@ -271,7 +281,8 @@ class RematchRequestDialog extends StatelessWidget {
                   ),
                   child: const Text(
                     'KABUL ET',
-                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                    style: TextStyle(
+                        color: Colors.white, fontWeight: FontWeight.bold),
                   ),
                 ),
               ],

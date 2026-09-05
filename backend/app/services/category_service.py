@@ -10,7 +10,7 @@ from dataclasses import dataclass, field
 from functools import lru_cache
 
 from app.db.database import fetch_all, fetch_column
-from app.services.player_service import normalize
+from app.services.player_service import has_squad_layer, normalize
 
 # Görünen adlar
 POSITION_TR = {
@@ -67,12 +67,20 @@ class Category:
     where: str
     params: tuple = field(default_factory=tuple)
 
+    # Kulüp/lig temelli kategorilerin `squad_updates` tablosundaki karşılığı.
+    # Ana tablo son transfer dönemini kapsamadığı için, yeni takımına göre
+    # doğru olan cevaplar yalnızca bu koşulla kabul edilebiliyor.
+    squad_where: str | None = None
+    squad_params: tuple = field(default_factory=tuple)
+
     def to_dict(self) -> dict:
         return {"id": self.id, "label": self.label}
 
 
-def _c(cid: str, label: str, where: str, *params) -> Category:
-    return Category(id=cid, label=label, where=where, params=tuple(params))
+def _c(cid: str, label: str, where: str, *params,
+       squad_where: str | None = None, squad_params: tuple = ()) -> Category:
+    return Category(id=cid, label=label, where=where, params=tuple(params),
+                    squad_where=squad_where, squad_params=tuple(squad_params))
 
 
 @lru_cache(maxsize=1)
@@ -85,14 +93,28 @@ def _build_candidates() -> list[Category]:
         "WHERE country_of_citizenship IS NOT NULL"
     ))]
 
-    clubs = fetch_column(
-        """SELECT current_club_name FROM players
-           WHERE current_club_name IS NOT NULL AND current_club_name != ''
-           GROUP BY current_club_name
-           HAVING COUNT(DISTINCT name) >= 40
-           ORDER BY COUNT(DISTINCT name) DESC
-           LIMIT 60"""
-    )
+    # Kulüp kategorileri güncel kadrosu bilinen takımlardan seçilir. Yalnızca
+    # ana tablodaki kayıt sayısına bakıldığında liste, oyuncuların tanımadığı
+    # kulüplerle doluyor ve Galatasaray gibi takımlar hiç çıkmıyordu.
+    clubs: list[str] = []
+    if has_squad_layer():
+        clubs = fetch_column(
+            """SELECT club_name FROM squad_updates
+               GROUP BY club_name
+               HAVING COUNT(*) >= 14
+               ORDER BY COUNT(*) DESC
+               LIMIT 80"""
+        )
+
+    if not clubs:
+        clubs = fetch_column(
+            """SELECT current_club_name FROM players
+               WHERE current_club_name IS NOT NULL AND current_club_name != ''
+               GROUP BY current_club_name
+               HAVING COUNT(DISTINCT name) >= 40
+               ORDER BY COUNT(DISTINCT name) DESC
+               LIMIT 60"""
+        )
 
     # 1) Ülke + mevki
     for nation in nations:
@@ -111,6 +133,7 @@ def _build_candidates() -> list[Category]:
             f"{club} forması giymiş futbolcular",
             "current_club_name = ?",
             club,
+            squad_where="club_name = ?", squad_params=(club,),
         ))
 
     # 3) Kulüp + ülke
@@ -121,6 +144,8 @@ def _build_candidates() -> list[Category]:
                 f"{club}'ta oynamış {NATION_TR[nation]} futbolcular",
                 "current_club_name = ? AND country_of_citizenship = ?",
                 club, nation,
+                squad_where="club_name = ? AND country = ?",
+                squad_params=(club, nation),
             ))
 
     # 4) Lig + ülke
@@ -131,6 +156,8 @@ def _build_candidates() -> list[Category]:
                 f"{league_tr}'de oynamış {NATION_TR[nation]} futbolcular",
                 "current_club_domestic_competition_id = ? AND country_of_citizenship = ?",
                 league, nation,
+                squad_where="competition_id = ? AND country = ?",
+                squad_params=(league, nation),
             ))
 
     # 5) Özel nitelikler
@@ -202,14 +229,31 @@ def get_category(category_id: str) -> Category | None:
 
 
 def verify_answer(category: Category, player_name: str) -> str | None:
-    """İsim kategoriye uyuyorsa oyuncunun kanonik adını, uymuyorsa None döner."""
+    """İsim kategoriye uyuyorsa oyuncunun kanonik adını, uymuyorsa None döner.
+
+    Kulüp ve lig temelli kategorilerde ana tablo yetmeyebilir: son transfer
+    döneminde takım değiştiren oyuncular ancak güncel kadro katmanında
+    görünür. O katman da sorgulanmazsa doğru cevaplar reddediliyordu.
+    """
     if not player_name.strip():
         return None
 
+    key = normalize(player_name)
     rows = fetch_all(
         f"""SELECT DISTINCT name FROM players
             WHERE name_normalized = ? AND ({category.where})""",
-        (normalize(player_name), *category.params),
+        (key, *category.params),
+    )
+    if rows:
+        return rows[0]["name"]
+
+    if not category.squad_where or not has_squad_layer():
+        return None
+
+    rows = fetch_all(
+        f"""SELECT DISTINCT player_name AS name FROM squad_updates
+            WHERE name_normalized = ? AND ({category.squad_where})""",
+        (key, *category.squad_params),
     )
     return rows[0]["name"] if rows else None
 

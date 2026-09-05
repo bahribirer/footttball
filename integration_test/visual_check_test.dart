@@ -39,7 +39,8 @@ void main() {
   }
 
   Future<void> showMode(WidgetTester tester, GameMode mode,
-      {String? league, void Function(WebSocketChannel rival)? rivalScript}) async {
+      {String? league,
+      void Function(WebSocketChannel rival)? rivalScript}) async {
     Session.instance.playerName = 'Bahri';
     await tester.pumpWidget(MaterialApp(
       debugShowCheckedModeBanner: false,
@@ -61,7 +62,9 @@ void main() {
     await pumpFor(tester, const Duration(seconds: 3)); // oda kurma ekranı
 
     final code = find
-        .descendant(of: find.byType(CreateRoomScreen), matching: find.byType(Text))
+        .descendant(
+            of: find.byKey(const ValueKey('room_code')),
+            matching: find.byType(Text))
         .evaluate()
         .map((e) => (e.widget as Text).data ?? '')
         .where((t) => t.length == 1 && int.tryParse(t) != null)
@@ -72,12 +75,16 @@ void main() {
       await pumpFor(tester, const Duration(seconds: 2));
     }
 
-    await tester.tap(find.byKey(const ValueKey('btn_play')));
     if (league != null) {
       await pumpUntil(tester, find.text('SERİ UZUNLUĞU'));
       await pumpFor(tester, const Duration(seconds: 2));
+      await tester.ensureVisible(find.byKey(const ValueKey('rounds_3')));
       await tester.tap(find.byKey(const ValueKey('rounds_3')));
+      await pumpFor(tester, const Duration(milliseconds: 500));
     }
+
+    await tester.ensureVisible(find.byKey(const ValueKey('btn_play')));
+    await tester.tap(find.byKey(const ValueKey('btn_play')));
 
     await pumpUntil(tester, find.byType(WaitingRoomScreen));
     await pumpFor(tester, const Duration(seconds: 3)); // bekleme odası

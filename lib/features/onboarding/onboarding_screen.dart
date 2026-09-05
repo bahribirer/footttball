@@ -28,16 +28,14 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     _Step(
       icon: Icons.grid_3x3_rounded,
       title: 'DÖRT FARKLI\nOYUN MODU',
-      text:
-          'Tiki Taka Toe, Oyuncu Tahmin, Son Harf ve Kategori Yarışı. '
+      text: 'Tiki Taka Toe, Oyuncu Tahmin, Son Harf ve Kategori Yarışı. '
           'Her mod farklı bir beceri istiyor.',
       colors: [Color(0xFFFF512F), Color(0xFFDD2476)],
     ),
     _Step(
       icon: Icons.bolt_rounded,
       title: 'SÜREYLE\nYARIŞ',
-      text:
-          'Saat işlerken doğru futbolcuyu bulmalısın. Yanlış cevap süreden '
+      text: 'Saat işlerken doğru futbolcuyu bulmalısın. Yanlış cevap süreden '
           'götürür — hızlı ve dikkatli ol.',
       colors: [Color(0xFF00F260), Color(0xFF0575E6)],
     ),
@@ -107,7 +105,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     controller: _pageController,
                     itemCount: _steps.length,
                     onPageChanged: (value) => setState(() => _page = value),
-                    itemBuilder: (context, index) => _StepView(step: _steps[index]),
+                    itemBuilder: (context, index) =>
+                        _StepView(step: _steps[index]),
                   ),
                 ),
                 if (_page == 1) const _ModeStrip(),
@@ -137,7 +136,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     width: double.infinity,
                     child: PrimaryButton(
                       label: last ? 'HADİ BAŞLAYALIM' : 'DEVAM',
-                      icon: last ? Icons.play_arrow_rounded : Icons.arrow_forward_rounded,
+                      icon: last
+                          ? Icons.play_arrow_rounded
+                          : Icons.arrow_forward_rounded,
                       colors: step.colors,
                       onTap: _next,
                     ),
@@ -174,8 +175,9 @@ class _StepView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 30),
+    // Kısa ekranlarda (ör. 320x568) içerik sığmıyordu; gerektiğinde kayar.
+    return SingleChildScrollView(
+      padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 12),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
@@ -195,7 +197,8 @@ class _StepView extends StatelessWidget {
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
-                border: Border.all(color: Colors.white.withOpacity(0.2), width: 2),
+                border:
+                    Border.all(color: Colors.white.withOpacity(0.2), width: 2),
                 boxShadow: [
                   BoxShadow(
                     color: step.colors.last.withOpacity(0.4),
@@ -208,7 +211,8 @@ class _StepView extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 38),
-          NeonTitle(step.title, fontSize: 25, colors: [Colors.white, step.colors.last]),
+          NeonTitle(step.title,
+              fontSize: 25, colors: [Colors.white, step.colors.last]),
           const SizedBox(height: 18),
           Text(
             step.text,
