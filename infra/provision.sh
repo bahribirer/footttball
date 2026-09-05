@@ -87,6 +87,12 @@ else
   echo "  yüklendi"
 fi
 
+if [ "${SKIP_TLS:-0}" = "1" ]; then
+  echo "▶ 5/6  TLS sertifikası — atlandı (SKIP_TLS=1)"
+  echo "  DNS yeni sunucuya yönlendikten sonra betiği tekrar çalıştırın."
+  exit 0
+fi
+
 echo "▶ 5/6  TLS sertifikası"
 $SSH "bash -s" <<REMOTE
 set -euo pipefail
