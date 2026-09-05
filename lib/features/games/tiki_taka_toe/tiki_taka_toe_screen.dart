@@ -1170,170 +1170,50 @@ class _TikiTakaToeScreenState extends State<TikiTakaToeScreen>
             ),
           ),
 
-          // Leave Room Button
+          // Alt eylem düğmeleri — görsel yerine Türkçe, mod paletiyle çizilir.
           Positioned(
-            left: screenSize.width * 0.55,
-            bottom: screenSize.height * 0.05,
-            child: GestureDetector(
-              onTap: () {
-                _socket.leave();
-                Navigator.pushAndRemoveUntil(
-                  context,
-                  MaterialPageRoute(builder: (context) => const ModeSelectScreen()),
-                  (route) => false,
-                );
-              },
-              child: Image.asset(
-                'images/leave.png',
-                width: screenSize.width * 0.3,
-                height: screenSize.height * 0.1,
-                fit: BoxFit.contain,
-              ),
+            left: 24,
+            right: 24,
+            bottom: screenSize.height * 0.045,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                _GameActionButton(
+                  label: 'RÖVANŞ',
+                  icon: Icons.refresh_rounded,
+                  colors: const [Color(0xFF6A11CB), Color(0xFF2575FC)],
+                  faded: _replayRequestSent,
+                  onTap: () {
+                    if (_replayRequestSent) return;
+                    if (_socket.playerTurn) {
+                      setState(() => _replayRequestSent = true);
+                      _socket.relay({'type': 'replayRequest'});
+                    } else {
+                      GameDialogs.showWarning(
+                        context,
+                        title: 'SIRA SENDE DEĞİL',
+                        message:
+                            'Rövanş istemek için rakibinin hamlesini beklemelisin.',
+                      );
+                    }
+                  },
+                ),
+                _GameActionButton(
+                  label: 'ODADAN ÇIK',
+                  icon: Icons.logout_rounded,
+                  colors: const [Color(0xFFB3261E), Color(0xFFE04A3A)],
+                  onTap: () {
+                    _socket.leave();
+                    Navigator.pushAndRemoveUntil(
+                      context,
+                      MaterialPageRoute(builder: (context) => const ModeSelectScreen()),
+                      (route) => false,
+                    );
+                  },
+                ),
+              ],
             ),
           ),
-
-          // Replay Button
-          // Replay butonuna basıldığında replay isteği gönderilir
-          Positioned(
-            right: screenSize.width * 0.55,
-            bottom: screenSize.height * 0.05,
-            child: GestureDetector(
-              onTap: () async {
-                if (_replayRequestSent) return; // Already sent, wait for response
-                // Check if it's the player's turn before sending the replay request
-                if (_socket.playerTurn) {
-                  setState(() { _replayRequestSent = true; });
-                  _socket.relay({'type': 'replayRequest'});
-                } else {
-                  // Premium "Not Your Turn" popup
-                  showGeneralDialog(
-                    barrierDismissible: true,
-                    barrierLabel: '',
-                    barrierColor: Colors.black54,
-                    transitionDuration: Duration(milliseconds: 300),
-                    pageBuilder: (ctx, anim1, anim2) => Center(
-                      child: Container(
-                        margin: EdgeInsets.symmetric(horizontal: 30),
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [Color(0xFF1A1A2E), Color(0xFF16213E)],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                          ),
-                          borderRadius: BorderRadius.circular(24),
-                          border: Border.all(
-                            color: Colors.orangeAccent.withOpacity(0.4),
-                            width: 2,
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.orangeAccent.withOpacity(0.3),
-                              blurRadius: 30,
-                              spreadRadius: 2,
-                            ),
-                          ],
-                        ),
-                        child: Material(
-                          color: Colors.transparent,
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              SizedBox(height: 24),
-                              Text("⏳", style: TextStyle(fontSize: 48)),
-                              SizedBox(height: 12),
-                              Text(
-                                "NOT YOUR TURN",
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.w900,
-                                  letterSpacing: 1.5,
-                                  shadows: [
-                                    Shadow(
-                                      blurRadius: 10,
-                                      color: Colors.orangeAccent.withOpacity(0.5),
-                                      offset: Offset(0, 0),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              SizedBox(height: 14),
-                              Padding(
-                                padding: EdgeInsets.symmetric(horizontal: 24),
-                                child: Text(
-                                  "Wait for your opponent's move\nbefore requesting a rematch.",
-                                  textAlign: TextAlign.center,
-                                  style: TextStyle(
-                                    color: Colors.white.withOpacity(0.8),
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w500,
-                                    height: 1.4,
-                                  ),
-                                ),
-                              ),
-                              SizedBox(height: 22),
-                              Padding(
-                                padding: EdgeInsets.symmetric(horizontal: 32),
-                                child: GestureDetector(
-                                  onTap: () => Navigator.of(ctx).pop(),
-                                  child: Container(
-                                    width: double.infinity,
-                                    padding: EdgeInsets.symmetric(vertical: 13),
-                                    decoration: BoxDecoration(
-                                      gradient: LinearGradient(
-                                        colors: [Colors.amberAccent, Colors.orangeAccent],
-                                      ),
-                                      borderRadius: BorderRadius.circular(16),
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color: Colors.amber.withOpacity(0.4),
-                                          blurRadius: 12,
-                                          offset: Offset(0, 4),
-                                        ),
-                                      ],
-                                    ),
-                                    child: Center(
-                                      child: Text(
-                                        "GOT IT",
-                                        style: TextStyle(
-                                          color: Colors.black87,
-                                          fontSize: 15,
-                                          fontWeight: FontWeight.w900,
-                                          letterSpacing: 1.0,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              SizedBox(height: 22),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                    transitionBuilder: (ctx, anim1, anim2, child) => ScaleTransition(
-                      scale: CurvedAnimation(parent: anim1, curve: Curves.easeOutBack),
-                      child: FadeTransition(
-                        opacity: anim1,
-                        child: child,
-                      ),
-                    ),
-                    context: context,
-                  );
-                }
-              },
-              child: Opacity(
-                opacity: _replayRequestSent ? 0.4 : 1.0,
-                child: Image.asset(
-                  'images/replay.png',
-                  width: screenSize.width * 0.3,
-                  height: screenSize.height * 0.1,
-                  fit: BoxFit.contain,
-                ),
-              ),
-            ),
-          )
         ],
       ),
     );
@@ -1480,5 +1360,67 @@ class _TikiTakaToeScreenState extends State<TikiTakaToeScreen>
 
     overlay.insert(entry);
     Future<void>.delayed(const Duration(milliseconds: 2600), entry.remove);
+  }
+}
+
+/// Tahtanın altındaki eylem düğmesi.
+class _GameActionButton extends StatelessWidget {
+  const _GameActionButton({
+    required this.label,
+    required this.icon,
+    required this.colors,
+    required this.onTap,
+    this.faded = false,
+  });
+
+  final String label;
+  final IconData icon;
+  final List<Color> colors;
+  final VoidCallback onTap;
+  final bool faded;
+
+  @override
+  Widget build(BuildContext context) {
+    return Opacity(
+      opacity: faded ? 0.45 : 1,
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 13),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: colors,
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: Colors.white.withOpacity(0.18), width: 1.4),
+            boxShadow: [
+              BoxShadow(
+                color: colors.last.withOpacity(0.4),
+                blurRadius: 14,
+                offset: const Offset(0, 5),
+              ),
+            ],
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, color: Colors.white, size: 17),
+              const SizedBox(width: 9),
+              Text(
+                label,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 1.1,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }

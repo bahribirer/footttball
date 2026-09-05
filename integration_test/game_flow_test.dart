@@ -115,7 +115,7 @@ void main() {
     await pumpUntil(tester, find.byType(OnboardingScreen),
         timeout: const Duration(seconds: 15), label: 'onboarding');
 
-    await tester.tap(find.text('Skip'));
+    await tester.tap(find.text('Atla'));
     await pumpUntil(tester, find.byType(NameRoom), label: 'isim ekranı');
 
     await tester.enterText(find.byType(TextField).first, 'Bahri');

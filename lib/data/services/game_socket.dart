@@ -236,11 +236,15 @@ class GameSocket {
   /// "rakibin seçimi" olarak görüyordu.
   void _handleRelay(Map<String, dynamic> data, int fromSlot) {
     final type = data['type'] as String?;
+    final symbol = data['symbol'] as String? ?? type;
 
-    if (data.containsKey('index')) {
+    // Hamle, `index` ile birlikte bir oyuncu sembolü taşır. Yalnızca `index`
+    // varlığına bakmak yetmiyor: kutu seçimi bildirimi de `index` taşıdığı
+    // için hamle sanılıyor, seçilen kutu doluyor ve sıra devrediyordu.
+    if (data.containsKey('index') && (symbol == 'X' || symbol == 'O')) {
       makeMove?.call(
         data['index'] as int,
-        data['symbol'] as String? ?? data['type'] as String? ?? '',
+        symbol!,
         data['playerName'] as String?,
       );
       return;

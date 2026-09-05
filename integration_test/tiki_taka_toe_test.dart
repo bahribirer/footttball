@@ -147,6 +147,37 @@ void main() {
     await socket.disconnect();
   });
 
+  testWidgets('kutu seçimi bildirimi hamle sayılmaz', (t) async {
+    // Kutu seçimi bildirimi de `index` taşır. Hamleyle karıştırılırsa
+    // seçilen kutu doluyor, arama kutusu kapanıyor ve sıra devrediyordu.
+    final rival = await startGame(t);
+    final socket = GameSocket.instance;
+
+    expect(socket.playerTurn, isTrue);
+
+    socket.relay({'type': 'selectCell', 'index': 9});
+    await hold(t, const Duration(seconds: 3));
+
+    expect(socket.playerTurn, isTrue,
+        reason: 'seçim bildirimi sırayı devretmemeli');
+    expect(find.text(socket.mySymbol), findsNothing,
+        reason: 'seçim bildirimi kutuyu doldurmamalı');
+
+    // Rakibin seçim bildirimi de tahtayı doldurmamalı.
+    rival.sink.add(jsonEncode({
+      'type': 'relay',
+      'data': {'type': 'selectCell', 'index': 10},
+    }));
+    await hold(t, const Duration(seconds: 2));
+
+    final rivalSymbol = socket.mySlot == 0 ? 'O' : 'X';
+    expect(find.text(rivalSymbol), findsNothing,
+        reason: 'rakibin seçimi de kutuyu doldurmamalı');
+
+    await rival.sink.close();
+    await socket.disconnect();
+  });
+
   testWidgets('süre dolumu sırayı devreder', (t) async {
     final rival = await startGame(t);
     final socket = GameSocket.instance;
