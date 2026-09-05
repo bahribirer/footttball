@@ -110,7 +110,8 @@ void main() {
     Session.instance
       ..playerName = ''
       ..selectedMode = GameMode.tikiTakaToe
-      ..roundCount = 1;
+      ..roundCount = 1
+      ..categoryId = null;
   });
 
   testWidgets('Açılış akışı: onboarding, isim girişi ve mod menüsü',
@@ -213,7 +214,8 @@ void main() {
 
     // İlk seçeneğin etiketi, oyun ekranında da görünmesi gereken kategoridir.
     final chosenLabel = tester
-        .widgetList<Text>(find.descendant(of: options.first, matching: find.byType(Text)))
+        .widgetList<Text>(
+            find.descendant(of: options.first, matching: find.byType(Text)))
         .map((t) => t.data ?? '')
         .firstWhere((t) => t.length > 3, orElse: () => '');
 

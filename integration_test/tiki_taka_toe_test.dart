@@ -41,6 +41,19 @@ void main() {
     fail('görünmedi: ${label ?? f.toString()}');
   }
 
+  // `GameSocket` ve `Session` tekil olduğu için testler arasında sıfırlanır;
+  // aksi halde bu dosya başka bir test dosyasıyla birlikte çalıştığında
+  // önceki testten kalan bağlantı ve geri çağrılar oyunu bozuyordu.
+  tearDown(() async {
+    await GameSocket.instance.disconnect();
+    GameSocket.instance.clearCallbacks();
+    Session.instance
+      ..playerName = ''
+      ..selectedMode = GameMode.tikiTakaToe
+      ..roundCount = 1
+      ..categoryId = null;
+  });
+
   /// Oyunu başlatır ve sahte rakibin bağlantısını döndürür.
   Future<WebSocketChannel> startGame(WidgetTester t) async {
     Session.instance
