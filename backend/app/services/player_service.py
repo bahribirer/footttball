@@ -53,18 +53,29 @@ def search_players(name: str, base_url: str) -> list[dict]:
         return []
 
     # Arama aksansız kolon üzerinden yapılır: "guler" yazan oyuncu
-    # "Arda Güler" kaydını da bulur. Baştan eşleşenler üste alınır.
+    # "Arda Güler" kaydını da bulur.
+    #
+    # Sıralama: önce adın başıyla eşleşenler, sonra soyadın (herhangi bir
+    # kelimenin) başıyla eşleşenler, en sonda ortada geçenler. Oyuncular
+    # çoğunlukla soyadıyla arandığı için "sane" araması Leroy Sané'yi
+    # Alassane Ndao'nun üstünde göstermelidir. Aynı öncelikte güncel
+    # sezondakiler öne alınır.
     key = normalize(name)
     rows = fetch_all(
         """SELECT name, country_of_citizenship, current_club_name,
-                  current_club_domestic_competition_id, image_url, position, last_season
+                  current_club_domestic_competition_id, image_url, position,
+                  last_season, highest_market_value_in_eur
            FROM players
            WHERE name_normalized LIKE ?
-           ORDER BY CASE WHEN name_normalized LIKE ? THEN 0 ELSE 1 END,
+           ORDER BY CASE
+                      WHEN name_normalized LIKE ? OR name_normalized LIKE ? THEN 0
+                      ELSE 1
+                    END,
+                    CAST(COALESCE(highest_market_value_in_eur, 0) AS INTEGER) DESC,
                     last_season DESC,
                     name ASC
            LIMIT ?""",
-        (f"%{key}%", f"{key}%", SEARCH_LIMIT),
+        (f"%{key}%", f"{key}%", f"% {key}%", SEARCH_LIMIT),
     )
 
     results: list[dict] = []
