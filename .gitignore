@@ -44,3 +44,22 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# --- Backend (Python) ---
+backend/.venv/
+backend/__pycache__/
+backend/**/__pycache__/
+backend/*.pyc
+backend/.pytest_cache/
+
+# 33 MB'lık oyuncu veritabanı depoda tutulmaz; sunucuda ve
+# yerelde backend/data/ altına elle konur (bkz. backend/README.md).
+backend/data/*.db
+backend/data/*.db-journal
+
+# Logo önbelleği çalışma sırasında dolar
+backend/static/logos/*
+!backend/static/logos/.gitkeep
+
+# --- Altyapı ---
+infra/certbot/
