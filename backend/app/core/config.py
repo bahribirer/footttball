@@ -30,6 +30,9 @@ class Settings:
     WS_HEARTBEAT_SECONDS: int = int(os.getenv("WS_HEARTBEAT_SECONDS", "25"))
     WS_IDLE_TIMEOUT_SECONDS: int = int(os.getenv("WS_IDLE_TIMEOUT_SECONDS", "90"))
     EMPTY_ROOM_TTL_SECONDS: int = int(os.getenv("EMPTY_ROOM_TTL_SECONDS", "120"))
+    # Kurucu lig/kategori/süre seçerken oda kimse bağlanmadan bekler; kısa
+    # ömür, seçimi uzatan oyuncunun odasını ayar kaydedilmeden siliyordu.
+    RESERVED_ROOM_TTL_SECONDS: int = int(os.getenv("RESERVED_ROOM_TTL_SECONDS", "1800"))
 
     # Tiki Taka Toe
     TTT_TURN_SECONDS: int = 30

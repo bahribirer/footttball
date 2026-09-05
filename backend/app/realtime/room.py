@@ -56,6 +56,9 @@ class Room:
     engine: object | None = None            # modes.base.BaseMode
     created_at: float = field(default_factory=time.time)
     emptied_at: float | None = None
+    # Odaya hiç bağlanan olmadıysa kurucu hâlâ ayar ekranındadır; bu odalar
+    # oyun bitip boşalanlardan daha uzun süre yaşatılır.
+    had_players: bool = False
     lock: asyncio.Lock = field(default_factory=asyncio.Lock)
 
     @property

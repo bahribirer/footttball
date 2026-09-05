@@ -89,6 +89,7 @@ class RoomHub:
                             slot=room.next_free_slot())
             room.players.append(player)
             room.emptied_at = None
+            room.had_players = True
             return room, player
 
     async def leave(self, room: Room, player: Player) -> None:
@@ -145,7 +146,10 @@ class RoomHub:
                         code for code, room in self._rooms.items()
                         if room.is_empty
                         and room.emptied_at
-                        and now - room.emptied_at > settings.EMPTY_ROOM_TTL_SECONDS
+                        and now - room.emptied_at > (
+                            settings.EMPTY_ROOM_TTL_SECONDS if room.had_players
+                            else settings.RESERVED_ROOM_TTL_SECONDS
+                        )
                     ]
                     for code in stale:
                         room = self._rooms.pop(code, None)
