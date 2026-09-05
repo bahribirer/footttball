@@ -5,7 +5,8 @@ import unicodedata
 from app.db.database import fetch_all, fetch_one
 from app.services.country_service import flag_url
 
-SEARCH_LIMIT = 50
+SEARCH_LIMIT = 40
+SUGGESTION_CLUBS = 4   # öneride gösterilecek en fazla kulüp sayısı
 
 
 # NFKD ayrıştırması bu harfleri çözemediği için elle karşılık verilir;
@@ -45,6 +46,26 @@ def verify_player(player_name: str, nationality: str, club: str) -> bool:
         (normalize(player_name), nationality, f"%{club}%"),
     )
     return bool(rows)
+
+
+def club_history(player_name: str) -> list[str]:
+    """Oyuncunun oynadığı kulüpler, güncelden eskiye.
+
+    Oyun eski takımları da kabul ettiği için öneri listesinde kulüp geçmişi
+    gösterilir; oyuncu "Haaland – Man City, Dortmund" bilgisini görerek
+    hamlesini seçebilir.
+    """
+    rows = fetch_all(
+        """SELECT current_club_name, MAX(last_season) AS season
+           FROM players
+           WHERE name_normalized = ?
+             AND current_club_name IS NOT NULL AND current_club_name != ''
+           GROUP BY current_club_name
+           ORDER BY season DESC
+           LIMIT ?""",
+        (normalize(player_name), SUGGESTION_CLUBS),
+    )
+    return [row["current_club_name"] for row in rows]
 
 
 def search_players(name: str, base_url: str) -> list[dict]:
@@ -92,6 +113,7 @@ def search_players(name: str, base_url: str) -> list[dict]:
             "name": row["name"],
             "country": row["country_of_citizenship"],
             "club": club,
+            "clubs": club_history(row["name"]),
             "flag_url": flag_url(row["country_of_citizenship"]),
             "logo_url": f"{base_url}/api/v1/logo_image/{club}" if club else None,
             "image_url": row["image_url"],

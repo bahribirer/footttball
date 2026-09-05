@@ -196,11 +196,12 @@ class _PlayerSearchDialogState extends State<PlayerSearchDialog> {
               ],
               Expanded(
                 child: Text(
+                  // Oyun eski takımları da kabul ettiği için kulüp geçmişi yazılır.
                   [
                     CountryCatalog.turkish(player['country'] as String?),
-                    player['club'] as String?,
+                    ...((player['clubs'] as List?) ?? [player['club']])
+                        .whereType<String>(),
                   ]
-                      .whereType<String>()
                       .where((value) => value.isNotEmpty)
                       .join(' • '),
                   overflow: TextOverflow.ellipsis,

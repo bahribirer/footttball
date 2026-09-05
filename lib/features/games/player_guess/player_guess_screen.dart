@@ -11,6 +11,7 @@ import 'package:footttball/features/modes/mode_select_screen.dart';
 import 'package:footttball/shared/widgets/app_background.dart';
 import 'package:footttball/shared/widgets/game_dialogs.dart';
 import 'package:footttball/shared/widgets/player_avatar.dart';
+import 'package:footttball/shared/widgets/player_suggestion_field.dart';
 
 /// Oyuncu Tahmin modu.
 ///
@@ -139,10 +140,10 @@ class _PlayerGuessScreenState extends State<PlayerGuessScreen> {
 
   void _pick(String value) => _socket.action('pick', value: value);
 
-  void _submitGuess() {
-    final guess = _answerController.text.trim();
-    if (guess.isEmpty) return;
-    _socket.action('guess', value: guess);
+  void _submitGuess(String guess) {
+    final answer = guess.trim();
+    if (answer.isEmpty) return;
+    _socket.action('guess', value: answer);
     _answerController.clear();
   }
 
@@ -388,34 +389,17 @@ class _PlayerGuessScreenState extends State<PlayerGuessScreen> {
             ),
           ),
           const SizedBox(height: 18),
-          TextField(
-            controller: _answerController,
-            enabled: canAnswer,
-            autofocus: true,
-            textInputAction: TextInputAction.send,
-            onSubmitted: (_) => _submitGuess(),
-            textAlign: TextAlign.center,
-            style: const TextStyle(color: Colors.white, fontSize: 17),
-            cursorColor: Colors.cyanAccent,
-            decoration: InputDecoration(
-              hintText: canAnswer ? 'Futbolcu adını yaz...' : 'Rakibini bekle...',
-              hintStyle: const TextStyle(color: Colors.white30),
-              filled: true,
-              fillColor: Colors.white.withOpacity(canAnswer ? 0.09 : 0.04),
-              contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 18),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(16),
-                borderSide: BorderSide.none,
-              ),
+          // Yazdıkça futbolcu önerir; seçilen isim doğrudan gönderilir.
+          ClipRRect(
+            borderRadius: BorderRadius.circular(18),
+            child: PlayerSuggestionField(
+              controller: _answerController,
+              enabled: canAnswer,
+              autofocus: true,
+              hint: 'Futbolcu adını yaz...',
+              accent: GameMode.playerGuess.colors.last,
+              onSubmit: _submitGuess,
             ),
-          ),
-          const SizedBox(height: 16),
-          PrimaryButton(
-            label: 'GÖNDER',
-            icon: Icons.send_rounded,
-            enabled: canAnswer,
-            colors: GameMode.playerGuess.colors,
-            onTap: _submitGuess,
           ),
         ],
       ),

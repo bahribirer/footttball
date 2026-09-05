@@ -10,6 +10,7 @@ import 'package:footttball/features/modes/mode_select_screen.dart';
 import 'package:footttball/shared/widgets/app_background.dart';
 import 'package:footttball/shared/widgets/game_dialogs.dart';
 import 'package:footttball/shared/widgets/player_avatar.dart';
+import 'package:footttball/shared/widgets/player_suggestion_field.dart';
 
 /// Son Harf ve Kategori Yarışı modlarının ortak ekran iskeleti.
 ///
@@ -180,8 +181,7 @@ class _ClockGameScaffoldState extends State<ClockGameScaffold> {
     });
   }
 
-  Future<void> _submit() async {
-    final answer = _answerController.text.trim();
+  Future<void> _submitAnswer(String answer) async {
     if (answer.isEmpty || !_isMyTurn || _gameOver || _submitting) return;
 
     setState(() => _submitting = true);
@@ -432,76 +432,14 @@ class _ClockGameScaffoldState extends State<ClockGameScaffold> {
     );
   }
 
+  /// Cevap alanı: yazdıkça futbolcu önerir, seçilen isim doğrudan gönderilir.
   Widget _buildInput() {
-    final enabled = _isMyTurn && !_gameOver;
-
-    return Container(
-      padding: EdgeInsets.fromLTRB(
-        16,
-        10,
-        16,
-        10 + MediaQuery.of(context).viewInsets.bottom * 0,
-      ),
-      decoration: BoxDecoration(
-        color: Colors.black.withOpacity(0.55),
-        border: Border(top: BorderSide(color: Colors.white.withOpacity(0.1))),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: TextField(
-              controller: _answerController,
-              focusNode: _answerFocus,
-              enabled: enabled,
-              textInputAction: TextInputAction.send,
-              onSubmitted: (_) => _submit(),
-              style: const TextStyle(color: Colors.white, fontSize: 15.5),
-              cursorColor: Colors.cyanAccent,
-              decoration: InputDecoration(
-                hintText: enabled ? widget.inputHint : 'Rakibin sırası...',
-                hintStyle: const TextStyle(color: Colors.white30, fontSize: 14),
-                filled: true,
-                fillColor: Colors.white.withOpacity(enabled ? 0.09 : 0.04),
-                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(16),
-                  borderSide: BorderSide.none,
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(width: 10),
-          GestureDetector(
-            onTap: enabled ? _submit : null,
-            child: Container(
-              width: 52,
-              height: 52,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: LinearGradient(
-                  colors: enabled
-                      ? widget.mode.colors
-                      : [Colors.white12, Colors.white10],
-                ),
-                boxShadow: enabled
-                    ? [
-                        BoxShadow(
-                          color: widget.mode.colors.last.withOpacity(0.5),
-                          blurRadius: 14,
-                          offset: const Offset(0, 4),
-                        ),
-                      ]
-                    : null,
-              ),
-              child: Icon(
-                Icons.send_rounded,
-                color: enabled ? Colors.white : Colors.white24,
-                size: 22,
-              ),
-            ),
-          ),
-        ],
-      ),
+    return PlayerSuggestionField(
+      controller: _answerController,
+      enabled: _isMyTurn && !_gameOver,
+      hint: widget.inputHint,
+      accent: widget.mode.colors.last,
+      onSubmit: _submitAnswer,
     );
   }
 
