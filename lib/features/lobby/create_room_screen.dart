@@ -215,12 +215,15 @@ class _CreateRoomScreenState extends State<CreateRoomScreen>
               children: [
                 Padding(
                   padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                  // `Spacer` boş alanı rozetle paylaştığı için uzun mod
+                  // adları ("KATEGORİ YARIŞI") gereksiz yere kısaltılıyordu.
                   child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       GlassBackButton(
                         onTap: () => Navigator.of(context).maybePop(),
                       ),
-                      const Spacer(),
+                      const SizedBox(width: 12),
                       Flexible(child: _ModeBadge(mode: _mode)),
                     ],
                   ),

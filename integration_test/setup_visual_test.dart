@@ -59,11 +59,11 @@ void main() {
       await waitFor(t, find.text('ODA KODU'));
 
       // Ayar bölümleri yüklenirken ekran görüntüsü alınabilsin diye beklenir.
-      await hold(t, const Duration(seconds: 9));
+      await hold(t, const Duration(seconds: 30));
 
       // Ekranın alt yarısı (tur sayısı / süre) da görülsün.
       await t.drag(find.byType(CreateRoomScreen), const Offset(0, -320));
-      await hold(t, const Duration(seconds: 8));
+      await hold(t, const Duration(seconds: 20));
     });
   }
 }
