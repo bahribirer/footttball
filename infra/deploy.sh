@@ -70,7 +70,7 @@ done
 # Oyuncu veritabanı sezon anlık görüntülerinden oluşuyor ve son transfer
 # dönemini kapsamıyor. Kadro katmanı Wikipedia'dan haftalık tazelenir;
 # container veritabanını salt okunur bağladığı için betik host'ta çalışır.
-CRON_LINE="0 4 * * 1 cd $(pwd) && /usr/bin/python3 backend/scripts/sync_current_squads.py >> /var/log/tikitakatoe-squads.log 2>&1"
+CRON_LINE="0 4 * * 1 cd $(pwd) && /usr/bin/python3 backend/scripts/sync_current_squads.py >> \$HOME/tikitakatoe-squads.log 2>&1"
 if ! crontab -l 2>/dev/null | grep -qF "sync_current_squads.py"; then
   echo "▶ Haftalık kadro güncellemesi zamanlanıyor"
   (crontab -l 2>/dev/null; echo "$CRON_LINE") | crontab -
