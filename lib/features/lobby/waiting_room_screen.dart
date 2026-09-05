@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import 'package:footttball/core/session.dart';
 import 'package:footttball/data/models/game_mode.dart';
@@ -27,17 +28,33 @@ class WaitingRoomScreen extends StatefulWidget {
   State<WaitingRoomScreen> createState() => _WaitingRoomScreenState();
 }
 
-class _WaitingRoomScreenState extends State<WaitingRoomScreen> {
+class _WaitingRoomScreenState extends State<WaitingRoomScreen>
+    with TickerProviderStateMixin {
   final _socket = GameSocket.instance;
   StreamSubscription<SocketEvent>? _subscription;
+
+  late final AnimationController _pulse;
+  late final AnimationController _orbit;
 
   List<RoomPlayer> _players = const [];
   String? _error;
   bool _navigated = false;
+  bool _copied = false;
+  Timer? _copyTimer;
+
+  Color get _accent => widget.mode.colors.last;
 
   @override
   void initState() {
     super.initState();
+    _pulse = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1800),
+    )..repeat(reverse: true);
+    _orbit = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 3),
+    )..repeat();
     _connect();
   }
 
@@ -71,13 +88,12 @@ class _WaitingRoomScreenState extends State<WaitingRoomScreen> {
         break;
 
       case 'error':
-        setState(() => _error = event.value<String>('message') ?? 'Beklenmeyen bir hata oluştu.');
+        setState(() =>
+            _error = event.value<String>('message') ?? 'Beklenmeyen bir hata oluştu.');
         break;
 
       case 'closed':
-        if (!_navigated) {
-          setState(() => _error = 'Bağlantı kapandı.');
-        }
+        if (!_navigated) setState(() => _error = 'Bağlantı kapandı.');
         break;
     }
   }
@@ -85,10 +101,19 @@ class _WaitingRoomScreenState extends State<WaitingRoomScreen> {
   void _goToGame() {
     if (_navigated) return;
     _navigated = true;
-
     Navigator.of(context).pushReplacement(
       MaterialPageRoute(builder: (_) => VsScreen(mode: widget.mode)),
     );
+  }
+
+  Future<void> _copyCode() async {
+    await Clipboard.setData(ClipboardData(text: widget.roomCode));
+    if (!mounted) return;
+    setState(() => _copied = true);
+    _copyTimer?.cancel();
+    _copyTimer = Timer(const Duration(seconds: 2), () {
+      if (mounted) setState(() => _copied = false);
+    });
   }
 
   Future<void> _leave() async {
@@ -100,6 +125,9 @@ class _WaitingRoomScreenState extends State<WaitingRoomScreen> {
   @override
   void dispose() {
     _subscription?.cancel();
+    _copyTimer?.cancel();
+    _pulse.dispose();
+    _orbit.dispose();
     // Oyuna geçiliyorsa bağlantı korunur; aksi halde kapatılır.
     if (!_navigated) _socket.disconnect();
     super.dispose();
@@ -114,49 +142,31 @@ class _WaitingRoomScreenState extends State<WaitingRoomScreen> {
       },
       child: Scaffold(
         body: Stack(
-          alignment: Alignment.center,
           children: [
             PlainBackground(accent: widget.mode.colors.first),
             SafeArea(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: Align(
-                  alignment: Alignment.topLeft,
-                  child: Padding(
-                    padding: const EdgeInsets.only(top: 8),
-                    child: GlassBackButton(onTap: _leave),
-                  ),
-                ),
-              ),
-            ),
-            SafeArea(
               child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Spacer(flex: 2),
-                  _ModePill(mode: widget.mode),
-                  const SizedBox(height: 26),
-                  _RoomCodeCard(code: widget.roomCode),
-                  const SizedBox(height: 34),
-                  if (_error != null)
-                    _ErrorCard(message: _error!, onExit: _leave)
-                  else ...[
-                    _PlayerSlots(players: _players, mySlot: _socket.mySlot),
-                    const SizedBox(height: 30),
-                    const NeonTitle('RAKİP BEKLENİYOR', fontSize: 19),
-                    const SizedBox(height: 24),
-                    const _BouncingBalls(),
-                  ],
-                  const Spacer(),
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 34),
-                    child: Text(
-                      'Maçı başlatmak için bu kodu paylaş',
-                      style: TextStyle(
-                        color: Colors.white.withOpacity(0.38),
-                        fontSize: 13,
-                        fontStyle: FontStyle.italic,
-                      ),
+                  _buildHeader(),
+                  Expanded(
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
+                      child: _error != null
+                          ? Padding(
+                              padding: const EdgeInsets.only(top: 60),
+                              child: _ErrorCard(message: _error!, onExit: _leave),
+                            )
+                          : Column(
+                              children: [
+                                _buildCodeCard(),
+                                const SizedBox(height: 22),
+                                _buildPlayers(),
+                                const SizedBox(height: 22),
+                                _buildStatus(),
+                                const SizedBox(height: 22),
+                                _RulesCard(mode: widget.mode),
+                              ],
+                            ),
                     ),
                   ),
                 ],
@@ -167,164 +177,481 @@ class _WaitingRoomScreenState extends State<WaitingRoomScreen> {
       ),
     );
   }
-}
 
-class _ModePill extends StatelessWidget {
-  const _ModePill({required this.mode});
-
-  final GameMode mode;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 9),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(colors: mode.colors),
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: [
-          BoxShadow(color: mode.colors.last.withOpacity(0.4), blurRadius: 16),
-        ],
-      ),
+  Widget _buildHeader() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
       child: Row(
-        mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(mode.icon, color: Colors.white, size: 18),
-          const SizedBox(width: 8),
-          Text(
-            mode.title.toUpperCase(),
-            style: const TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.w900,
-              fontSize: 13,
-              letterSpacing: 1.3,
+          GlassBackButton(onTap: _leave),
+          const Spacer(),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(colors: widget.mode.colors),
+              borderRadius: BorderRadius.circular(22),
+              boxShadow: [
+                BoxShadow(color: _accent.withOpacity(0.4), blurRadius: 16),
+              ],
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(widget.mode.icon, color: Colors.white, size: 17),
+                const SizedBox(width: 8),
+                Text(
+                  widget.mode.title.toUpperCase(),
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w900,
+                    fontSize: 12.5,
+                    letterSpacing: 1.2,
+                  ),
+                ),
+              ],
             ),
           ),
         ],
       ),
     );
   }
-}
 
-class _RoomCodeCard extends StatelessWidget {
-  const _RoomCodeCard({required this.code});
-
-  final String code;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 22),
-      decoration: BoxDecoration(
-        color: const Color(0xFF1A1A2E).withOpacity(0.95),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.cyanAccent.withOpacity(0.5), width: 2),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.cyanAccent.withOpacity(0.28),
-            blurRadius: 20,
-            spreadRadius: 2,
+  /// Oda kodu — dokununca panoya kopyalanır.
+  Widget _buildCodeCard() {
+    return AnimatedBuilder(
+      animation: _pulse,
+      builder: (context, child) {
+        final glow = 0.25 + 0.25 * _pulse.value;
+        return Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(24),
+            boxShadow: [
+              BoxShadow(
+                color: _accent.withOpacity(glow),
+                blurRadius: 26 + 10 * _pulse.value,
+                spreadRadius: 1,
+              ),
+            ],
           ),
-        ],
-      ),
-      child: Column(
-        children: [
-          const Text(
-            'ODA KODU',
-            style: TextStyle(
-              color: Colors.white54,
-              fontSize: 12,
-              letterSpacing: 3,
-              fontWeight: FontWeight.bold,
+          child: child,
+        );
+      },
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(vertical: 22, horizontal: 18),
+        decoration: BoxDecoration(
+          color: const Color(0xFF16132C).withOpacity(0.92),
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(color: _accent.withOpacity(0.55), width: 1.8),
+        ),
+        child: Column(
+          children: [
+            Text(
+              'ODA KODU',
+              style: TextStyle(
+                color: Colors.white.withOpacity(0.55),
+                fontSize: 11.5,
+                letterSpacing: 3.4,
+                fontWeight: FontWeight.bold,
+              ),
             ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            code,
-            style: const TextStyle(
-              fontSize: 46,
-              fontWeight: FontWeight.w900,
-              color: Colors.white,
-              letterSpacing: 5,
-              shadows: [Shadow(color: Colors.purpleAccent, blurRadius: 15)],
+            const SizedBox(height: 12),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: widget.roomCode.split('').map((digit) {
+                return Container(
+                  margin: const EdgeInsets.symmetric(horizontal: 5),
+                  width: 54,
+                  height: 68,
+                  decoration: BoxDecoration(
+                    color: Colors.black.withOpacity(0.45),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: _accent.withOpacity(0.4), width: 1.4),
+                  ),
+                  child: Center(
+                    child: Text(
+                      digit,
+                      style: TextStyle(
+                        fontSize: 34,
+                        fontWeight: FontWeight.w900,
+                        color: Colors.white,
+                        shadows: [Shadow(color: _accent, blurRadius: 14)],
+                      ),
+                    ),
+                  ),
+                );
+              }).toList(),
             ),
-          ),
-        ],
+            const SizedBox(height: 16),
+            GestureDetector(
+              onTap: _copyCode,
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 11),
+                decoration: BoxDecoration(
+                  color: _copied
+                      ? Colors.greenAccent.withOpacity(0.18)
+                      : Colors.white.withOpacity(0.08),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(
+                    color: _copied
+                        ? Colors.greenAccent.withOpacity(0.7)
+                        : Colors.white.withOpacity(0.18),
+                  ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      _copied ? Icons.check_rounded : Icons.copy_rounded,
+                      color: _copied ? Colors.greenAccent : Colors.white70,
+                      size: 17,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      _copied ? 'Kopyalandı' : 'Kodu kopyala',
+                      style: TextStyle(
+                        color: _copied ? Colors.greenAccent : Colors.white70,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
-}
 
-class _PlayerSlots extends StatelessWidget {
-  const _PlayerSlots({required this.players, required this.mySlot});
-
-  final List<RoomPlayer> players;
-  final int mySlot;
-
-  @override
-  Widget build(BuildContext context) {
+  Widget _buildPlayers() {
     RoomPlayer? at(int slot) =>
-        players.where((player) => player.slot == slot).cast<RoomPlayer?>().firstOrNull;
+        _players.where((player) => player.slot == slot).cast<RoomPlayer?>().firstOrNull;
+
+    final me = at(_socket.mySlot);
+    final rival = at(_socket.opponentSlot);
 
     return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        _slot(at(0), isMe: mySlot == 0, color: Colors.cyanAccent),
+        Expanded(
+          child: _PlayerCard(
+            name: me?.name ?? Session.instance.displayName,
+            label: 'SEN',
+            accent: Colors.cyanAccent,
+            filled: true,
+            orbit: _orbit,
+          ),
+        ),
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 14),
+          padding: const EdgeInsets.symmetric(horizontal: 10),
           child: Text(
             'VS',
             style: TextStyle(
-              color: Colors.white.withOpacity(0.5),
-              fontSize: 17,
+              color: Colors.white.withOpacity(0.45),
+              fontSize: 18,
               fontWeight: FontWeight.w900,
               fontStyle: FontStyle.italic,
             ),
           ),
         ),
-        _slot(at(1), isMe: mySlot == 1, color: Colors.purpleAccent),
+        Expanded(
+          child: _PlayerCard(
+            name: rival?.name ?? 'Bekleniyor',
+            label: rival == null ? 'BOŞ' : 'RAKİP',
+            accent: _accent,
+            filled: rival != null,
+            orbit: _orbit,
+          ),
+        ),
       ],
     );
   }
 
-  Widget _slot(RoomPlayer? player, {required bool isMe, required Color color}) {
-    final filled = player != null;
-    return Container(
-      width: 118,
-      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
-      decoration: BoxDecoration(
-        color: Colors.black.withOpacity(0.55),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: filled ? color.withOpacity(0.7) : Colors.white12,
-          width: 1.6,
+  Widget _buildStatus() {
+    final waiting = _players.length < 2;
+
+    return Column(
+      children: [
+        NeonTitle(
+          waiting ? 'RAKİP BEKLENİYOR' : 'HERKES HAZIR',
+          fontSize: 18,
+          colors: waiting
+              ? [Colors.white, _accent]
+              : const [Colors.white, Colors.greenAccent],
         ),
+        const SizedBox(height: 10),
+        if (waiting)
+          _TypingDots(controller: _orbit, color: _accent)
+        else
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.check_circle, color: Colors.greenAccent, size: 16),
+              const SizedBox(width: 8),
+              Text(
+                'Oyun başlıyor...',
+                style: TextStyle(
+                  color: Colors.greenAccent.withOpacity(0.9),
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+        const SizedBox(height: 10),
+        Text(
+          waiting
+              ? 'Kodu arkadaşınla paylaş, o katılınca maç başlasın'
+              : 'İyi şanslar!',
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            color: Colors.white.withOpacity(0.42),
+            fontSize: 12.5,
+            fontStyle: FontStyle.italic,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// Oyuncu yeri. Boş yer, dönen halkayla "bekleniyor" hissi verir.
+class _PlayerCard extends StatelessWidget {
+  const _PlayerCard({
+    required this.name,
+    required this.label,
+    required this.accent,
+    required this.filled,
+    required this.orbit,
+  });
+
+  final String name;
+  final String label;
+  final Color accent;
+  final bool filled;
+  final AnimationController orbit;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 10),
+      decoration: BoxDecoration(
+        color: Colors.black.withOpacity(filled ? 0.5 : 0.32),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: filled ? accent.withOpacity(0.75) : Colors.white12,
+          width: filled ? 1.8 : 1.2,
+        ),
+        boxShadow: filled
+            ? [BoxShadow(color: accent.withOpacity(0.28), blurRadius: 16)]
+            : null,
       ),
       child: Column(
         children: [
-          Icon(
-            filled ? Icons.person : Icons.person_outline,
-            color: filled ? color : Colors.white24,
-            size: 26,
+          SizedBox(
+            width: 52,
+            height: 52,
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                if (!filled)
+                  AnimatedBuilder(
+                    animation: orbit,
+                    builder: (context, _) => Transform.rotate(
+                      angle: orbit.value * 2 * math.pi,
+                      child: Container(
+                        width: 52,
+                        height: 52,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          gradient: SweepGradient(
+                            colors: [
+                              Colors.transparent,
+                              accent.withOpacity(0.55),
+                              Colors.transparent,
+                            ],
+                            stops: const [0.35, 0.6, 0.85],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                Container(
+                  width: 42,
+                  height: 42,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Colors.black.withOpacity(0.55),
+                    border: Border.all(
+                      color: filled ? accent : Colors.white24,
+                      width: 1.5,
+                    ),
+                  ),
+                  child: Icon(
+                    filled ? Icons.person : Icons.person_search_rounded,
+                    color: filled ? accent : Colors.white30,
+                    size: 22,
+                  ),
+                ),
+              ],
+            ),
           ),
-          const SizedBox(height: 7),
+          const SizedBox(height: 10),
           Text(
-            filled ? player.name : 'Bekleniyor',
+            name,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
               color: filled ? Colors.white : Colors.white38,
-              fontSize: 13,
+              fontSize: 14,
               fontWeight: FontWeight.bold,
             ),
           ),
-          if (isMe) ...[
-            const SizedBox(height: 3),
-            Text(
-              'SEN',
-              style: TextStyle(color: color, fontSize: 10, fontWeight: FontWeight.w900),
+          const SizedBox(height: 3),
+          Text(
+            label,
+            style: TextStyle(
+              color: filled ? accent : Colors.white24,
+              fontSize: 10,
+              fontWeight: FontWeight.w900,
+              letterSpacing: 1.2,
             ),
-          ],
+          ),
         ],
+      ),
+    );
+  }
+}
+
+/// Modun kurallarını özetleyen kart — bekleme süresini bilgiyle doldurur.
+class _RulesCard extends StatelessWidget {
+  const _RulesCard({required this.mode});
+
+  final GameMode mode;
+
+  List<(IconData, String)> get _rules => switch (mode) {
+        GameMode.tikiTakaToe => [
+            (Icons.grid_3x3_rounded, 'Kulüp ve millet kesişimine uyan futbolcuyu yaz'),
+            (Icons.timer_outlined, 'Her hamle için 30 saniyen var'),
+            (Icons.swap_horiz_rounded, 'Rakibin kutusunu çalma hakkın 3 kez'),
+          ],
+        GameMode.playerGuess => [
+            (Icons.flag_rounded, 'Biriniz milli takımı, diğeriniz kulübü seçer'),
+            (Icons.bolt_rounded, 'Eşleşmeye uyan futbolcuyu ilk bilen turu alır'),
+            (Icons.favorite_rounded, 'Tur başına 3 deneme hakkın var'),
+          ],
+        GameMode.lastLetter => [
+            (Icons.abc_rounded, 'Rakibinin yazdığı ismin son harfiyle başla'),
+            (Icons.hourglass_bottom_rounded, 'Oyuncu başına 50 saniye'),
+            (Icons.remove_circle_outline, 'Yanlış cevap 3 saniye götürür'),
+          ],
+        GameMode.categoryRace => [
+            (Icons.category_rounded, 'Verilen kategoriye uyan futbolcuları yaz'),
+            (Icons.hourglass_bottom_rounded, 'Sırayla oynanır, herkesin 50 saniyesi var'),
+            (Icons.remove_circle_outline, 'Yanlış ya da tekrar eden isim 3 saniye götürür'),
+          ],
+      };
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.045),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.white.withOpacity(0.1)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.info_outline_rounded,
+                  color: mode.colors.last.withOpacity(0.9), size: 16),
+              const SizedBox(width: 8),
+              Text(
+                'NASIL OYNANIR',
+                style: TextStyle(
+                  color: Colors.white.withOpacity(0.6),
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 2,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          ..._rules.map((rule) => Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      width: 28,
+                      height: 28,
+                      decoration: BoxDecoration(
+                        color: mode.colors.last.withOpacity(0.16),
+                        borderRadius: BorderRadius.circular(9),
+                      ),
+                      child: Icon(rule.$1, color: mode.colors.last, size: 15),
+                    ),
+                    const SizedBox(width: 11),
+                    Expanded(
+                      child: Text(
+                        rule.$2,
+                        style: TextStyle(
+                          color: Colors.white.withOpacity(0.78),
+                          fontSize: 13,
+                          height: 1.35,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              )),
+        ],
+      ),
+    );
+  }
+}
+
+/// Sıralı yanıp sönen üç nokta.
+class _TypingDots extends StatelessWidget {
+  const _TypingDots({required this.controller, required this.color});
+
+  final AnimationController controller;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: controller,
+      builder: (context, _) => Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: List.generate(3, (index) {
+          final phase = (controller.value + index * 0.22) % 1.0;
+          final wave = math.sin(phase * math.pi).clamp(0.0, 1.0);
+          return Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 5),
+            child: Transform.translate(
+              offset: Offset(0, -5 * wave),
+              child: Container(
+                width: 9,
+                height: 9,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: color.withOpacity(0.35 + 0.55 * wave),
+                  boxShadow: [
+                    BoxShadow(color: color.withOpacity(0.5 * wave), blurRadius: 10),
+                  ],
+                ),
+              ),
+            ),
+          );
+        }),
       ),
     );
   }
@@ -338,108 +665,25 @@ class _ErrorCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 28),
-      child: NeonPanel(
-        colors: const [Colors.redAccent, Colors.orangeAccent],
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text('🚫', style: TextStyle(fontSize: 40)),
-            const SizedBox(height: 12),
-            Text(
-              message,
-              textAlign: TextAlign.center,
-              style: const TextStyle(color: Colors.white, fontSize: 14.5, height: 1.4),
-            ),
-            const SizedBox(height: 18),
-            PrimaryButton(
-              label: 'GERİ DÖN',
-              colors: const [Colors.redAccent, Colors.orangeAccent],
-              onTap: onExit,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _BouncingBalls extends StatefulWidget {
-  const _BouncingBalls();
-
-  @override
-  State<_BouncingBalls> createState() => _BouncingBallsState();
-}
-
-class _BouncingBallsState extends State<_BouncingBalls>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _controller;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1200),
-    )..repeat();
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: _controller,
-      builder: (context, _) => Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: List.generate(3, (index) {
-          final value = (_controller.value + index * 0.2) % 1.0;
-          final bounce = math.sin(value * math.pi);
-
-          return Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 10),
-            child: Column(
-              children: [
-                Transform.translate(
-                  offset: Offset(0, -20 * bounce),
-                  child: Container(
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.white.withOpacity(0.3 * bounce),
-                          blurRadius: 10 * bounce,
-                          spreadRadius: 2 * bounce,
-                        ),
-                      ],
-                    ),
-                    child: const Icon(Icons.sports_soccer, color: Colors.white, size: 30),
-                  ),
-                ),
-                const SizedBox(height: 5),
-                Opacity(
-                  opacity: 1.0 - bounce * 0.7,
-                  child: Transform.scale(
-                    scale: 1.0 - bounce * 0.5,
-                    child: Container(
-                      width: 20,
-                      height: 4,
-                      decoration: BoxDecoration(
-                        color: Colors.black45,
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          );
-        }),
+    return NeonPanel(
+      colors: const [Colors.redAccent, Colors.orangeAccent],
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Text('🚫', style: TextStyle(fontSize: 40)),
+          const SizedBox(height: 12),
+          Text(
+            message,
+            textAlign: TextAlign.center,
+            style: const TextStyle(color: Colors.white, fontSize: 14.5, height: 1.4),
+          ),
+          const SizedBox(height: 18),
+          PrimaryButton(
+            label: 'GERİ DÖN',
+            colors: const [Colors.redAccent, Colors.orangeAccent],
+            onTap: onExit,
+          ),
+        ],
       ),
     );
   }

@@ -76,8 +76,23 @@ class _JoinRoomScreenState extends State<JoinRoomScreen>
         return;
       }
 
-      // Odanın modu neyse ona katılınır; menüde farklı mod seçilmiş olabilir.
-      final mode = status.mode ?? Session.instance.selectedMode;
+      // Oda başka bir oyun modunda kurulmuşsa katılım engellenir; aksi halde
+      // oyuncu seçtiğinden farklı bir oyunun içinde buluyordu kendini.
+      final selected = Session.instance.selectedMode;
+      final roomMode = status.mode;
+
+      if (roomMode != null && roomMode != selected) {
+        GameDialogs.showWarning(
+          context,
+          title: 'FARKLI OYUN MODU',
+          message: '"$code" kodlu oda ${roomMode.title} modunda kurulmuş.\n'
+              'Sen ${selected.title} seçtin.\n\n'
+              'Menüye dönüp ${roomMode.title} modunu seçerek katılabilirsin.',
+        );
+        return;
+      }
+
+      final mode = roomMode ?? selected;
       Session.instance.selectedMode = mode;
 
       if (!mounted) return;
