@@ -5,10 +5,12 @@ import 'package:flutter/material.dart';
 import 'package:footttball/data/models/game_mode.dart';
 import 'package:footttball/data/models/room_models.dart';
 import 'package:footttball/data/services/api_service.dart';
+import 'package:footttball/data/services/country_catalog.dart';
 import 'package:footttball/data/services/game_socket.dart';
 import 'package:footttball/features/modes/mode_select_screen.dart';
 import 'package:footttball/shared/widgets/app_background.dart';
 import 'package:footttball/shared/widgets/game_dialogs.dart';
+import 'package:footttball/shared/widgets/player_avatar.dart';
 
 /// Oyuncu Tahmin modu.
 ///
@@ -165,7 +167,7 @@ class _PlayerGuessScreenState extends State<PlayerGuessScreen> {
         resizeToAvoidBottomInset: true,
         body: Stack(
           children: [
-            const GameBackground(),
+            GameBackground(accent: GameMode.playerGuess.colors.first),
             SafeArea(
               child: Column(
                 children: [
@@ -269,7 +271,7 @@ class _PlayerGuessScreenState extends State<PlayerGuessScreen> {
       'revealing' => _CountdownView(
           seconds: _state.countdown,
           title: 'BAŞLIYOR',
-          subtitle: '${_state.selectedNation ?? '?'} × ${_state.selectedClub ?? '?'}',
+          subtitle: '${CountryCatalog.turkish(_state.selectedNation)} × ${_state.selectedClub ?? '?'}',
         ),
       'answering' => _buildAnswering(),
       'round_over' => _buildRoundOver(),
@@ -457,7 +459,14 @@ class _PlayerGuessScreenState extends State<PlayerGuessScreen> {
                 winner == null ? 'Doğru cevaplardan biri' : 'Cevap',
                 style: const TextStyle(color: Colors.white38, fontSize: 11.5),
               ),
-              const SizedBox(height: 4),
+              const SizedBox(height: 10),
+              PlayerAvatar(
+                name: _state.solution!,
+                imageUrl: _state.solutionImage,
+                size: 76,
+                borderColor: Colors.amberAccent,
+              ),
+              const SizedBox(height: 8),
               Text(
                 _state.solution!,
                 textAlign: TextAlign.center,
@@ -648,19 +657,19 @@ class _PickTile extends StatelessWidget {
                   borderRadius: BorderRadius.circular(6),
                   child: Image.network(
                     ApiService.logoUrl(label),
-                    width: 30,
-                    height: 30,
+                    width: 32,
+                    height: 32,
                     fit: BoxFit.contain,
                     errorBuilder: (_, __, ___) =>
                         Icon(Icons.shield_outlined, color: accent, size: 26),
                   ),
                 )
               else
-                Icon(Icons.flag_rounded, color: accent, size: 26),
+                CountryFlag(country: label, width: 34),
               const SizedBox(width: 14),
               Expanded(
                 child: Text(
-                  label,
+                  isNation ? CountryCatalog.turkish(label) : label,
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 15.5,
@@ -726,10 +735,10 @@ class _MatchupCard extends StatelessWidget {
           Expanded(
             child: Column(
               children: [
-                const Icon(Icons.flag_rounded, color: Colors.cyanAccent, size: 30),
+                CountryFlag(country: nation, width: 46),
                 const SizedBox(height: 8),
                 Text(
-                  nation,
+                  CountryCatalog.turkish(nation),
                   textAlign: TextAlign.center,
                   style: const TextStyle(
                     color: Colors.white,

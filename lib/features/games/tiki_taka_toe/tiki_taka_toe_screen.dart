@@ -9,6 +9,7 @@ import 'package:footttball/data/services/league_catalog.dart';
 import 'package:footttball/features/modes/mode_select_screen.dart';
 import 'package:footttball/shared/widgets/app_background.dart';
 import 'package:footttball/shared/widgets/game_dialogs.dart';
+import 'package:footttball/shared/widgets/player_avatar.dart';
 
 /// Klasik 3x3 tahta. Oyun mantığı istemcide yürür; sunucu tahtayı üretir ve
 /// hamleleri rakibe aktarır.
@@ -707,25 +708,18 @@ class _TikiTakaToeScreenState extends State<TikiTakaToeScreen>
                                         )
                                   : (index == 4 || index == 8 || index == 12)
                                       ? widget.teammodel.nations.length >= 3
-                                          ? Image.network(
-                                              teamobject.countryCode(widget
-                                                          .teammodel.nations[
-                                                      (index ~/ 4) - 1]) ==
-                                                      "XK"
-                                                  ? "https://upload.wikimedia.org/wikipedia/commons/thumb/1/1f/Flag_of_Kosovo.svg/120px-Flag_of_Kosovo.svg.png"
-                                                  : "https://flagsapi.com/" +
-                                                      teamobject.countryCode(widget
-                                                          .teammodel.nations[
-                                                      (index ~/ 4) - 1]) +
-                                                      "/flat/64.png",
-                                              errorBuilder:
-                                                  (context, error, stackTrace) {
-                                                return Icon(Icons.flag,
-                                                    color: Colors.white,
-                                                    size: 40);
-                                              },
+                                          // Bayrak ve ülkenin Türkçe adı birlikte gösterilir.
+                                          ? Padding(
+                                              padding: const EdgeInsets.all(4),
+                                              child: CountryLabel(
+                                                country: widget.teammodel
+                                                    .nations[(index ~/ 4) - 1],
+                                                axis: Axis.vertical,
+                                                flagWidth: 42,
+                                                fontSize: 10.5,
+                                              ),
                                             )
-                                          : CircularProgressIndicator()
+                                          : const CircularProgressIndicator()
                                       : index == 0
                                           ? SizedBox.expand(
                                               child: Image.asset(

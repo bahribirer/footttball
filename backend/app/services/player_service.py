@@ -80,10 +80,33 @@ def search_players(name: str, base_url: str) -> list[dict]:
 
 def player_exists(player_name: str) -> str | None:
     """Oyuncu veritabanında varsa kanonik adını döndürür."""
+    found = find_player(player_name)
+    return found["name"] if found else None
+
+
+def find_player(player_name: str) -> dict | None:
+    """Oyuncunun kanonik adı, görseli, kulübü ve ülkesi.
+
+    Arayüz kabul edilen cevapları oyuncu fotoğrafıyla gösterdiği için
+    doğrulama sonucuyla birlikte bu alanlar da döndürülür.
+    """
+    if not player_name or not player_name.strip():
+        return None
+
     row = fetch_one(
-        "SELECT name FROM players WHERE name LIKE ? ORDER BY last_season DESC LIMIT 1",
-        (player_name,),
+        """SELECT name, image_url, current_club_name, country_of_citizenship
+           FROM players
+           WHERE name LIKE ?
+           ORDER BY last_season DESC
+           LIMIT 1""",
+        (player_name.strip(),),
     )
-    if row and normalize(row["name"]) == normalize(player_name):
-        return row["name"]
-    return None
+    if not row or normalize(row["name"]) != normalize(player_name):
+        return None
+
+    return {
+        "name": row["name"],
+        "image_url": row["image_url"],
+        "club": row["current_club_name"],
+        "country": row["country_of_citizenship"],
+    }

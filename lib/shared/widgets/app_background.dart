@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 
 /// Uygulamanın koyu uzay temalı arka planı.
 ///
-/// Arka plan görselinde büyük bir logo bulunduğu için, üzerine içerik gelen
-/// ekranlarda [dim] ile karartma katmanı uygulanır; aksi halde yazılar
-/// logonun üstüne binip okunmaz hale geliyor.
+/// `Positioned.fill` yerine `SizedBox.expand` kullanılır: `Stack` varsayılan
+/// olarak konumlandırılmamış çocuklarının boyutunu alır, dolayısıyla dar bir
+/// içerik sütunu arka planı da daraltıyor ve ekranın kalanı boş kalıyordu.
 class AppBackground extends StatelessWidget {
   const AppBackground({
     super.key,
@@ -17,7 +17,7 @@ class AppBackground extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Positioned.fill(
+    return SizedBox.expand(
       child: Stack(
         fit: StackFit.expand,
         children: [
@@ -43,16 +43,65 @@ class AppBackground extends StatelessWidget {
   }
 }
 
-/// Oyun ekranlarının kullandığı, içeriği öne çıkaran koyu arka plan.
-class GameBackground extends StatelessWidget {
-  const GameBackground({super.key});
+/// Logosuz, düz gradyan arka plan.
+///
+/// Arka plan görselindeki büyük "TIKI TAKA TOE" logosu, üzerine içerik gelen
+/// ekranlarda yazılarla çakışıyordu. Lobi ve oyun ekranları bu yüzden aynı
+/// renk dünyasını koruyan ama logosuz bir zemin kullanır.
+class PlainBackground extends StatelessWidget {
+  const PlainBackground({super.key, this.accent});
+
+  /// Moda özgü hafif bir renk vurgusu (üst köşede).
+  final Color? accent;
 
   @override
-  Widget build(BuildContext context) =>
-      const AppBackground(asset: 'images/arka2.PNG', dim: 0.62);
+  Widget build(BuildContext context) {
+    final glow = accent ?? const Color(0xFF6A11CB);
+
+    return SizedBox.expand(
+      child: DecoratedBox(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [Color(0xFF241B4A), Color(0xFF15102E), Color(0xFF0C0A1C)],
+            stops: [0, 0.55, 1],
+          ),
+        ),
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            gradient: RadialGradient(
+              center: const Alignment(-0.7, -0.85),
+              radius: 1.1,
+              colors: [glow.withOpacity(0.28), Colors.transparent],
+            ),
+          ),
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: RadialGradient(
+                center: const Alignment(0.9, 0.9),
+                radius: 1.0,
+                colors: [glow.withOpacity(0.16), Colors.transparent],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
-/// Tiki Taka Toe tahtasının kullandığı açık arka plan.
+/// Oyun ekranlarının kullandığı, içeriği öne çıkaran koyu arka plan.
+class GameBackground extends StatelessWidget {
+  const GameBackground({super.key, this.accent});
+
+  final Color? accent;
+
+  @override
+  Widget build(BuildContext context) => PlainBackground(accent: accent);
+}
+
+/// Tiki Taka Toe tahtasının arka planı.
 class BoardBackground extends StatelessWidget {
   const BoardBackground({super.key, this.dim = 0});
 
@@ -60,7 +109,7 @@ class BoardBackground extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) =>
-      AppBackground(asset: 'images/arka1.png', dim: dim);
+      const PlainBackground(accent: Color(0xFF2575FC));
 }
 
 /// Neon çerçeveli koyu panel — diyaloglarda ve kartlarda ortak görünüm.

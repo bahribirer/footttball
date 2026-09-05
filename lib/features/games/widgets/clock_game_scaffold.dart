@@ -4,10 +4,12 @@ import 'package:flutter/material.dart';
 
 import 'package:footttball/data/models/game_mode.dart';
 import 'package:footttball/data/models/room_models.dart';
+import 'package:footttball/data/services/country_catalog.dart';
 import 'package:footttball/data/services/game_socket.dart';
 import 'package:footttball/features/modes/mode_select_screen.dart';
 import 'package:footttball/shared/widgets/app_background.dart';
 import 'package:footttball/shared/widgets/game_dialogs.dart';
+import 'package:footttball/shared/widgets/player_avatar.dart';
 
 /// Son Harf ve Kategori Yarışı modlarının ortak ekran iskeleti.
 ///
@@ -213,7 +215,7 @@ class _ClockGameScaffoldState extends State<ClockGameScaffold> {
         resizeToAvoidBottomInset: true,
         body: Stack(
           children: [
-            const GameBackground(),
+            GameBackground(accent: widget.mode.colors.first),
             SafeArea(
               child: Column(
                 children: [
@@ -353,29 +355,75 @@ class _ClockGameScaffoldState extends State<ClockGameScaffold> {
         final mine = entry.slot == _socket.mySlot;
         final accent = mine ? Colors.cyanAccent : Colors.purpleAccent;
 
+        final latest = index == 0;
+        final subtitle = [
+          if (entry.country != null && entry.country!.isNotEmpty)
+            CountryCatalog.turkish(entry.country),
+          if (entry.club != null && entry.club!.isNotEmpty) entry.club!,
+        ].join(' • ');
+
         return Align(
           alignment: mine ? Alignment.centerLeft : Alignment.centerRight,
           child: Container(
-            margin: const EdgeInsets.symmetric(vertical: 3.5),
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+            constraints: const BoxConstraints(maxWidth: 290),
+            margin: const EdgeInsets.symmetric(vertical: 4),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
             decoration: BoxDecoration(
-              color: accent.withOpacity(index == 0 ? 0.2 : 0.09),
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: accent.withOpacity(index == 0 ? 0.6 : 0.22)),
+              color: accent.withOpacity(latest ? 0.2 : 0.09),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: accent.withOpacity(latest ? 0.6 : 0.22)),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(Icons.check_circle, color: accent, size: 15),
-                const SizedBox(width: 8),
-                Text(
-                  entry.answer,
-                  style: TextStyle(
-                    color: Colors.white.withOpacity(index == 0 ? 1 : 0.72),
-                    fontSize: 14.5,
-                    fontWeight: index == 0 ? FontWeight.bold : FontWeight.w500,
+                PlayerAvatar(
+                  name: entry.answer,
+                  imageUrl: entry.imageUrl,
+                  size: latest ? 42 : 34,
+                  borderColor: accent,
+                ),
+                const SizedBox(width: 10),
+                Flexible(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        entry.answer,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: Colors.white.withOpacity(latest ? 1 : 0.75),
+                          fontSize: latest ? 15 : 14,
+                          fontWeight: latest ? FontWeight.bold : FontWeight.w500,
+                        ),
+                      ),
+                      if (subtitle.isNotEmpty) ...[
+                        const SizedBox(height: 2),
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            if (entry.country != null && entry.country!.isNotEmpty) ...[
+                              CountryFlag(country: entry.country!, width: 18),
+                              const SizedBox(width: 6),
+                            ],
+                            Flexible(
+                              child: Text(
+                                entry.club ?? CountryCatalog.turkish(entry.country),
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  color: Colors.white.withOpacity(0.5),
+                                  fontSize: 11.5,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ],
                   ),
                 ),
+                const SizedBox(width: 6),
+                Icon(Icons.check_circle, color: accent, size: 15),
               ],
             ),
           ),

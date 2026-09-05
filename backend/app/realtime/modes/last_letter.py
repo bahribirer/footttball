@@ -39,11 +39,11 @@ class LastLetterMode(TurnClockMode):
         if self.required_letter and first_letter(answer) != self.required_letter:
             return AnswerResult(False, reason="wrong_letter")
 
-        canonical = await asyncio.to_thread(player_service.player_exists, answer)
-        if not canonical:
+        found = await asyncio.to_thread(player_service.find_player, answer)
+        if not found:
             return AnswerResult(False, reason="not_found")
 
-        return AnswerResult(True, canonical=canonical)
+        return AnswerResult(True, canonical=found["name"], player=found)
 
     async def on_accepted(self, canonical: str) -> None:
         self.last_answer = canonical

@@ -22,6 +22,7 @@ class AnswerResult:
     ok: bool
     canonical: str | None = None
     reason: str | None = None      # hata sebebi: not_found / wrong_letter / duplicate / off_category
+    player: dict | None = None     # kabul edilen oyuncunun görseli, kulübü, ülkesi
 
 
 class TurnClockMode(BaseMode):
@@ -109,13 +110,27 @@ class TurnClockMode(BaseMode):
                 return
 
             canonical = result.canonical or answer
+            info = result.player or {}
             self.used.add(normalize(canonical))
-            self.history.append({"slot": player.slot, "answer": canonical})
+            self.history.append({
+                "slot": player.slot,
+                "answer": canonical,
+                "image_url": info.get("image_url"),
+                "club": info.get("club"),
+                "country": info.get("country"),
+            })
             player.score += 1
 
             await self.on_accepted(canonical)
             self.current_turn = 1 - player.slot
-            await self.emit("accepted", slot=player.slot, answer=canonical)
+            await self.emit(
+                "accepted",
+                slot=player.slot,
+                answer=canonical,
+                image_url=info.get("image_url"),
+                club=info.get("club"),
+                country=info.get("country"),
+            )
             await self.push_state()
 
     async def _apply_penalty(self, player, answer: str, reason: str) -> None:

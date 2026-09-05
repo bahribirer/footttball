@@ -4,7 +4,7 @@ import asyncio
 
 from app.realtime.modes.turn_clock import AnswerResult, TurnClockMode
 from app.realtime.protocol import GameMode
-from app.services import category_service
+from app.services import category_service, player_service
 
 
 class CategoryRaceMode(TurnClockMode):
@@ -34,7 +34,9 @@ class CategoryRaceMode(TurnClockMode):
         )
         if not canonical:
             return AnswerResult(False, reason="off_category")
-        return AnswerResult(True, canonical=canonical)
+
+        found = await asyncio.to_thread(player_service.find_player, canonical)
+        return AnswerResult(True, canonical=canonical, player=found)
 
     async def _timeout(self, slot: int) -> None:
         # Oyun biterken örnek doğru cevapları göster.

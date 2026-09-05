@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import 'package:footttball/data/services/api_service.dart';
+import 'package:footttball/data/services/country_catalog.dart';
 import 'package:footttball/shared/widgets/app_background.dart';
 
 /// Oyuncu arama ve seçme kutusu. Seçilen oyuncunun adını `pop` ile döndürür.
@@ -45,7 +46,7 @@ class _PlayerSearchDialogState extends State<PlayerSearchDialog> {
       });
       return;
     }
-    _debounce = Timer(const Duration(milliseconds: 350), () => _search(query));
+    _debounce = Timer(const Duration(milliseconds: 180), () => _search(query));
   }
 
   Future<void> _search(String query) async {
@@ -83,7 +84,12 @@ class _PlayerSearchDialogState extends State<PlayerSearchDialog> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Flexible(child: _Chip(text: widget.nationality, color: Colors.cyanAccent)),
+                        Flexible(
+                          child: _Chip(
+                            text: CountryCatalog.turkish(widget.nationality),
+                            color: Colors.cyanAccent,
+                          ),
+                        ),
                         const Padding(
                           padding: EdgeInsets.symmetric(horizontal: 6),
                           child: Text('×',
@@ -190,7 +196,10 @@ class _PlayerSearchDialogState extends State<PlayerSearchDialog> {
               ],
               Expanded(
                 child: Text(
-                  [player['club'], player['position']]
+                  [
+                    CountryCatalog.turkish(player['country'] as String?),
+                    player['club'] as String?,
+                  ]
                       .whereType<String>()
                       .where((value) => value.isNotEmpty)
                       .join(' • '),

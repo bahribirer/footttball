@@ -116,7 +116,7 @@ class _WaitingRoomScreenState extends State<WaitingRoomScreen> {
         body: Stack(
           alignment: Alignment.center,
           children: [
-            const AppBackground(dim: 0.45),
+            PlainBackground(accent: widget.mode.colors.first),
             SafeArea(
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -133,7 +133,7 @@ class _WaitingRoomScreenState extends State<WaitingRoomScreen> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const SizedBox(height: 40),
+                  const Spacer(flex: 2),
                   _ModePill(mode: widget.mode),
                   const SizedBox(height: 26),
                   _RoomCodeCard(code: widget.roomCode),

@@ -104,12 +104,24 @@ class ClockGameState {
 class HistoryEntry {
   final int slot;
   final String answer;
+  final String? imageUrl;
+  final String? club;
+  final String? country;
 
-  const HistoryEntry({required this.slot, required this.answer});
+  const HistoryEntry({
+    required this.slot,
+    required this.answer,
+    this.imageUrl,
+    this.club,
+    this.country,
+  });
 
   factory HistoryEntry.fromJson(Map<String, dynamic> json) => HistoryEntry(
         slot: json['slot'] as int? ?? 0,
         answer: json['answer'] as String? ?? '',
+        imageUrl: json['image_url'] as String?,
+        club: json['club'] as String?,
+        country: json['country'] as String?,
       );
 }
 
@@ -128,6 +140,7 @@ class DuelState {
   final Map<int, int> attempts;
   final int? roundWinner;
   final String? solution;
+  final String? solutionImage;
   final Map<int, int> scores;
 
   const DuelState({
@@ -145,6 +158,7 @@ class DuelState {
     this.selectedClub,
     this.roundWinner,
     this.solution,
+    this.solutionImage,
   });
 
   factory DuelState.fromJson(Map<String, dynamic> json) => DuelState(
@@ -161,6 +175,7 @@ class DuelState {
         attempts: _intIntMap(json['attempts']),
         roundWinner: json['round_winner'] as int?,
         solution: json['solution'] as String?,
+        solutionImage: json['solution_image'] as String?,
         scores: _intIntMap(json['scores']),
       );
 

@@ -17,7 +17,7 @@ class StartPage extends StatelessWidget {
     return Scaffold(
       body: Stack(
         children: [
-          const AppBackground(),
+          PlainBackground(accent: mode.colors.first),
           SafeArea(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),

@@ -47,7 +47,7 @@ class _ModeSelectScreenState extends State<ModeSelectScreen>
     return Scaffold(
       body: Stack(
         children: [
-          const AppBackground(dim: 0.35),
+          const PlainBackground(),
           SafeArea(
             child: Column(
               children: [
@@ -90,10 +90,8 @@ class _ModeSelectScreenState extends State<ModeSelectScreen>
                     ],
                   ),
                 ),
-                // Arka plan görselindeki logo bu aralıkta duruyor; başlık
-                // okunaksız kalmasın diye içerik logonun altından başlar.
-                SizedBox(height: MediaQuery.of(context).size.height * 0.20),
-                const NeonTitle('OYUN MODU SEÇ', fontSize: 24),
+                const SizedBox(height: 26),
+                const NeonTitle('OYUN MODU SEÇ', fontSize: 26),
                 const SizedBox(height: 5),
                 Text(
                   'Rakibinle aynı modda buluşun',

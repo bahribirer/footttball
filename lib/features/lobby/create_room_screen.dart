@@ -153,7 +153,7 @@ class _CreateRoomScreenState extends State<CreateRoomScreen>
     return Scaffold(
       body: Stack(
         children: [
-          const BoardBackground(dim: 0.3),
+          PlainBackground(accent: _mode.colors.first),
           SafeArea(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -168,7 +168,7 @@ class _CreateRoomScreenState extends State<CreateRoomScreen>
           ),
           SafeArea(
             child: SingleChildScrollView(
-              padding: EdgeInsets.only(top: size.height * 0.13, bottom: 32),
+              padding: EdgeInsets.only(top: size.height * 0.07, bottom: 28),
               child: Column(
                 children: [
                   _ModeBadge(mode: _mode),
@@ -186,8 +186,8 @@ class _CreateRoomScreenState extends State<CreateRoomScreen>
                       opacity: (_roomCode == null || _applyingSettings) ? 0.4 : 1,
                       child: Image.asset(
                         'images/play.PNG',
-                        width: size.width * 0.46,
-                        height: size.height * 0.1,
+                        width: size.width * 0.42,
+                        height: 76,
                         fit: BoxFit.contain,
                       ),
                     ),
@@ -305,8 +305,8 @@ class _CreateRoomScreenState extends State<CreateRoomScreen>
                 Image.asset(
                   entry.value,
                   fit: BoxFit.contain,
-                  width: size.width * 0.7,
-                  height: size.height * 0.07,
+                  width: size.width * 0.66,
+                  height: 54,
                 ),
                 if (selected)
                   Positioned(

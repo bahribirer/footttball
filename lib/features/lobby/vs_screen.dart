@@ -107,7 +107,7 @@ class _VsScreenState extends State<VsScreen> with TickerProviderStateMixin {
       body: Stack(
         alignment: Alignment.center,
         children: [
-          const AppBackground(dim: 0.5),
+          PlainBackground(accent: widget.mode.colors.first),
           Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [

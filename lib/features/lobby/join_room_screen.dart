@@ -109,7 +109,7 @@ class _JoinRoomScreenState extends State<JoinRoomScreen>
       resizeToAvoidBottomInset: true,
       body: Stack(
         children: [
-          const BoardBackground(dim: 0.3),
+          const PlainBackground(accent: Colors.orangeAccent),
           SafeArea(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),

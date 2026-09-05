@@ -40,6 +40,7 @@ class PlayerGuessMode(BaseMode):
         self.wrong_guesses: dict[int, list[str]] = {}
         self.round_winner: int | None = None
         self.solution: str | None = None
+        self.solution_image: str | None = None
 
         self._pick_event = asyncio.Event()
         self._answer_event = asyncio.Event()
@@ -82,6 +83,7 @@ class PlayerGuessMode(BaseMode):
         self.selected_club = None
         self.round_winner = None
         self.solution = None
+        self.solution_image = None
         self.attempts = {player.slot: settings.PG_MAX_ATTEMPTS for player in self.room.players}
         self.wrong_guesses = {player.slot: [] for player in self.room.players}
         self._pick_event.clear()
@@ -151,22 +153,26 @@ class PlayerGuessMode(BaseMode):
     async def _round_result(self) -> None:
         self.phase = "round_over"
         if self.solution is None and self.selected_nation and self.selected_club:
-            self.solution = await asyncio.to_thread(
+            example = await asyncio.to_thread(
                 self._find_example, self.selected_nation, self.selected_club
             )
+            if example:
+                self.solution = example["name"]
+                self.solution_image = example["image_url"]
         await self.push_state(event="round_over")
 
     @staticmethod
-    def _find_example(nation: str, club: str) -> str | None:
+    def _find_example(nation: str, club: str) -> dict | None:
+        """Tur sonunda gösterilecek örnek doğru cevap."""
         from app.db.database import fetch_one
         row = fetch_one(
-            """SELECT name FROM players
+            """SELECT name, image_url FROM players
                WHERE country_of_citizenship = ? AND current_club_name = ?
                ORDER BY CAST(COALESCE(market_value_in_eur, '0') AS INTEGER) DESC
                LIMIT 1""",
             (nation, club),
         )
-        return row["name"] if row else None
+        return {"name": row["name"], "image_url": row["image_url"]} if row else None
 
     async def _finish_match(self) -> None:
         self.phase = "finished"
@@ -225,10 +231,17 @@ class PlayerGuessMode(BaseMode):
         )
 
         if correct:
+            found = await asyncio.to_thread(player_service.find_player, guess)
             self.round_winner = player.slot
-            self.solution = guess
+            self.solution = found["name"] if found else guess
+            self.solution_image = found.get("image_url") if found else None
             player.score += 1
-            await self.emit("correct_answer", slot=player.slot, answer=guess)
+            await self.emit(
+                "correct_answer",
+                slot=player.slot,
+                answer=self.solution,
+                image_url=self.solution_image,
+            )
             self._answer_event.set()
             return
 
@@ -263,5 +276,6 @@ class PlayerGuessMode(BaseMode):
             "wrong_guesses": self.wrong_guesses,
             "round_winner": self.round_winner,
             "solution": self.solution,
+            "solution_image": self.solution_image,
             "scores": {player.slot: player.score for player in self.room.players},
         }
