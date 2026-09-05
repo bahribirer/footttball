@@ -8,11 +8,21 @@ from app.services.country_service import flag_url
 SEARCH_LIMIT = 50
 
 
+# NFKD ayrıştırması bu harfleri çözemediği için elle karşılık verilir;
+# aksi halde "Calhanoglu" yazan oyuncu "Çalhanoğlu" kaydını bulamıyor.
+_TRANSLIT = str.maketrans({
+    "ı": "i", "İ": "i", "ß": "ss", "ø": "o", "Ø": "o", "đ": "d", "Đ": "d",
+    "ł": "l", "Ł": "l", "æ": "ae", "Æ": "ae", "œ": "oe", "Œ": "oe",
+    "ð": "d", "Ð": "d", "þ": "th", "Þ": "th", "ħ": "h", "ŋ": "n",
+})
+
+
 def normalize(text: str | None) -> str:
     """Aksan ve büyük/küçük harf farklarını yok sayan karşılaştırma anahtarı."""
     if not text:
         return ""
-    decomposed = unicodedata.normalize("NFKD", text)
+    translated = text.translate(_TRANSLIT)
+    decomposed = unicodedata.normalize("NFKD", translated)
     stripped = "".join(ch for ch in decomposed if not unicodedata.combining(ch))
     return " ".join(stripped.lower().split())
 
@@ -29,13 +39,12 @@ def verify_player(player_name: str, nationality: str, club: str) -> bool:
 
     rows = fetch_all(
         """SELECT DISTINCT name FROM players
-           WHERE name LIKE ?
+           WHERE name_normalized = ?
              AND country_of_citizenship = ?
              AND current_club_name LIKE ?""",
-        (player_name, nationality, f"%{club}%"),
+        (normalize(player_name), nationality, f"%{club}%"),
     )
-    target = normalize(player_name)
-    return any(normalize(row["name"]) == target for row in rows)
+    return bool(rows)
 
 
 def search_players(name: str, base_url: str) -> list[dict]:
@@ -43,16 +52,19 @@ def search_players(name: str, base_url: str) -> list[dict]:
     if not name or len(name) < 2:
         return []
 
+    # Arama aksansız kolon üzerinden yapılır: "guler" yazan oyuncu
+    # "Arda Güler" kaydını da bulur. Baştan eşleşenler üste alınır.
+    key = normalize(name)
     rows = fetch_all(
         """SELECT name, country_of_citizenship, current_club_name,
                   current_club_domestic_competition_id, image_url, position, last_season
            FROM players
-           WHERE name LIKE ?
-           ORDER BY CASE WHEN name LIKE ? THEN 0 ELSE 1 END,
+           WHERE name_normalized LIKE ?
+           ORDER BY CASE WHEN name_normalized LIKE ? THEN 0 ELSE 1 END,
                     last_season DESC,
                     name ASC
            LIMIT ?""",
-        (f"%{name}%", f"{name}%", SEARCH_LIMIT),
+        (f"%{key}%", f"{key}%", SEARCH_LIMIT),
     )
 
     results: list[dict] = []
@@ -96,12 +108,12 @@ def find_player(player_name: str) -> dict | None:
     row = fetch_one(
         """SELECT name, image_url, current_club_name, country_of_citizenship
            FROM players
-           WHERE name LIKE ?
+           WHERE name_normalized = ?
            ORDER BY last_season DESC
            LIMIT 1""",
-        (player_name.strip(),),
+        (normalize(player_name),),
     )
-    if not row or normalize(row["name"]) != normalize(player_name):
+    if not row:
         return None
 
     return {

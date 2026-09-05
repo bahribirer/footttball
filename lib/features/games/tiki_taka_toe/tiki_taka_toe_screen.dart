@@ -607,7 +607,7 @@ class _TikiTakaToeScreenState extends State<TikiTakaToeScreen>
           const BoardBackground(dim: 0.35),
           // Centered Grid
           Positioned(
-            top: screenSize.height * 0.25,
+            top: screenSize.height * 0.10,
             left: screenSize.width * 0.05,
             right: screenSize.width * 0.05,
             child: SizedBox(
@@ -890,7 +890,7 @@ class _TikiTakaToeScreenState extends State<TikiTakaToeScreen>
           Positioned(
             left: 30,
             right: 30,
-            bottom: screenSize.height * 0.22,
+            bottom: screenSize.height * 0.25,
             child: Container(
               padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               decoration: BoxDecoration(
@@ -1084,7 +1084,7 @@ class _TikiTakaToeScreenState extends State<TikiTakaToeScreen>
           Positioned(
             left: 0,
             right: 0,
-            bottom: screenSize.height * 0.13,
+            bottom: screenSize.height * 0.155,
             child: Center(
               child: Container(
                 width: 60,

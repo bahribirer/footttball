@@ -207,14 +207,11 @@ def verify_answer(category: Category, player_name: str) -> str | None:
         return None
 
     rows = fetch_all(
-        f"SELECT DISTINCT name FROM players WHERE name LIKE ? AND ({category.where})",
-        (player_name.strip(), *category.params),
+        f"""SELECT DISTINCT name FROM players
+            WHERE name_normalized = ? AND ({category.where})""",
+        (normalize(player_name), *category.params),
     )
-    target = normalize(player_name)
-    for row in rows:
-        if normalize(row["name"]) == target:
-            return row["name"]
-    return None
+    return rows[0]["name"] if rows else None
 
 
 def sample_answers(category: Category, limit: int = 5) -> list[str]:
