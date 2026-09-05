@@ -121,7 +121,7 @@ void main() {
     await tester.enterText(find.byType(TextField).first, 'Bahri');
     await pumpFor(tester, const Duration(milliseconds: 300));
 
-    await tester.tap(find.text('START'));
+    await tester.tap(find.text('BAŞLA'));
     await pumpUntil(tester, find.byType(ModeSelectScreen), label: 'mod menüsü');
 
     expect(find.text('BAHRI'), findsOneWidget);

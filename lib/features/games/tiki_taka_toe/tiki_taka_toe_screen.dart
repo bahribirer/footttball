@@ -1479,6 +1479,6 @@ class _TikiTakaToeScreenState extends State<TikiTakaToeScreen>
     );
 
     overlay.insert(entry);
-    Future<void>.delayed(const Duration(milliseconds: 1800), entry.remove);
+    Future<void>.delayed(const Duration(milliseconds: 2600), entry.remove);
   }
 }

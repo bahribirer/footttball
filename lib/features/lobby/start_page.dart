@@ -71,6 +71,7 @@ class _StartPageState extends State<StartPage> with TickerProviderStateMixin {
                         _slideIn(
                           0,
                           _ActionCard(
+                            key: const ValueKey('btn_create_room'),
                             title: 'ODA KUR',
                             subtitle: 'Kodu sen al, arkadaşını çağır',
                             icon: Icons.add_circle_outline_rounded,
@@ -83,6 +84,7 @@ class _StartPageState extends State<StartPage> with TickerProviderStateMixin {
                         _slideIn(
                           1,
                           _ActionCard(
+                            key: const ValueKey('btn_join_room'),
                             title: 'ODAYA KATIL',
                             subtitle: 'Sana verilen kodu gir',
                             icon: Icons.login_rounded,
@@ -184,6 +186,7 @@ class _StartPageState extends State<StartPage> with TickerProviderStateMixin {
 /// Büyük eylem kartı (oda kur / katıl).
 class _ActionCard extends StatefulWidget {
   const _ActionCard({
+    super.key,
     required this.title,
     required this.subtitle,
     required this.icon,
