@@ -24,6 +24,13 @@ APP_DIR="/srv/tikitakatoe"
 DOMAIN="tikitakatoe.com"
 LOCAL_DB="backend/data/tikitakapi.db"
 
+# www kaydı henüz yeni sunucuya yönlenmediyse INCLUDE_WWW=0 ile dışarıda bırakılır.
+if [ "${INCLUDE_WWW:-1}" = "1" ]; then
+  CERT_DOMAIN_ARGS="-d $DOMAIN -d www.$DOMAIN"
+else
+  CERT_DOMAIN_ARGS="-d $DOMAIN"
+fi
+
 if [ -z "$TARGET" ] || [ -z "$KEY" ]; then
   echo "Kullanım: $0 ubuntu@<IP> <anahtar.pem> [dal]" >&2
   exit 1
@@ -94,7 +101,7 @@ if [ "${SKIP_TLS:-0}" = "1" ]; then
 fi
 
 echo "▶ 5/6  TLS sertifikası"
-$SSH "bash -s" <<REMOTE
+$SSH "CERT_DOMAIN_ARGS='$CERT_DOMAIN_ARGS' bash -s" <<REMOTE
 set -euo pipefail
 cd "$APP_DIR"
 if [ -d "infra/certbot/conf/live/$DOMAIN" ]; then
@@ -107,9 +114,19 @@ else
     -v "$APP_DIR/infra/certbot/conf:/etc/letsencrypt" \
     -v "$APP_DIR/infra/certbot/www:/var/www/certbot" \
     certbot/certbot certonly --standalone \
-    -d "$DOMAIN" -d "www.$DOMAIN" \
+    $CERT_DOMAIN_ARGS \
     --non-interactive --agree-tos --register-unsafely-without-email
   echo "  sertifika alındı"
+
+  # İlk sertifika standalone alınır, ancak yenileme sırasında 80 portu
+  # nginx'te olacağı için doğrulama webroot'a çevrilmeli; aksi halde
+  # otomatik yenileme sessizce başarısız olur ve sertifika 90 gün sonra düşer.
+  CONF="$APP_DIR/infra/certbot/conf/renewal/$DOMAIN.conf"
+  sudo sed -i 's|^authenticator = standalone|authenticator = webroot\nwebroot_path = /var/www/certbot,|' "\$CONF"
+  if ! sudo grep -q "webroot_map" "\$CONF"; then
+    printf '\n[[webroot_map]]\n$DOMAIN = /var/www/certbot\n' | sudo tee -a "\$CONF" > /dev/null
+  fi
+  echo "  yenileme webroot'a ayarlandı"
 fi
 REMOTE
 
