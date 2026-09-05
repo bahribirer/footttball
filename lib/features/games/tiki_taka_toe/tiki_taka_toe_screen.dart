@@ -282,17 +282,15 @@ class _TikiTakaToeScreenState extends State<TikiTakaToeScreen>
       
       // Handle Steal Consequences
       if (isSteal) {
-         if (type == _socket.mySymbol) {
-            // I stole
-            myStealRights--; 
-         } else {
-            // Opponent stole
-            opponentStealRights--;
-            // If I was the victim, show animation
-            if (victimType == _socket.mySymbol) {
-               _showStealedAnimation();
-            }
-         }
+        // Sayaçlar negatife düşmemeli; iki cihaz da aynı mesajı işler.
+        if (type == _socket.mySymbol) {
+          myStealRights = (myStealRights - 1).clamp(0, 3);
+        } else {
+          opponentStealRights = (opponentStealRights - 1).clamp(0, 3);
+          if (victimType == _socket.mySymbol) {
+            _showStealedBanner();
+          }
+        }
       }
     }
     var player1 = checkWin("X");
@@ -625,8 +623,33 @@ class _TikiTakaToeScreenState extends State<TikiTakaToeScreen>
                       ignoring: !_socket.playerTurn,
                       child: GestureDetector(
                         onTap: () async {
+                          final row = index ~/ 4;
+                          final col = index % 4;
+                          // Üst satır ve sol sütun başlıktır, oynanmaz.
+                          if (row == 0 || col == 0) return;
+
                           bool isOpponentCell = (squares[index] != "" && squares[index] != currentPlayer);
                           bool canSteal = isOpponentCell && myStealRights > 0;
+
+                          // Hakkı bitmiş oyuncu neden oynayamadığını görmeli.
+                          if (isOpponentCell && myStealRights == 0) {
+                            GameDialogs.showWarning(
+                              context,
+                              title: 'ÇALMA HAKKIN BİTTİ',
+                              message:
+                                  'Rakibin kutularını almak için hakkın kalmadı.\nBoş bir kutu seç.',
+                            );
+                            return;
+                          }
+
+                          if (squares[index] == currentPlayer) {
+                            GameDialogs.showWarning(
+                              context,
+                              title: 'BURASI SENİN',
+                              message: 'Bu kutuyu zaten kazandın. Başka bir kutu seç.',
+                            );
+                            return;
+                          }
 
                           if ((squares[index] == "" || canSteal) &&
                               _socket.playerTurn) {
@@ -1388,45 +1411,62 @@ class _TikiTakaToeScreenState extends State<TikiTakaToeScreen>
   }
 
 
-  void _showStealedAnimation() {
-    showGeneralDialog(
-      context: context,
-      barrierDismissible: false,
-      barrierColor: Colors.black.withOpacity(0.3), // Light dim
-      transitionDuration: Duration(milliseconds: 300),
-      pageBuilder: (ctx, anim1, anim2) {
-        return Center(
-          child: Material(
-            color: Colors.transparent,
-            child: ScaleTransition(
-              scale: CurvedAnimation(parent: anim1, curve: Curves.elasticOut),
+  /// "Kutun çalındı" bildirimi.
+  ///
+  /// Diyalog yerine katman (overlay) kullanılır: eskiden bu bildirim
+  /// `Navigator.pop` ile kapanıyordu ve o sırada açık olan başka bir
+  /// diyaloğu (oyuncu arama kutusu, tur sonu penceresi) kapatabiliyordu.
+  void _showStealedBanner() {
+    final overlay = Overlay.maybeOf(context);
+    if (overlay == null) return;
+
+    late OverlayEntry entry;
+    entry = OverlayEntry(
+      builder: (context) => Positioned(
+        top: MediaQuery.of(context).padding.top + 70,
+        left: 24,
+        right: 24,
+        child: IgnorePointer(
+          child: TweenAnimationBuilder<double>(
+            tween: Tween(begin: 0, end: 1),
+            duration: const Duration(milliseconds: 320),
+            curve: Curves.easeOutBack,
+            builder: (context, value, child) => Opacity(
+              opacity: value.clamp(0, 1),
+              child: Transform.translate(
+                offset: Offset(0, -18 * (1 - value)),
+                child: child,
+              ),
+            ),
+            child: Material(
+              color: Colors.transparent,
               child: Container(
-                padding: EdgeInsets.symmetric(horizontal: 30, vertical: 20),
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
                 decoration: BoxDecoration(
-                  color: Colors.redAccent.withOpacity(0.9),
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: Colors.white, width: 2),
+                  color: const Color(0xFF3A0F1C).withOpacity(0.96),
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(color: Colors.redAccent.withOpacity(0.8), width: 1.6),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.red.withOpacity(0.5),
-                      blurRadius: 30,
-                      spreadRadius: 5,
-                    )
+                      color: Colors.redAccent.withOpacity(0.35),
+                      blurRadius: 24,
+                      spreadRadius: 1,
+                    ),
                   ],
                 ),
-                child: Column(
+                child: Row(
                   mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.gpp_bad_rounded, color: Colors.white, size: 50),
-                    SizedBox(height: 10),
-                    Text(
-                      "YOUR SPOT WAS STOLEN!",
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 20,
-                        fontWeight: FontWeight.w900,
-                        shadows: [Shadow(blurRadius: 5, color: Colors.black45)],
+                  children: const [
+                    Icon(Icons.gpp_bad_rounded, color: Colors.redAccent, size: 26),
+                    SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        'Rakibin kutunu çaldı!',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 15.5,
+                          fontWeight: FontWeight.w800,
+                        ),
                       ),
                     ),
                   ],
@@ -1434,15 +1474,11 @@ class _TikiTakaToeScreenState extends State<TikiTakaToeScreen>
               ),
             ),
           ),
-        );
-      },
+        ),
+      ),
     );
 
-    // Auto dismiss
-    Future.delayed(Duration(milliseconds: 1500), () {
-      if (mounted && Navigator.canPop(context)) {
-        Navigator.pop(context);
-      }
-    });
+    overlay.insert(entry);
+    Future<void>.delayed(const Duration(milliseconds: 1800), entry.remove);
   }
 }

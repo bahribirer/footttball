@@ -69,12 +69,13 @@ class RoomHub:
         async with self._lock:
             room = self._rooms.get(code)
 
+            # Oda yalnızca `POST /api/v1/rooms` ile kurulur. Bağlanırken oda
+            # yaratmak, katılma ekranına yazılan her kodun yeni bir oda
+            # açmasına yol açıyordu.
             if room is None:
-                if not mode:
-                    raise RoomNotFound(code)
-                room = Room(code=code, mode=GameMode(mode), settings={})
-                self._rooms[code] = room
-            elif mode and room.players and room.mode != mode:
+                raise RoomNotFound(code)
+
+            if mode and room.mode != mode:
                 raise ModeMismatch(room.mode)
 
             active = [player for player in room.players if player.connected]

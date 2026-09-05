@@ -45,6 +45,21 @@ class TikiTakaToeMode(BaseMode):
                 grid_service.build_grid, "RANDOM"
             )
 
+    async def handle_relay(self, player, data: dict) -> None:
+        """Hamleyi her iki oyuncuya da iletir.
+
+        Bu modda tahta durumu istemcide tutulur ve hamleyi işleyen kod
+        (`makeMove`) sıra değişimini de yapar. Mesaj yalnızca rakibe
+        gönderilirse oynayan taraf kendi hamlesini göremez ve sıra
+        devretmediği için oyun kilitlenir. Eski protokolde de yayın
+        gönderen dahil herkese gidiyordu.
+        """
+        await self.room.broadcast({
+            "type": ServerMessage.RELAY,
+            "from": player.slot,
+            "data": data,
+        })
+
     async def handle_action(self, player, payload: dict) -> None:
         action = payload.get("action")
         if action == "next_round":

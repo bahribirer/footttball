@@ -13,6 +13,9 @@ class LastLetterScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return ClockGameScaffold(
       mode: GameMode.lastLetter,
+      // Doğru ismi bulmak oyunun kendisi olduğu için öneri kapalı.
+      showSuggestions: false,
+      showHistoryDetails: false,
       inputHint: 'Futbolcu adı yaz...',
       emptyHistoryText: 'İlk futbolcuyu sen belirle — zincir seninle başlıyor',
       buildInfoPanel: (context, state) => _LetterPanel(state: state),

@@ -12,6 +12,8 @@ class CategoryRaceScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return ClockGameScaffold(
       mode: GameMode.categoryRace,
+      // Ülke/kulüp bilgisi kategoriyi ele verdiği için gizli.
+      showHistoryDetails: false,
       inputHint: 'Kategoriye uyan futbolcu...',
       emptyHistoryText: 'Kategoriye uyan ilk futbolcuyu yaz',
       buildInfoPanel: (context, state) => _CategoryPanel(state: state),

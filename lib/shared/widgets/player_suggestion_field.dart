@@ -20,6 +20,8 @@ class PlayerSuggestionField extends StatefulWidget {
     this.hint = 'Futbolcu adı yaz...',
     this.autofocus = false,
     this.maxSuggestions = 6,
+    this.showSuggestions = true,
+    this.showPlayerDetails = false,
   });
 
   final TextEditingController controller;
@@ -29,6 +31,12 @@ class PlayerSuggestionField extends StatefulWidget {
   final String hint;
   final bool autofocus;
   final int maxSuggestions;
+
+  /// Kapalıysa hiç öneri gösterilmez (Son Harf modunda oyunun özü budur).
+  final bool showSuggestions;
+
+  /// Açıksa önerilerde ülke ve kulüp de görünür; kapalıyken yalnızca isim.
+  final bool showPlayerDetails;
 
   @override
   State<PlayerSuggestionField> createState() => _PlayerSuggestionFieldState();
@@ -50,6 +58,8 @@ class _PlayerSuggestionFieldState extends State<PlayerSuggestionField> {
 
   void _onChanged(String query) {
     _debounce?.cancel();
+
+    if (!widget.showSuggestions) return;
 
     if (query.trim().length < 2) {
       setState(() {
@@ -104,7 +114,9 @@ class _PlayerSuggestionFieldState extends State<PlayerSuggestionField> {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        if (widget.enabled && (_suggestions.isNotEmpty || _loading))
+        if (widget.showSuggestions &&
+            widget.enabled &&
+            (_suggestions.isNotEmpty || _loading))
           _buildSuggestions(),
         _buildInput(),
       ],
@@ -160,53 +172,68 @@ class _PlayerSuggestionFieldState extends State<PlayerSuggestionField> {
     return InkWell(
       onTap: () => _submit(name),
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+        padding: EdgeInsets.symmetric(
+          horizontal: 12,
+          vertical: widget.showPlayerDetails ? 9 : 11,
+        ),
         child: Row(
           children: [
             PlayerAvatar(
               name: name,
               imageUrl: player['image_url'] as String?,
-              size: 38,
+              size: widget.showPlayerDetails ? 38 : 32,
               borderColor: widget.accent,
             ),
             const SizedBox(width: 11),
             Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    name,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 14.5,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Row(
-                    children: [
-                      if (country != null && country.isNotEmpty) ...[
-                        CountryFlag(country: country, width: 17),
-                        const SizedBox(width: 6),
-                      ],
-                      Expanded(
-                        child: Text(
-                          clubLine,
+              child: widget.showPlayerDetails
+                  ? Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          name,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            color: Colors.white.withOpacity(0.5),
-                            fontSize: 11.5,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 14.5,
+                            fontWeight: FontWeight.w600,
                           ),
                         ),
+                        const SizedBox(height: 2),
+                        Row(
+                          children: [
+                            if (country != null && country.isNotEmpty) ...[
+                              CountryFlag(country: country, width: 17),
+                              const SizedBox(width: 6),
+                            ],
+                            Expanded(
+                              child: Text(
+                                clubLine,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  color: Colors.white.withOpacity(0.5),
+                                  fontSize: 11.5,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    )
+                  // Oyunun zorluğunu korumak için yalnızca isim gösterilir.
+                  : Text(
+                      name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
                       ),
-                    ],
-                  ),
-                ],
-              ),
+                    ),
             ),
             Icon(Icons.north_east_rounded,
                 color: widget.accent.withOpacity(0.75), size: 17),

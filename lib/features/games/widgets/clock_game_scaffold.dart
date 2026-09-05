@@ -23,6 +23,8 @@ class ClockGameScaffold extends StatefulWidget {
     required this.buildInfoPanel,
     required this.inputHint,
     this.emptyHistoryText = 'İlk cevabı yaz ve zinciri başlat',
+    this.showSuggestions = true,
+    this.showHistoryDetails = true,
   });
 
   final GameMode mode;
@@ -32,6 +34,12 @@ class ClockGameScaffold extends StatefulWidget {
 
   final String inputHint;
   final String emptyHistoryText;
+
+  /// Son Harf modunda öneri kapalıdır: doğru ismi bulmak oyunun kendisidir.
+  final bool showSuggestions;
+
+  /// Geçmiş listesinde ülke/kulüp gösterilsin mi.
+  final bool showHistoryDetails;
 
   @override
   State<ClockGameScaffold> createState() => _ClockGameScaffoldState();
@@ -356,11 +364,14 @@ class _ClockGameScaffoldState extends State<ClockGameScaffold> {
         final accent = mine ? Colors.cyanAccent : Colors.purpleAccent;
 
         final latest = index == 0;
-        final subtitle = [
-          if (entry.country != null && entry.country!.isNotEmpty)
-            CountryCatalog.turkish(entry.country),
-          if (entry.club != null && entry.club!.isNotEmpty) entry.club!,
-        ].join(' • ');
+        // Ülke/kulüp bilgisi ipucu verdiği için yalnızca istenen modlarda gösterilir.
+        final subtitle = !widget.showHistoryDetails
+            ? ''
+            : [
+                if (entry.country != null && entry.country!.isNotEmpty)
+                  CountryCatalog.turkish(entry.country),
+                if (entry.club != null && entry.club!.isNotEmpty) entry.club!,
+              ].join(' • ');
 
         return Align(
           alignment: mine ? Alignment.centerLeft : Alignment.centerRight,
@@ -439,6 +450,7 @@ class _ClockGameScaffoldState extends State<ClockGameScaffold> {
       enabled: _isMyTurn && !_gameOver,
       hint: widget.inputHint,
       accent: widget.mode.colors.last,
+      showSuggestions: widget.showSuggestions,
       onSubmit: _submitAnswer,
     );
   }

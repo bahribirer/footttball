@@ -191,7 +191,10 @@ class GameSocket {
         break;
 
       case 'relay':
-        _handleRelay((message['data'] as Map?)?.cast<String, dynamic>() ?? {});
+        _handleRelay(
+          (message['data'] as Map?)?.cast<String, dynamic>() ?? {},
+          message['from'] as int? ?? opponentSlot,
+        );
         break;
 
       case 'event':
@@ -226,7 +229,12 @@ class GameSocket {
   }
 
   /// Tiki Taka Toe'nun istemci mesajlarını ilgili geri çağrıya dağıtır.
-  void _handleRelay(Map<String, dynamic> data) {
+  ///
+  /// Hamleler her iki oyuncuya da iletilir: tahtayı ve sıra devrini işleyen
+  /// kod ortaktır. Buna karşılık seçim/ad/sayaç bildirimleri yalnızca
+  /// rakipten geldiğinde işlenir; aksi halde oyuncu kendi seçtiği kutuyu
+  /// "rakibin seçimi" olarak görüyordu.
+  void _handleRelay(Map<String, dynamic> data, int fromSlot) {
     final type = data['type'] as String?;
 
     if (data.containsKey('index')) {
@@ -237,6 +245,8 @@ class GameSocket {
       );
       return;
     }
+
+    if (fromSlot == mySlot) return; // kendi bildirimimi yok say
 
     switch (type) {
       case 'announceName':

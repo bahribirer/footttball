@@ -398,6 +398,7 @@ class _PlayerGuessScreenState extends State<PlayerGuessScreen> {
               autofocus: true,
               hint: 'Futbolcu adını yaz...',
               accent: GameMode.playerGuess.colors.last,
+              // Öneride ülke/kulüp gösterilmez; ipucu vermemeli.
               onSubmit: _submitGuess,
             ),
           ),

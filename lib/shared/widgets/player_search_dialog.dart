@@ -183,33 +183,7 @@ class _PlayerSearchDialogState extends State<PlayerSearchDialog> {
               fontSize: 15,
             ),
           ),
-          subtitle: Row(
-            children: [
-              if (player['flag_url'] != null) ...[
-                Image.network(
-                  player['flag_url'] as String,
-                  width: 18,
-                  height: 12,
-                  errorBuilder: (_, __, ___) => const SizedBox.shrink(),
-                ),
-                const SizedBox(width: 6),
-              ],
-              Expanded(
-                child: Text(
-                  // Oyun eski takımları da kabul ettiği için kulüp geçmişi yazılır.
-                  [
-                    CountryCatalog.turkish(player['country'] as String?),
-                    ...((player['clubs'] as List?) ?? [player['club']])
-                        .whereType<String>(),
-                  ]
-                      .where((value) => value.isNotEmpty)
-                      .join(' • '),
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(color: Colors.white54, fontSize: 12),
-                ),
-              ),
-            ],
-          ),
+          // Ülke ve kulüp bilgisi cevabı ele vereceği için gösterilmez.
           trailing: const Icon(Icons.chevron_right, color: Colors.white30),
           onTap: () => Navigator.of(context).pop(name),
         );
