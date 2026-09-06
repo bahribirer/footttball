@@ -3,6 +3,7 @@
 import asyncio
 import json
 import logging
+import secrets
 import time
 from dataclasses import dataclass, field
 
@@ -20,6 +21,14 @@ class Player:
     slot: int                       # 0 = kurucu (X), 1 = katılan (O)
     connected: bool = True
     score: int = 0
+
+    # Kısa süreli kopmalarda (tünel, asansör, hücre değişimi) oyuncu aynı
+    # yerine dönebilsin diye verilen gizli anahtar. İstemci `?token=` ile
+    # geri gelir; ad yeterli değil, iki oyuncu aynı adı yazabilir.
+    token: str = field(default_factory=lambda: secrets.token_urlsafe(12))
+
+    # Bağlantı koptuğu an; tolerans süresi dolunca oyuncu odadan düşer.
+    disconnected_at: float | None = None
 
     @property
     def symbol(self) -> str:

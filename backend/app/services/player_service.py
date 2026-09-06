@@ -28,23 +28,57 @@ def normalize(text: str | None) -> str:
     return " ".join(stripped.lower().split())
 
 
-_squad_layer_available: bool | None = None
+_layer_cache: dict[str, bool] = {}
+
+
+def _has_table(table: str) -> bool:
+    """Ek veri katmanı kurulu mu (bir kez sorgulanır)."""
+    if table not in _layer_cache:
+        row = fetch_one(
+            "SELECT name FROM sqlite_master WHERE type='table' AND name=?", (table,)
+        )
+        _layer_cache[table] = row is not None
+    return _layer_cache[table]
 
 
 def has_squad_layer() -> bool:
-    """`squad_updates` tablosu kurulu mu?
+    """Güncel kadro katmanı (`scripts/sync_current_squads.py`)."""
+    return _has_table("squad_updates")
 
-    Ana tablo sezon anlık görüntülerinden oluşuyor ve son transfer dönemini
-    kapsamıyor. `scripts/sync_current_squads.py` güncel kadroları bu ek
-    tabloya yazar; tablo yoksa sorgular sessizce atlanır.
+
+def has_history_layer() -> bool:
+    """Tarihsel kadro katmanı (`scripts/sync_club_history.py`).
+
+    Ana tablo eski dönemleri ve pek çok oyuncunun uyruğunu içermiyor;
+    Fatih Tekke'nin Trabzonspor yılları gibi doğru cevaplar bu yüzden
+    reddediliyordu.
     """
-    global _squad_layer_available
-    if _squad_layer_available is None:
-        row = fetch_one(
-            "SELECT name FROM sqlite_master WHERE type='table' AND name='squad_updates'"
-        )
-        _squad_layer_available = row is not None
-    return _squad_layer_available
+    return _has_table("club_history")
+
+
+# --- ad eşleştirme ---------------------------------------------------------
+#
+# Oyuncular futbolcuyu çoğunlukla soyadıyla yazıyor ("Messi", "Haaland").
+# Eşleştirme yalnızca tam ada bakarsa bu cevaplar reddediliyordu. Aşağıdaki
+# yardımcılar adın tamamını, soyadını ya da içindeki herhangi bir kelimeyi
+# kabul eden bir koşul üretir; birden fazla aday çıkarsa en tanınmış oyuncu
+# (piyasa değeri en yüksek) seçilir.
+
+
+def _name_match(column: str, key: str) -> tuple[str, list]:
+    """Tam ad / soyad / ara isim eşleşmesi için SQL koşulu ve parametreleri."""
+    return (
+        f"({column} = ? OR {column} LIKE ? OR {column} LIKE ? OR {column} LIKE ?)",
+        [key, f"% {key}", f"{key} %", f"% {key} %"],
+    )
+
+
+def _name_rank(column: str, key: str) -> tuple[str, list]:
+    """Tam ad en önce, sonra soyad eşleşmesi, en sonda ara isimler."""
+    return (
+        f"CASE WHEN {column} = ? THEN 0 WHEN {column} LIKE ? THEN 1 ELSE 2 END",
+        [key, f"% {key}"],
+    )
 
 
 def verify_player(player_name: str, nationality: str, club: str) -> bool:
@@ -61,12 +95,14 @@ def verify_player(player_name: str, nationality: str, club: str) -> bool:
         return False
 
     key = normalize(player_name)
+    where, params = _name_match("name_normalized", key)
+
     rows = fetch_all(
-        """SELECT DISTINCT name FROM players
-           WHERE name_normalized = ?
-             AND country_of_citizenship = ?
-             AND current_club_name LIKE ?""",
-        (key, nationality, f"%{club}%"),
+        f"""SELECT DISTINCT name FROM players
+            WHERE {where}
+              AND country_of_citizenship = ?
+              AND current_club_name LIKE ?""",
+        (*params, nationality, f"%{club}%"),
     )
     if rows:
         return True
@@ -75,11 +111,24 @@ def verify_player(player_name: str, nationality: str, club: str) -> bool:
         return False
 
     rows = fetch_all(
-        """SELECT 1 FROM squad_updates
-           WHERE name_normalized = ?
-             AND country = ?
-             AND club_name LIKE ?""",
-        (key, nationality, f"%{club}%"),
+        f"""SELECT 1 FROM squad_updates
+            WHERE {where}
+              AND country = ?
+              AND club_name LIKE ?""",
+        (*params, nationality, f"%{club}%"),
+    )
+    if rows:
+        return True
+
+    if not has_history_layer():
+        return False
+
+    rows = fetch_all(
+        f"""SELECT 1 FROM club_history
+            WHERE {where}
+              AND country = ?
+              AND club_name LIKE ?""",
+        (*params, nationality, f"%{club}%"),
     )
     return bool(rows)
 
@@ -111,6 +160,17 @@ def club_history(player_name: str) -> list[str]:
         (key, SUGGESTION_CLUBS),
     )
     clubs.extend(row["current_club_name"] for row in rows)
+
+    # Ana tabloda olmayan eski kulüpler tarihsel katmandan tamamlanır.
+    if has_history_layer() and len(clubs) < SUGGESTION_CLUBS:
+        rows = fetch_all(
+            """SELECT club_name FROM club_history
+               WHERE name_normalized = ?
+               ORDER BY COALESCE(end_year, start_year, 0) DESC
+               LIMIT ?""",
+            (key, SUGGESTION_CLUBS),
+        )
+        clubs.extend(row["club_name"] for row in rows)
 
     # Sıra korunarak yinelenenler ayıklanır.
     seen: set[str] = set()
@@ -188,13 +248,20 @@ def find_player(player_name: str) -> dict | None:
     if not player_name or not player_name.strip():
         return None
 
+    key = normalize(player_name)
+    where, where_params = _name_match("name_normalized", key)
+    rank, rank_params = _name_rank("name_normalized", key)
+
+    # Aynı ada birden çok oyuncu uyabilir ("Silva"); en tanınmışı seçilir.
     row = fetch_one(
-        """SELECT name, image_url, current_club_name, country_of_citizenship
-           FROM players
-           WHERE name_normalized = ?
-           ORDER BY last_season DESC
-           LIMIT 1""",
-        (normalize(player_name),),
+        f"""SELECT name, image_url, current_club_name, country_of_citizenship
+            FROM players
+            WHERE {where}
+            ORDER BY {rank},
+                     CAST(COALESCE(highest_market_value_in_eur, 0) AS INTEGER) DESC,
+                     last_season DESC
+            LIMIT 1""",
+        (*where_params, *rank_params),
     )
     if not row:
         return None

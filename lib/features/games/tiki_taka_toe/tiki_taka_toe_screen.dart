@@ -10,6 +10,7 @@ import 'package:footttball/features/modes/mode_select_screen.dart';
 import 'package:footttball/shared/widgets/app_background.dart';
 import 'package:footttball/shared/widgets/game_dialogs.dart';
 import 'package:footttball/shared/widgets/player_avatar.dart';
+import 'package:footttball/shared/widgets/connection_banner.dart';
 
 /// Klasik 3x3 tahta. Oyun mantığı istemcide yürür; sunucu tahtayı üretir ve
 /// hamleleri rakibe aktarır.
@@ -462,9 +463,15 @@ class _TikiTakaToeScreenState extends State<TikiTakaToeScreen>
       } else {
         isRoundOverDialogOpen = true;
         _suppressNextRoundTrigger = false; // Reset flag when opening
+        final target = widget.roundCount;
         GameDialogs.showInfo(context,
             title: "TUR BİTTİ",
-            message: "$roundWinnerName bu turu kazandı!", onDismiss: () {
+            message: target == 1
+                ? "$roundWinnerName bu turu kazandı!"
+                : "$roundWinnerName bu turu kazandı!\n\n"
+                    "Seri: $myName $myScore - $opponentScore $opponentName\n"
+                    "Seriyi kazanmak için $target tur gerekiyor.",
+            onDismiss: () {
           isRoundOverDialogOpen = false;
 
           // Check if we should suppress the trigger (because we closed programmatically)
@@ -1209,8 +1216,13 @@ class _TikiTakaToeScreenState extends State<TikiTakaToeScreen>
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
+                          // Seri, turu ilk `roundCount` kez kazanana gider;
+                          // "2/3" gösterimi bunu "3 turluk maç" gibi
+                          // okutuyordu.
                           Text(
-                            "ROUND",
+                            widget.roundCount == 1
+                                ? "TUR"
+                                : "İLK ${widget.roundCount}",
                             style: TextStyle(
                               color: Colors.amberAccent,
                               fontSize: 9,
@@ -1219,11 +1231,9 @@ class _TikiTakaToeScreenState extends State<TikiTakaToeScreen>
                             ),
                           ),
                           Text(
-                            (widget.roundCount == 1 && currentRound == 1)
-                                ? "MATCH"
-                                : (currentRound > widget.roundCount
-                                    ? "EXTRA"
-                                    : "$currentRound/${widget.roundCount}"),
+                            widget.roundCount == 1
+                                ? "TEK MAÇ"
+                                : "$currentRound. TUR",
                             style: TextStyle(
                               color: Colors.amberAccent,
                               fontSize: 16,
@@ -1374,6 +1384,10 @@ class _TikiTakaToeScreenState extends State<TikiTakaToeScreen>
                 ),
               ),
             ),
+
+            // Bağlantı kopunca oyunu bitirmek yerine durum gösterilir.
+            const Align(
+                alignment: Alignment.topCenter, child: ConnectionBanner()),
 
             // Alt eylem düğmeleri — görsel yerine Türkçe, mod paletiyle çizilir.
             Positioned(

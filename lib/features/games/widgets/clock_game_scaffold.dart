@@ -11,6 +11,7 @@ import 'package:footttball/shared/widgets/app_background.dart';
 import 'package:footttball/shared/widgets/game_dialogs.dart';
 import 'package:footttball/shared/widgets/player_avatar.dart';
 import 'package:footttball/shared/widgets/player_suggestion_field.dart';
+import 'package:footttball/shared/widgets/connection_banner.dart';
 
 /// Son Harf ve Kategori Yarışı modlarının ortak ekran iskeleti.
 ///
@@ -241,6 +242,9 @@ class _ClockGameScaffoldState extends State<ClockGameScaffold> {
                 ],
               ),
             ),
+            // Bağlantı kopunca oyunu bitirmek yerine durum gösterilir.
+            const Align(
+                alignment: Alignment.topCenter, child: ConnectionBanner()),
           ],
         ),
       ),

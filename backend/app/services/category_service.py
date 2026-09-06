@@ -10,7 +10,7 @@ from dataclasses import dataclass, field
 from functools import lru_cache
 
 from app.db.database import fetch_all, fetch_column
-from app.services.player_service import has_squad_layer, normalize
+from app.services.player_service import _name_match, has_squad_layer, normalize
 
 # Görünen adlar
 POSITION_TR = {
@@ -73,14 +73,20 @@ class Category:
     squad_where: str | None = None
     squad_params: tuple = field(default_factory=tuple)
 
+    # "easy" | "medium" | "hard" — dar kesişimler (lig × uyruk) oyuncuları
+    # zorluyordu; seçenekler artık ağırlıklı olarak kolaylardan geliyor.
+    difficulty: str = "medium"
+
     def to_dict(self) -> dict:
-        return {"id": self.id, "label": self.label}
+        return {"id": self.id, "label": self.label, "difficulty": self.difficulty}
 
 
 def _c(cid: str, label: str, where: str, *params,
-       squad_where: str | None = None, squad_params: tuple = ()) -> Category:
+       squad_where: str | None = None, squad_params: tuple = (),
+       difficulty: str = "medium") -> Category:
     return Category(id=cid, label=label, where=where, params=tuple(params),
-                    squad_where=squad_where, squad_params=tuple(squad_params))
+                    squad_where=squad_where, squad_params=tuple(squad_params),
+                    difficulty=difficulty)
 
 
 @lru_cache(maxsize=1)
@@ -124,6 +130,7 @@ def _build_candidates() -> list[Category]:
                 f"{NATION_TR[nation]} {tr}",
                 "country_of_citizenship = ? AND position = ?",
                 nation, position,
+                difficulty="medium",
             ))
 
     # 2) Kulüp forması giymiş oyuncular
@@ -134,6 +141,7 @@ def _build_candidates() -> list[Category]:
             "current_club_name = ?",
             club,
             squad_where="club_name = ?", squad_params=(club,),
+            difficulty="easy",
         ))
 
     # 3) Kulüp + ülke
@@ -146,6 +154,7 @@ def _build_candidates() -> list[Category]:
                 club, nation,
                 squad_where="club_name = ? AND country = ?",
                 squad_params=(club, nation),
+                difficulty="hard",
             ))
 
     # 4) Lig + ülke
@@ -158,35 +167,85 @@ def _build_candidates() -> list[Category]:
                 league, nation,
                 squad_where="competition_id = ? AND country = ?",
                 squad_params=(league, nation),
+                difficulty="hard",
             ))
 
-    # 5) Özel nitelikler
+    # 5) Kolay kategoriler — tek geniş süzgeç.
+    #
+    # Kategoriler yalnızca kesişimlerden üretilince ("Eredivisie'de oynamış
+    # Avusturyalı futbolcular") oyuncular tek isim bile bulmakta zorlanıyordu.
+    # Aşağıdakiler havuzu geniş tutar.
+    for nation in nations:
+        candidates.append(_c(
+            f"nat:{nation}", f"{NATION_TR[nation]} futbolcular",
+            "country_of_citizenship = ?", nation,
+            difficulty="easy",
+        ))
+
+    for league, league_tr in LEAGUE_TR.items():
+        candidates.append(_c(
+            f"league:{league}", f"{league_tr}'de oynamış futbolcular",
+            "current_club_domestic_competition_id = ?", league,
+            squad_where="competition_id = ?", squad_params=(league,),
+            difficulty="easy",
+        ))
+
+    for position, tr in POSITION_TR.items():
+        candidates.append(_c(
+            f"pos:{position}", f"Herhangi bir {tr}",
+            "position = ?", position,
+            difficulty="easy",
+        ))
+
+    # Büyük futbol ülkeleri + mevki: geniş havuz, tanıdık isimler.
+    for nation in ("Brazil", "Argentina", "France", "Spain", "Germany",
+                   "Italy", "England", "Portugal", "Netherlands", "Turkey"):
+        if nation not in nations:
+            continue
+        candidates.append(_c(
+            f"nat_easy_att:{nation}",
+            f"{NATION_TR[nation]} forvetler",
+            "country_of_citizenship = ? AND position = 'Attack'", nation,
+            difficulty="easy",
+        ))
+        candidates.append(_c(
+            f"nat_easy_gk:{nation}",
+            f"{NATION_TR[nation]} kaleciler",
+            "country_of_citizenship = ? AND position = 'Goalkeeper'", nation,
+            difficulty="medium",
+        ))
+
+    # 6) Özel nitelikler
     candidates += [
         _c("value:50m", "Piyasa değeri 50 milyon € üzeri futbolcular",
-           "CAST(market_value_in_eur AS INTEGER) >= 50000000"),
+           "CAST(market_value_in_eur AS INTEGER) >= 50000000", difficulty="easy"),
         _c("value:80m", "Piyasa değeri 80 milyon € üzeri futbolcular",
-           "CAST(market_value_in_eur AS INTEGER) >= 80000000"),
+           "CAST(market_value_in_eur AS INTEGER) >= 80000000", difficulty="medium"),
         _c("tall:195", "Boyu 195 cm ve üzeri futbolcular",
-           "CAST(height_in_cm AS INTEGER) >= 195"),
+           "CAST(height_in_cm AS INTEGER) >= 195", difficulty="medium"),
         _c("tall:190gk", "Boyu 190 cm üzeri kaleciler",
-           "CAST(height_in_cm AS INTEGER) >= 190 AND position = 'Goalkeeper'"),
+           "CAST(height_in_cm AS INTEGER) >= 190 AND position = 'Goalkeeper'",
+           difficulty="medium"),
     ]
 
     for league, league_tr in LEAGUE_TR.items():
         candidates.append(_c(
             f"left:{league}", f"{league_tr}'de oynamış solak futbolcular",
             "current_club_domestic_competition_id = ? AND foot = 'left'", league,
+            difficulty="medium",
         ))
         candidates.append(_c(
             f"young:{league}", f"{league_tr}'de oynamış 2003 ve sonrası doğumlular",
             "current_club_domestic_competition_id = ? AND date_of_birth >= '2003-01-01'",
             league,
+            difficulty="medium",
         ))
 
     for nation in nations:
         candidates.append(_c(
             f"nat_left:{nation}", f"Solak {NATION_TR[nation]} futbolcular",
             "country_of_citizenship = ? AND foot = 'left'", nation,
+            difficulty="hard",
         ))
 
     return candidates
@@ -200,24 +259,57 @@ def _pool_size(category: Category) -> int:
     return row[0]["total"] if row else 0
 
 
+# Sunulan seçeneklerin zorluk dağılımı: çoğunluk kolay, en fazla bir zor.
+# Tümü kesişimlerden seçilince oyuncular tek isim bile bulamıyordu.
+DIFFICULTY_MIX = ("easy", "easy", "medium", "easy", "medium", "hard",
+                  "easy", "medium", "easy", "medium")
+
+
 def random_categories(count: int = 3) -> list[Category]:
-    """Yeterli sayıda oyuncu barındıran rastgele kategoriler döndürür."""
+    """Havuzu yeterli, zorluğu dengeli rastgele kategoriler döndürür."""
     candidates = _build_candidates()
+    by_difficulty: dict[str, list[Category]] = {}
+    for category in candidates:
+        by_difficulty.setdefault(category.difficulty, []).append(category)
+    for bucket in by_difficulty.values():
+        random.shuffle(bucket)
+
+    cursors = {level: 0 for level in by_difficulty}
     chosen: list[Category] = []
     seen: set[str] = set()
 
-    for category in random.sample(candidates, min(CATEGORY_CHOICES, len(candidates))):
-        if category.id in seen:
-            continue
-        if _pool_size(category) >= MIN_POOL_SIZE:
-            chosen.append(category)
-            seen.add(category.id)
+    def take(level: str) -> Category | None:
+        """İstenen zorluktan, havuzu yeterli ilk kategoriyi verir."""
+        bucket = by_difficulty.get(level, [])
+        while cursors.get(level, 0) < len(bucket):
+            category = bucket[cursors[level]]
+            cursors[level] += 1
+            if category.id in seen:
+                continue
+            if _pool_size(category) >= MIN_POOL_SIZE:
+                return category
+        return None
+
+    for level in DIFFICULTY_MIX:
         if len(chosen) == count:
             break
+        category = take(level)
+        if category:
+            chosen.append(category)
+            seen.add(category.id)
+
+    # Karışım yetmezse kalan yerler herhangi bir zorluktan tamamlanır.
+    for level in ("easy", "medium", "hard"):
+        while len(chosen) < count:
+            category = take(level)
+            if not category:
+                break
+            chosen.append(category)
+            seen.add(category.id)
 
     if not chosen:  # her ihtimale karşı güvenli varsayılan
         chosen = [_c("fallback", "Brezilyalı futbolcular",
-                     "country_of_citizenship = ?", "Brazil")]
+                     "country_of_citizenship = ?", "Brazil", difficulty="easy")]
     return chosen
 
 
@@ -239,10 +331,15 @@ def verify_answer(category: Category, player_name: str) -> str | None:
         return None
 
     key = normalize(player_name)
+    where, params = _name_match("name_normalized", key)
+
+    # Oyuncular futbolcuyu çoğunlukla soyadıyla yazıyor; tam ad şartı
+    # doğru cevapları reddediyordu.
     rows = fetch_all(
         f"""SELECT DISTINCT name FROM players
-            WHERE name_normalized = ? AND ({category.where})""",
-        (key, *category.params),
+            WHERE {where} AND ({category.where})
+            ORDER BY CAST(COALESCE(highest_market_value_in_eur, 0) AS INTEGER) DESC""",
+        (*params, *category.params),
     )
     if rows:
         return rows[0]["name"]
@@ -252,8 +349,8 @@ def verify_answer(category: Category, player_name: str) -> str | None:
 
     rows = fetch_all(
         f"""SELECT DISTINCT player_name AS name FROM squad_updates
-            WHERE name_normalized = ? AND ({category.squad_where})""",
-        (key, *category.squad_params),
+            WHERE {where} AND ({category.squad_where})""",
+        (*params, *category.squad_params),
     )
     return rows[0]["name"] if rows else None
 

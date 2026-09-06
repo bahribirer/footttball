@@ -27,6 +27,9 @@ class PlayerGuessMode(BaseMode):
     def __init__(self, room) -> None:
         super().__init__(room)
         self.total_rounds: int = int(room.settings.get("round_count") or settings.PG_ROUNDS)
+        # Puansız (kimsenin bilemediği) turlar seriyi uzatabilir;
+        # maçın sonsuza gitmemesi için tavan konur.
+        self.max_rounds: int = self.total_rounds * 3 + 3
         self.round: int = 0
         self.phase: str = "idle"
         self.countdown: int = 0
@@ -67,16 +70,28 @@ class PlayerGuessMode(BaseMode):
         self.spawn(self._run())
 
     async def _run(self) -> None:
-        for round_no in range(1, self.total_rounds + 1):
-            if self.finished:
-                return
+        """Turu ilk `total_rounds` kez kazanan maçı alır.
+
+        Eskiden sabit sayıda tur oynanıp en çok puanı toplayan kazanıyordu;
+        kurucunun seçtiği sayı bir hedef değil, maç uzunluğu oluyordu. Artık
+        seri 2-0'dan 2-3'e dönebilir. Berabere biten turlar kimseye puan
+        yazmadığı için üst sınır konur.
+        """
+        round_no = 0
+        while not self.finished and round_no < self.max_rounds:
+            round_no += 1
             self.round = round_no
             await self._play_round()
             if self.finished:
                 return
+            if self._best_score() >= self.total_rounds:
+                break
             await asyncio.sleep(ROUND_BREAK_SECONDS)
 
         await self._finish_match()
+
+    def _best_score(self) -> int:
+        return max((player.score for player in self.room.players), default=0)
 
     async def _play_round(self) -> None:
         self.selected_nation = None

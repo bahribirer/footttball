@@ -14,7 +14,8 @@ router = APIRouter(tags=["content"])
 async def categories(count: int = Query(default=3, ge=1, le=10)) -> list[CategoryResponse]:
     """Oyun öncesi gösterilecek rastgele kategoriler."""
     chosen = await asyncio.to_thread(category_service.random_categories, count)
-    return [CategoryResponse(id=c.id, label=c.label) for c in chosen]
+    return [CategoryResponse(id=c.id, label=c.label, difficulty=c.difficulty)
+            for c in chosen]
 
 
 @router.get("/duel_board", response_model=GridResponse)

@@ -308,9 +308,7 @@ class _CreateRoomScreenState extends State<CreateRoomScreen>
       add(_SetupSection(
         step: step++,
         title: _mode == GameMode.tikiTakaToe ? 'SERİ UZUNLUĞU' : 'TUR SAYISI',
-        hint: _mode == GameMode.tikiTakaToe
-            ? 'Kaç tahta oynanacak?'
-            : 'Kaç eşleşme sorulacak?',
+        hint: 'Seriyi kazanmak için gereken tur sayısı — ilk ulaşan kazanır',
         accent: _mode.colors.last,
         child: _buildRoundPicker(),
       ));
@@ -548,7 +546,7 @@ class _CreateRoomScreenState extends State<CreateRoomScreen>
             child: _OptionCard(
               key: ValueKey('rounds_$rounds'),
               value: '$rounds',
-              unit: 'TUR',
+              unit: rounds == 1 ? 'TUR' : 'TUR ÖNCE',
               label: _roundLabel(rounds, options),
               icon: _roundIcon(rounds, options),
               colors: _optionColors(options.indexOf(rounds)),
@@ -868,15 +866,27 @@ class _CategoryTile extends StatelessWidget {
             const SizedBox(width: 11),
             // Uzun kategori adları sarar; taşma yerine satıra iner.
             Expanded(
-              child: Text(
-                category.label,
-                style: TextStyle(
-                  color:
-                      selected ? Colors.white : Colors.white.withOpacity(0.82),
-                  fontSize: 13.5,
-                  fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
-                  height: 1.3,
-                ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    category.label,
+                    style: TextStyle(
+                      color: selected
+                          ? Colors.white
+                          : Colors.white.withOpacity(0.82),
+                      fontSize: 13.5,
+                      fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
+                      height: 1.3,
+                    ),
+                  ),
+                  const SizedBox(height: 5),
+                  _DifficultyChip(
+                    difficulty: category.difficulty,
+                    label: category.difficultyLabel,
+                  ),
+                ],
               ),
             ),
             const SizedBox(width: 8),
@@ -981,6 +991,41 @@ class _ModeBadge extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Kategorinin ne kadar zor olduğunu gösteren küçük rozet.
+class _DifficultyChip extends StatelessWidget {
+  const _DifficultyChip({required this.difficulty, required this.label});
+
+  final String difficulty;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = switch (difficulty) {
+      'easy' => const Color(0xFF00D68F),
+      'hard' => const Color(0xFFFF6B6B),
+      _ => const Color(0xFFFFC048),
+    };
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2.5),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.18),
+        borderRadius: BorderRadius.circular(7),
+        border: Border.all(color: color.withOpacity(0.55)),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          color: color,
+          fontSize: 9,
+          fontWeight: FontWeight.w900,
+          letterSpacing: 0.8,
+        ),
       ),
     );
   }

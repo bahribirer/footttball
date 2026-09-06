@@ -26,11 +26,14 @@ async def websocket_v2(
     code: str,
     name: str = Query(default=""),
     mode: str = Query(default=""),
+    token: str = Query(default=""),
 ) -> None:
     await websocket.accept()
 
     try:
-        room, player = await hub.join(code, websocket, name, mode or None)
+        room, player, resumed = await hub.join(
+            code, websocket, name, mode or None, token or None
+        )
     except RoomFull:
         await websocket.send_text(json.dumps(
             error(ErrorCode.ROOM_FULL, "Bu odada zaten iki oyuncu var.")))
@@ -47,35 +50,70 @@ async def websocket_v2(
         await websocket.close(code=CLOSE_MODE_MISMATCH)
         return
 
-    logger.info("Oda %s: %s (slot %s) katıldı", code, player.name, player.slot)
+    logger.info(
+        "Oda %s: %s (slot %s) %s",
+        code, player.name, player.slot, "geri döndü" if resumed else "katıldı",
+    )
 
     await player.send({
         "type": ServerMessage.JOINED,
         "you": player.public(),
         "room": room.snapshot(),
+        # İstemci bunu saklar ve kopma sonrası `?token=` ile geri döner.
+        "token": player.token,
+        "resumed": resumed,
     })
     await room.send_room_state()
 
+    # Ayrıldı bildirimi yalnızca oyuncu gerçekten çıktığında gider; kopmalarda
+    # yer tolerans süresi boyunca korunur.
+    left_for_good = False
+
     try:
-        if room.is_full and room.engine is None:
+        if resumed:
+            # Geri dönen oyuncuya güncel oyun durumu yeniden yollanır, yoksa
+            # boş bir ekranla kalıyordu.
+            await room.broadcast({
+                "type": ServerMessage.EVENT,
+                "event": "opponent_reconnected",
+                "slot": player.slot,
+                "name": player.name,
+            })
+            if room.engine:
+                await room.engine.resend_state(player)
+        elif room.is_full and room.engine is None:
             engine = hub.build_engine(room)
             await engine.start()
 
         await _message_loop(room, player)
+        left_for_good = True   # döngü `leave` mesajıyla bitti
 
     except WebSocketDisconnect:
         pass
     except Exception:
         logger.exception("Oda %s WebSocket döngüsünde hata", code)
     finally:
-        await hub.leave(room, player)
-        await room.broadcast({
-            "type": ServerMessage.OPPONENT_LEFT,
-            "slot": player.slot,
-            "name": player.name,
-        })
-        await room.send_room_state()
-        logger.info("Oda %s: %s ayrıldı", code, player.name)
+        if left_for_good:
+            await hub.leave(room, player)
+            await room.broadcast({
+                "type": ServerMessage.OPPONENT_LEFT,
+                "slot": player.slot,
+                "name": player.name,
+            })
+            await room.send_room_state()
+            logger.info("Oda %s: %s ayrıldı", code, player.name)
+        else:
+            # Beklenmedik kopma: yer korunur, rakibe "bekleniyor" denir.
+            await hub.mark_disconnected(room, player)
+            await room.broadcast({
+                "type": ServerMessage.EVENT,
+                "event": "opponent_disconnected",
+                "slot": player.slot,
+                "name": player.name,
+                "grace_seconds": settings.RECONNECT_GRACE_SECONDS,
+            })
+            await room.send_room_state()
+            logger.info("Oda %s: %s bağlantısı koptu, bekleniyor", code, player.name)
 
 
 async def _message_loop(room, player) -> None:

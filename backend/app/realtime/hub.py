@@ -14,7 +14,7 @@ from app.realtime.modes.category_race import CategoryRaceMode
 from app.realtime.modes.last_letter import LastLetterMode
 from app.realtime.modes.player_guess import PlayerGuessMode
 from app.realtime.modes.tiki_taka_toe import TikiTakaToeMode
-from app.realtime.protocol import GameMode
+from app.realtime.protocol import GameMode, ServerMessage
 from app.realtime.room import Player, Room
 
 logger = logging.getLogger(__name__)
@@ -65,7 +65,18 @@ class RoomHub:
             self._rooms[code] = room
             return room
 
-    async def join(self, code: str, socket: WebSocket, name: str, mode: str | None) -> tuple[Room, Player]:
+    async def join(
+        self,
+        code: str,
+        socket: WebSocket,
+        name: str,
+        mode: str | None,
+        token: str | None = None,
+    ) -> tuple[Room, Player, bool]:
+        """Odaya katılır ya da kopan oturumu geri alır.
+
+        Üçüncü değer, bunun bir yeniden bağlanma olup olmadığını söyler.
+        """
         async with self._lock:
             room = self._rooms.get(code)
 
@@ -78,11 +89,25 @@ class RoomHub:
             if mode and room.mode != mode:
                 raise ModeMismatch(room.mode)
 
+            # Elinde geçerli belirteç olan oyuncu eski yerine döner: skoru,
+            # slotu ve süren oyun korunur. Aksi halde kısa bir kopma maçı
+            # bitiriyordu.
+            if token:
+                for existing in room.players:
+                    if existing.token == token:
+                        existing.socket = socket
+                        existing.connected = True
+                        existing.disconnected_at = None
+                        if name:
+                            existing.name = name
+                        room.emptied_at = None
+                        return room, existing, True
+
             active = [player for player in room.players if player.connected]
             if len(active) >= settings.MAX_PLAYERS_PER_ROOM:
                 raise RoomFull(code)
 
-            # Kopmuş oyuncu kayıtlarını temizle, slotu geri kazan.
+            # Tolerans süresi dolmuş kopuk kayıtlar slotu bırakır.
             room.players = active
 
             player = Player(socket=socket, name=name or f"Oyuncu {room.next_free_slot() + 1}",
@@ -90,7 +115,19 @@ class RoomHub:
             room.players.append(player)
             room.emptied_at = None
             room.had_players = True
-            return room, player
+            return room, player, False
+
+    async def mark_disconnected(self, room: Room, player: Player) -> None:
+        """Oyuncuyu kopmuş işaretler ama odadan düşürmez.
+
+        Tolerans süresi içinde belirteciyle dönerse oyun kaldığı yerden
+        sürer; dönmezse `cleanup_loop` onu odadan çıkarır.
+        """
+        async with self._lock:
+            player.connected = False
+            player.disconnected_at = time.time()
+            if not any(p.connected for p in room.players):
+                room.emptied_at = time.time()
 
     async def leave(self, room: Room, player: Player) -> None:
         async with self._lock:
@@ -135,11 +172,45 @@ class RoomHub:
 
     # --- bakım ------------------------------------------------------------
 
+    async def expire_disconnected(self) -> None:
+        """Tolerans süresi dolan kopuk oyuncuları odadan düşürür.
+
+        Kopma anında oyuncu odada bırakılır ki geri dönebilsin; süre dolduğunda
+        rakibe ancak burada "ayrıldı" bildirilir.
+        """
+        now = time.time()
+        expired: list[tuple[Room, Player]] = []
+
+        async with self._lock:
+            for room in self._rooms.values():
+                for player in list(room.players):
+                    if (
+                        not player.connected
+                        and player.disconnected_at
+                        and now - player.disconnected_at > settings.RECONNECT_GRACE_SECONDS
+                    ):
+                        room.players.remove(player)
+                        expired.append((room, player))
+                if room.players and not any(p.connected for p in room.players):
+                    room.emptied_at = room.emptied_at or now
+
+        for room, player in expired:
+            logger.info("Oda %s: %s geri dönmedi, düşürüldü", room.code, player.name)
+            await room.broadcast({
+                "type": ServerMessage.OPPONENT_LEFT,
+                "slot": player.slot,
+                "name": player.name,
+            })
+            await room.send_room_state()
+            if room.engine:
+                await room.engine.on_player_left(player)
+
     async def cleanup_loop(self) -> None:
         """Boş kalan odaları belirli bir süre sonra siler."""
         while True:
-            await asyncio.sleep(30)
+            await asyncio.sleep(5)
             try:
+                await self.expire_disconnected()
                 now = time.time()
                 async with self._lock:
                     stale = [

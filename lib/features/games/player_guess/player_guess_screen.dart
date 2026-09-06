@@ -12,6 +12,7 @@ import 'package:footttball/shared/widgets/app_background.dart';
 import 'package:footttball/shared/widgets/game_dialogs.dart';
 import 'package:footttball/shared/widgets/player_avatar.dart';
 import 'package:footttball/shared/widgets/player_suggestion_field.dart';
+import 'package:footttball/shared/widgets/connection_banner.dart';
 
 /// Oyuncu Tahmin modu.
 ///
@@ -182,6 +183,9 @@ class _PlayerGuessScreenState extends State<PlayerGuessScreen> {
                 ],
               ),
             ),
+            // Bağlantı kopunca oyunu bitirmek yerine durum gösterilir.
+            const Align(
+                alignment: Alignment.topCenter, child: ConnectionBanner()),
           ],
         ),
       ),

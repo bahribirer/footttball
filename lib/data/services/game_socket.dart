@@ -23,6 +23,23 @@ class GameSocket {
   StreamController<SocketEvent> _events =
       StreamController<SocketEvent>.broadcast();
 
+  // --- yeniden bağlanma ---------------------------------------------------
+  // Mobil şebekede kısa kopmalar sık: asansör, tünel, hücre değişimi. Sunucu
+  // oyuncunun yerini bir süre koruduğu için istemci sessizce geri bağlanır ve
+  // oyun kaldığı yerden sürer.
+  static const int _maxReconnectAttempts = 8;
+
+  String _playerName = '';
+  String? _sessionToken;
+  Timer? _reconnectTimer;
+  int _reconnectAttempt = 0;
+
+  /// Kullanıcı bilerek çıktığında yeniden bağlanma denenmez.
+  bool _closing = false;
+
+  /// Bağlantı kopuk ve yeniden deneniyor.
+  bool get isReconnecting => _reconnectTimer != null;
+
   /// Bu cihazın oda içindeki yeri: 0 = kurucu (X), 1 = katılan (O).
   int mySlot = 0;
   GameMode mode = GameMode.tikiTakaToe;
@@ -79,15 +96,26 @@ class GameSocket {
 
     this.mode = mode;
     roomCode = code;
+    _playerName = name;
+    _sessionToken = null;
     players = const [];
     startPayload = const {};
     lastState = const {};
     playerTurn = false;
     initialType = '';
+    _reconnectAttempt = 0;
+    _closing = false;
 
+    await _open();
+  }
+
+  /// Soketi açar. Yeniden bağlanmada oturum belirteci de gönderilir.
+  Future<void> _open() async {
+    final token = _sessionToken;
     final uri = Uri.parse(
-      '${AppConfig.wsBase}/ws/v2/$code'
-      '?name=${Uri.encodeQueryComponent(name)}&mode=${mode.id}',
+      '${AppConfig.wsBase}/ws/v2/$roomCode'
+      '?name=${Uri.encodeQueryComponent(_playerName)}&mode=${mode.id}'
+      '${token != null ? '&token=${Uri.encodeQueryComponent(token)}' : ''}',
     );
 
     final channel = WebSocketChannel.connect(uri);
@@ -97,17 +125,69 @@ class GameSocket {
     _subscription = channel.stream.listen(
       _handleMessage,
       onError: (Object error) => _emit({'type': 'error', 'message': '$error'}),
-      onDone: () => _emit({'type': 'closed'}),
+      onDone: _handleClosed,
       cancelOnError: false,
     );
 
+    _heartbeat?.cancel();
     _heartbeat = Timer.periodic(
       AppConfig.heartbeatInterval,
       (_) => send({'type': 'ping'}),
     );
   }
 
+  /// Bağlantı kapandı: bilerek mi, kopma mı?
+  void _handleClosed() {
+    _heartbeat?.cancel();
+    _heartbeat = null;
+
+    if (_closing || _sessionToken == null) {
+      // Kullanıcı çıktı ya da hiç oturum kurulmadı: yeniden deneme yok.
+      _emit({'type': 'closed'});
+      return;
+    }
+
+    _scheduleReconnect();
+  }
+
+  void _scheduleReconnect() {
+    if (_reconnectAttempt >= _maxReconnectAttempts) {
+      _emit({'type': 'reconnect_failed'});
+      _emit({'type': 'closed'});
+      return;
+    }
+
+    // 1, 2, 3, 5, 8... saniye — sunucunun tolerans süresini aşmadan birkaç
+    // kez denenir.
+    final delaySeconds = [1, 2, 3, 5, 8, 8, 10, 10][_reconnectAttempt];
+    _reconnectAttempt++;
+
+    _emit({
+      'type': 'reconnecting',
+      'attempt': _reconnectAttempt,
+      'max': _maxReconnectAttempts,
+    });
+
+    _reconnectTimer?.cancel();
+    _reconnectTimer = Timer(Duration(seconds: delaySeconds), () async {
+      _reconnectTimer = null;
+      if (_closing) return;
+      try {
+        await _subscription?.cancel();
+        _subscription = null;
+        await _open();
+      } catch (_) {
+        _scheduleReconnect();
+      }
+    });
+  }
+
   Future<void> disconnect() async {
+    _closing = true;
+    _reconnectTimer?.cancel();
+    _reconnectTimer = null;
+    _reconnectAttempt = 0;
+    _sessionToken = null;
     _heartbeat?.cancel();
     _heartbeat = null;
     await _subscription?.cancel();
@@ -153,7 +233,10 @@ class GameSocket {
 
   void requestRematch() => send({'type': 'rematch'});
 
-  void leave() => send({'type': 'leave'});
+  void leave() {
+    _closing = true; // "ayrıldı" bildirimi gitsin, yeniden bağlanma olmasın
+    send({'type': 'leave'});
+  }
 
   // --- alım -------------------------------------------------------------
 
@@ -169,6 +252,11 @@ class GameSocket {
 
     switch (message['type']) {
       case 'joined':
+        _sessionToken = message['token'] as String? ?? _sessionToken;
+        _reconnectAttempt = 0;
+        if (message['resumed'] == true) {
+          _emit({'type': 'reconnected'});
+        }
         final you = (message['you'] as Map?)?.cast<String, dynamic>();
         mySlot = you?['slot'] as int? ?? 0;
         initialType = mySymbol;

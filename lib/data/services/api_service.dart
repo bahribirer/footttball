@@ -179,6 +179,7 @@ class ApiService {
         .map((e) => GameCategory(
               id: (e as Map)['id'] as String,
               label: e['label'] as String,
+              difficulty: e['difficulty'] as String? ?? 'medium',
             ))
         .toList();
   }
@@ -209,7 +210,20 @@ class GameCategory {
   final String id;
   final String label;
 
-  const GameCategory({required this.id, required this.label});
+  /// "easy" | "medium" | "hard" — oda kurma ekranında rozet olarak gösterilir.
+  final String difficulty;
+
+  const GameCategory({
+    required this.id,
+    required this.label,
+    this.difficulty = 'medium',
+  });
+
+  String get difficultyLabel => switch (difficulty) {
+        'easy' => 'KOLAY',
+        'hard' => 'ZOR',
+        _ => 'ORTA',
+      };
 }
 
 class ApiException implements Exception {

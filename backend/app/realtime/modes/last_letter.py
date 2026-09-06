@@ -27,6 +27,20 @@ def first_letter(name: str) -> str:
     return base.lower()
 
 
+def _openings(typed: str, canonical: str) -> set[str]:
+    """Zincirde kabul edilebilir baş harfler.
+
+    Oyuncu futbolcuyu soyadıyla yazabildiği için ("Messi" → "Lionel Messi"),
+    harf kontrolü yazılan metnin, kanonik adın ve soyadın baş harflerini
+    birlikte kabul eder.
+    """
+    letters = {first_letter(typed), first_letter(canonical)}
+    words = canonical.split()
+    if words:
+        letters.add(first_letter(words[-1]))
+    return {letter for letter in letters if letter}
+
+
 class LastLetterMode(TurnClockMode):
     mode_id = GameMode.LAST_LETTER
 
@@ -36,12 +50,16 @@ class LastLetterMode(TurnClockMode):
         self.last_answer: str | None = None
 
     async def validate_answer(self, answer: str) -> AnswerResult:
-        if self.required_letter and first_letter(answer) != self.required_letter:
-            return AnswerResult(False, reason="wrong_letter")
-
+        # Önce oyuncu bulunur: kullanıcı "Messi" yazdığında kanonik ad
+        # "Lionel Messi" olur ve harf kontrolü ikisini birden kabul eder.
         found = await asyncio.to_thread(player_service.find_player, answer)
         if not found:
             return AnswerResult(False, reason="not_found")
+
+        if self.required_letter and self.required_letter not in _openings(
+            answer, found["name"]
+        ):
+            return AnswerResult(False, reason="wrong_letter")
 
         return AnswerResult(True, canonical=found["name"], player=found)
 

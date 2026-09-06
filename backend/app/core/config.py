@@ -33,6 +33,9 @@ class Settings:
     # Kurucu lig/kategori/süre seçerken oda kimse bağlanmadan bekler; kısa
     # ömür, seçimi uzatan oyuncunun odasını ayar kaydedilmeden siliyordu.
     RESERVED_ROOM_TTL_SECONDS: int = int(os.getenv("RESERVED_ROOM_TTL_SECONDS", "1800"))
+    # Bağlantısı kopan oyuncu bu süre içinde belirteciyle dönerse oyun
+    # kaldığı yerden sürer; mobil şebekede kısa kopmalar sık yaşanıyor.
+    RECONNECT_GRACE_SECONDS: int = int(os.getenv("RECONNECT_GRACE_SECONDS", "45"))
 
     # Tiki Taka Toe
     TTT_TURN_SECONDS: int = 30

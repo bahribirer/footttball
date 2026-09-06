@@ -41,3 +41,5 @@ class RoomStatusResponse(BaseModel):
 class CategoryResponse(BaseModel):
     id: str
     label: str
+    # "easy" | "medium" | "hard" — oda kurma ekranında rozet olarak gösterilir.
+    difficulty: str = "medium"

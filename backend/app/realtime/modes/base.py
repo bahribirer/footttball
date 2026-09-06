@@ -80,6 +80,19 @@ class BaseMode:
                 "message": "Oyun beklenmedik bir hatayla durdu.",
             })
 
+    async def resend_state(self, player: "Player") -> None:
+        """Yeniden bağlanan oyuncuya oyunun güncel durumunu yollar.
+
+        `start` yükünü kaçırdığı için tahta/kategori gibi bilgileri yalnızca
+        böyle geri alabilir.
+        """
+        await player.send({
+            "type": ServerMessage.START,
+            "mode": self.mode_id,
+            "payload": self.state(),
+            "resumed": True,
+        })
+
     async def push_state(self, event: str | None = None, **extra) -> None:
         message = {"type": ServerMessage.STATE, "payload": self.state()}
         if event:

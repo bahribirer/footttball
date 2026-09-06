@@ -50,10 +50,67 @@ class _PlayerSuggestionFieldState extends State<PlayerSuggestionField> {
   /// Yalnızca en son isteğin sonucu gösterilir; geç dönenler yok sayılır.
   int _requestId = 0;
 
+  // Öneri listesi girişin üstünde bir katmanda açılır. Eskiden aynı `Column`
+  // içinde giriş alanının kardeşiydi; liste her açılıp kapandığında yerleşim
+  // yükseliyor ve ekran zıplıyordu.
+  final LayerLink _link = LayerLink();
+  OverlayEntry? _overlay;
+
   @override
   void dispose() {
     _debounce?.cancel();
+    _removeOverlay();
     super.dispose();
+  }
+
+  @override
+  void didUpdateWidget(covariant PlayerSuggestionField oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Sıra rakibe geçtiğinde açık kalan liste kapatılır.
+    if (!widget.enabled || !widget.showSuggestions) _clearSuggestions();
+  }
+
+  bool get _hasPanel => _suggestions.isNotEmpty || _loading;
+
+  /// Katmanı içeriğe göre açar, kapatır ya da tazeler.
+  void _syncOverlay() {
+    final shouldShow = widget.showSuggestions && widget.enabled && _hasPanel;
+
+    if (!shouldShow) {
+      _removeOverlay();
+      return;
+    }
+
+    if (_overlay != null) {
+      _overlay!.markNeedsBuild();
+      return;
+    }
+
+    final overlay = Overlay.maybeOf(context);
+    if (overlay == null) return;
+
+    _overlay = OverlayEntry(
+      builder: (context) => Positioned(
+        width: MediaQuery.of(context).size.width,
+        child: CompositedTransformFollower(
+          link: _link,
+          showWhenUnlinked: false,
+          // Panelin altı, giriş alanının üstüne yapışır.
+          targetAnchor: Alignment.topCenter,
+          followerAnchor: Alignment.bottomCenter,
+          child: Material(
+            color: Colors.transparent,
+            child: _buildSuggestions(),
+          ),
+        ),
+      ),
+    );
+    overlay.insert(_overlay!);
+  }
+
+  void _removeOverlay() {
+    _overlay?.remove();
+    _overlay = null;
   }
 
   void _onChanged(String query) {
@@ -111,21 +168,25 @@ class _PlayerSuggestionFieldState extends State<PlayerSuggestionField> {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        if (widget.showSuggestions &&
-            widget.enabled &&
-            (_suggestions.isNotEmpty || _loading))
-          _buildSuggestions(),
-        _buildInput(),
-      ],
+    // Katman, çizim sırasında değiştirilemediği için kare sonuna bırakılır.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _syncOverlay();
+    });
+
+    // Yalnızca giriş alanı yer kaplar; öneri listesi üstte yüzer, böylece
+    // liste açılıp kapanırken ekran yerinden oynamaz.
+    return CompositedTransformTarget(
+      link: _link,
+      child: _buildInput(),
     );
   }
 
   Widget _buildSuggestions() {
+    // Klavye açıkken panel ekranın kalanına sığmalı; sabit 260 piksel
+    // küçük telefonlarda girişin üstünü aşıyordu.
+    final available = MediaQuery.of(context).size.height;
     return Container(
-      constraints: const BoxConstraints(maxHeight: 260),
+      constraints: BoxConstraints(maxHeight: available * 0.32),
       margin: const EdgeInsets.fromLTRB(12, 0, 12, 6),
       decoration: BoxDecoration(
         color: const Color(0xFF16132C),
