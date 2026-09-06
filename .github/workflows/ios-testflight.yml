@@ -31,11 +31,22 @@ concurrency:
 jobs:
   testflight:
     name: Derle ve yükle
-    runs-on: macos-15
+    runs-on: macos-26
     timeout-minutes: 60
     environment: production
     steps:
       - uses: actions/checkout@v4
+
+      # App Store Connect iOS 26 SDK'sından eskisini kabul etmiyor. Runner'da
+      # birden çok Xcode kurulu olabiliyor; en yenisi seçilir ve hangisi
+      # olduğu log'a yazılır, sürüm sorunu bir daha karanlıkta kalmasın.
+      - name: Xcode sürümünü seç
+        run: |
+          ls -d /Applications/Xcode*.app
+          NEWEST=$(ls -d /Applications/Xcode*.app | sort -V | tail -1)
+          sudo xcode-select -s "$NEWEST/Contents/Developer"
+          xcodebuild -version
+          xcodebuild -showsdks | grep -i iphoneos
 
       - uses: subosito/flutter-action@v2
         with:
