@@ -35,6 +35,7 @@ class _PlayerGuessScreenState extends State<PlayerGuessScreen> {
   Color _flashColor = Colors.redAccent;
   Timer? _flashTimer;
   bool _gameOver = false;
+  bool _passDialogOpen = false;
 
   @override
   void initState() {
@@ -62,6 +63,9 @@ class _PlayerGuessScreenState extends State<PlayerGuessScreen> {
       case 'start':
       case 'state':
         setState(() => _state = DuelState.fromJson(event.payload));
+        // Pencere olaydan değil durumdan sürülür: yeniden bağlanan
+        // oyuncu da bekleyen teklifi görür, tur bitince kendiliğinden kapanır.
+        _syncPassDialog();
         break;
 
       case 'event':
@@ -102,6 +106,26 @@ class _PlayerGuessScreenState extends State<PlayerGuessScreen> {
           _showFlash('Yanlış! Kalan hakkın: $left', Colors.redAccent);
           _answerController.clear();
         }
+        break;
+
+      case 'pass_requested':
+        if (slot == _socket.mySlot) {
+          _showFlash('Pas teklifin gönderildi', Colors.cyanAccent);
+        }
+        break;
+
+      case 'pass_declined':
+        _showFlash(
+          slot == _socket.mySlot
+              ? 'Rakibin pas teklifini reddetti'
+              : 'Pas teklifini reddettin',
+          Colors.orangeAccent,
+        );
+        break;
+
+      case 'pass_accepted':
+        _showFlash('Tur pas geçildi', Colors.cyanAccent);
+        _answerController.clear();
         break;
 
       case 'pick_complete':
@@ -150,6 +174,45 @@ class _PlayerGuessScreenState extends State<PlayerGuessScreen> {
     if (answer.isEmpty) return;
     _socket.action('guess', value: answer);
     _answerController.clear();
+  }
+
+  void _requestPass() {
+    if (!_state.canRequestPass(_socket.mySlot)) return;
+    _socket.action('pass_request');
+  }
+
+  void _answerPass(bool accept) {
+    _socket.action('pass_response', extra: {'accept': accept});
+  }
+
+  /// Bekleyen teklif varsa pencereyi açar, düştüğünde kapatır.
+  void _syncPassDialog() {
+    final pending = _state.phase == 'answering' &&
+        _state.roundWinner == null &&
+        _state.passRequestBy != null &&
+        _state.passRequestBy != _socket.mySlot;
+
+    if (pending && !_passDialogOpen) {
+      _passDialogOpen = true;
+      showDialog<void>(
+        context: context,
+        barrierDismissible: false,
+        builder: (dialogContext) => PassRequestDialog(
+          onAccept: () {
+            Navigator.of(dialogContext).pop();
+            _answerPass(true);
+          },
+          onDecline: () {
+            Navigator.of(dialogContext).pop();
+            _answerPass(false);
+          },
+        ),
+      ).whenComplete(() => _passDialogOpen = false);
+    } else if (!pending && _passDialogOpen) {
+      // Tur bitti ya da teklif düştü; pencere ekranda kalmasın.
+      _passDialogOpen = false;
+      Navigator.of(context, rootNavigator: true).pop();
+    }
   }
 
   void _exitToMenu() {
@@ -415,7 +478,47 @@ class _PlayerGuessScreenState extends State<PlayerGuessScreen> {
               onSubmit: _submitGuess,
             ),
           ),
+          const SizedBox(height: 14),
+          _buildPassButton(),
         ],
+      ),
+    );
+  }
+
+  /// Kimse bilemediğinde turu erken kapatmak için pas teklifi.
+  Widget _buildPassButton() {
+    final pendingMine = _state.passRequestBy == _socket.mySlot;
+    final blocked = _state.passBlocked.contains(_socket.mySlot);
+    final enabled = _state.canRequestPass(_socket.mySlot);
+
+    final label = pendingMine
+        ? 'RAKİP BEKLENİYOR...'
+        : blocked
+            ? 'PAS REDDEDİLDİ'
+            : 'PAS TEKLİF ET';
+
+    return TextButton.icon(
+      onPressed: enabled ? _requestPass : null,
+      icon: Icon(
+        Icons.skip_next_rounded,
+        size: 18,
+        color: enabled ? Colors.white70 : Colors.white24,
+      ),
+      label: Text(
+        label,
+        style: TextStyle(
+          color: enabled ? Colors.white70 : Colors.white24,
+          fontWeight: FontWeight.bold,
+          fontSize: 12,
+          letterSpacing: 1.1,
+        ),
+      ),
+      style: TextButton.styleFrom(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+        backgroundColor: Colors.white10,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(14),
+        ),
       ),
     );
   }

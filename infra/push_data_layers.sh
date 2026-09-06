@@ -37,6 +37,28 @@ print(f"  squad_updates: {con.execute('SELECT COUNT(*) FROM squad_updates').fetc
 PY
 echo "  $(wc -l < "$DUMP" | tr -d ' ') satır"
 
+# Uyruklar yalnızca club_history'den gelmiyor: ad araması ve elle
+# düzeltmelerle de dolduruldu. Sunucudaki backfill bunları üretemez, o
+# yüzden ad -> ülke eşlemesi ayrıca taşınır.
+echo "> Uyruk eslemesi cikariliyor"
+python3 - "$LOCAL_DB" /tmp/ttt_nations.tsv <<'NATDUMP'
+import sqlite3, sys
+db, out = sys.argv[1], sys.argv[2]
+con = sqlite3.connect(db)
+rows = con.execute(
+    "SELECT DISTINCT name_normalized, country_of_citizenship FROM players "
+    "WHERE country_of_citizenship IS NOT NULL AND country_of_citizenship <> '' "
+    "AND name_normalized IS NOT NULL")
+count = 0
+with open(out, "w", encoding="utf-8") as fh:
+    for key, country in rows:
+        fh.write(key + "\t" + country + "\n")
+        count += 1
+print("  " + str(count) + " esleme")
+NATDUMP
+gzip -f /tmp/ttt_nations.tsv
+scp -q -i "$KEY" /tmp/ttt_nations.tsv.gz "$HOST:/tmp/ttt_nations.tsv.gz"
+
 echo "▶ Sunucuya kopyalanıyor"
 gzip -f "$DUMP"
 scp -q -i "$KEY" "$DUMP.gz" "$HOST:/tmp/ttt_layers.sql.gz"
@@ -52,21 +74,74 @@ cp "$DB" "$BACKUP"
 echo "  yedek: $BACKUP"
 
 gunzip -f /tmp/ttt_layers.sql.gz
-python3 - "$DB" /tmp/ttt_layers.sql <<'PY'
+python3 - "$DB" /tmp/ttt_layers.sql <<'LOADLAYERS'
 import sqlite3, sys
+
 db, dump = sys.argv[1], sys.argv[2]
 con = sqlite3.connect(db)
-con.executescript("DROP TABLE IF EXISTS club_history; DROP TABLE IF EXISTS squad_updates;")
-with open(dump, encoding="utf-8") as fh:
-    con.executescript(fh.read())
-con.commit()
+
+# Tablolar önce geçici adla kurulur. Doğrudan üzerine yazarken aktarım
+# kesilirse veritabanı yarım kalıyor ve sunucu var olmayan tabloyu
+# sorguladığı için canlıda hata veriyordu.
+sql = open(dump, encoding="utf-8").read()
 for table in ("club_history", "squad_updates"):
-    print(f"  {table}: {con.execute(f'SELECT COUNT(*) FROM {table}').fetchone()[0]} kayıt")
-PY
+    sql = sql.replace(f'"{table}"', f'"{table}__new"')
+    sql = sql.replace(f"TABLE {table} ", f"TABLE {table}__new ")
+    sql = sql.replace(f"ON {table}(", f"ON {table}__new(")
+# İndeks adları da benzersiz olmalı.
+sql = sql.replace("CREATE INDEX idx_", "CREATE INDEX new_idx_")
+
+con.executescript("DROP TABLE IF EXISTS club_history__new;"
+                  "DROP TABLE IF EXISTS squad_updates__new;")
+con.executescript(sql)
+
+counts = {}
+for table in ("club_history", "squad_updates"):
+    counts[table] = con.execute(f"SELECT COUNT(*) FROM {table}__new").fetchone()[0]
+    if counts[table] == 0:
+        raise SystemExit(f"{table} bos geldi, degisiklik uygulanmadi")
+
+# Her sey yerinde: takas tek islemde.
+con.executescript(
+    "BEGIN;"
+    "DROP TABLE IF EXISTS club_history;"
+    "DROP TABLE IF EXISTS squad_updates;"
+    "ALTER TABLE club_history__new RENAME TO club_history;"
+    "ALTER TABLE squad_updates__new RENAME TO squad_updates;"
+    "COMMIT;")
+con.commit()
+for table, n in counts.items():
+    print(f"  {table}: {n} kayit")
+LOADLAYERS
 rm -f /tmp/ttt_layers.sql
 
 echo "▶ Boş uyruklar dolduruluyor"
 /usr/bin/python3 backend/scripts/backfill_player_gaps.py
+
+echo "> Yerelde bulunan uyruklar uygulaniyor"
+gunzip -f /tmp/ttt_nations.tsv.gz
+python3 - "$DB" /tmp/ttt_nations.tsv <<'NATAPPLY'
+import sqlite3, sys
+db, path = sys.argv[1], sys.argv[2]
+con = sqlite3.connect(db)
+empty = ("SELECT COUNT(*) FROM players WHERE country_of_citizenship IS NULL "
+         "OR country_of_citizenship=''")
+before = con.execute(empty).fetchone()[0]
+pairs = []
+with open(path, encoding="utf-8") as fh:
+    for line in fh:
+        line = line.rstrip("\n")
+        if "\t" in line:
+            key, country = line.split("\t", 1)
+            pairs.append((country, key))
+con.executemany(
+    "UPDATE players SET country_of_citizenship = ? WHERE name_normalized = ? "
+    "AND (country_of_citizenship IS NULL OR country_of_citizenship = '')", pairs)
+con.commit()
+after = con.execute(empty).fetchone()[0]
+print("  " + str(before - after) + " satir dolduruldu, kalan bos: " + str(after))
+NATAPPLY
+rm -f /tmp/ttt_nations.tsv
 
 echo "▶ Backend yeniden başlatılıyor (katman önbelleği tazelensin)"
 docker compose restart backend >/dev/null

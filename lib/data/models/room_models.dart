@@ -139,6 +139,12 @@ class DuelState {
   final String? selectedClub;
   final Map<int, int> attempts;
   final int? roundWinner;
+
+  /// Bekleyen pas teklifini veren oyuncunun slotu.
+  final int? passRequestBy;
+
+  /// Bu turda pas teklifi reddedilen oyuncular; tekrar soramazlar.
+  final List<int> passBlocked;
   final String? solution;
   final String? solutionImage;
   final Map<int, int> scores;
@@ -154,6 +160,8 @@ class DuelState {
     required this.clubPicker,
     required this.attempts,
     required this.scores,
+    this.passBlocked = const [],
+    this.passRequestBy,
     this.selectedNation,
     this.selectedClub,
     this.roundWinner,
@@ -174,6 +182,8 @@ class DuelState {
         selectedClub: json['selected_club'] as String?,
         attempts: _intIntMap(json['attempts']),
         roundWinner: json['round_winner'] as int?,
+        passRequestBy: json['pass_request_by'] as int?,
+        passBlocked: ((json['pass_blocked'] as List?) ?? const []).cast<int>(),
         solution: json['solution'] as String?,
         solutionImage: json['solution_image'] as String?,
         scores: _intIntMap(json['scores']),
@@ -193,6 +203,11 @@ class DuelState {
   );
 
   int attemptsOf(int slot) => attempts[slot] ?? 0;
+  bool canRequestPass(int slot) =>
+      phase == 'answering' &&
+      roundWinner == null &&
+      passRequestBy == null &&
+      !passBlocked.contains(slot);
   int scoreOf(int slot) => scores[slot] ?? 0;
 }
 

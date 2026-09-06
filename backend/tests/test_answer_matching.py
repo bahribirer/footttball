@@ -12,6 +12,7 @@ import pytest
 
 from app.realtime.modes.last_letter import _openings, first_letter, last_letter
 from app.services import player_service as ps
+from tests.conftest import requires_player_data
 
 
 @pytest.mark.parametrize("typed, expected", [
@@ -23,12 +24,14 @@ from app.services import player_service as ps
     ("Gundogan", "İlkay Gündoğan"),     # Türkçe harfler
     ("Lionel Messi", "Lionel Messi"),   # tam ad hâlâ çalışır
 ])
+@requires_player_data
 def test_soyadla_yazilan_futbolcu_bulunur(typed, expected):
     found = ps.find_player(typed)
     assert found is not None, f"{typed} bulunamadı"
     assert found["name"] == expected
 
 
+@requires_player_data
 def test_olmayan_isim_reddedilir():
     assert ps.find_player("Zzzq Yokoyuncu") is None
 
@@ -37,14 +40,17 @@ def test_olmayan_isim_reddedilir():
     ("Messi", "Argentina", "Paris Saint-Germain"),
     ("Haaland", "Norway", "Manchester City"),
 ])
+@requires_player_data
 def test_hucre_dogrulamasi_soyadi_kabul_eder(name, nation, club):
     assert ps.verify_player(name, nation, club) is True
 
 
+@requires_player_data
 def test_yanlis_hucre_reddedilir():
     assert ps.verify_player("Messi", "Argentina", "Galatasaray") is False
 
 
+@requires_player_data
 @pytest.mark.skipif(not ps.has_history_layer(), reason="tarihsel katman kurulu değil")
 def test_eski_donem_oyuncusu_kabul_edilir():
     # Ana tabloda Fatih Tekke'nin yalnızca Zenit ve Rubin kayıtları var,

@@ -293,3 +293,83 @@ class RematchRequestDialog extends StatelessWidget {
     );
   }
 }
+
+/// Rakip turu atlamayı teklif ettiğinde açılan onay penceresi.
+///
+/// Rövanş isteğiyle aynı akış: bir taraf gönderir, diğer taraf kabul eder ya
+/// da reddeder. Kimsenin bilemediği turlarda sayacın dolmasını beklemeyi
+/// gereksiz kılar.
+class PassRequestDialog extends StatelessWidget {
+  const PassRequestDialog({
+    super.key,
+    required this.onAccept,
+    required this.onDecline,
+  });
+
+  final VoidCallback onAccept;
+  final VoidCallback onDecline;
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      backgroundColor: Colors.transparent,
+      child: NeonPanel(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('⏭️', style: TextStyle(fontSize: 40)),
+            const SizedBox(height: 10),
+            const NeonTitle('PAS TEKLİFİ', fontSize: 20),
+            const SizedBox(height: 14),
+            const Text(
+              'Rakibin bu turu pas geçmek istiyor.\n'
+              'Kabul edersen tur puansız kapanır.',
+              textAlign: TextAlign.center,
+              style:
+                  TextStyle(color: Colors.white70, fontSize: 14, height: 1.4),
+            ),
+            const SizedBox(height: 22),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                TextButton(
+                  onPressed: onDecline,
+                  style: TextButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 22, vertical: 12),
+                    backgroundColor: Colors.white12,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: const Text(
+                    'DEVAM ET',
+                    style: TextStyle(
+                        color: Colors.white60, fontWeight: FontWeight.bold),
+                  ),
+                ),
+                ElevatedButton(
+                  onPressed: onAccept,
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 22, vertical: 14),
+                    backgroundColor: const Color(0xFF2575FC),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    elevation: 6,
+                  ),
+                  child: const Text(
+                    'PAS GEÇ',
+                    style: TextStyle(
+                        color: Colors.white, fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}

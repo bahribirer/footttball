@@ -5,6 +5,10 @@ Tur akışı:
   2. seçim: bir oyuncuya 5 milli takım, diğerine 5 kulüp gelir
   3. açılış geri sayımı (3)
   4. cevap: iki oyuncu da yazar, ilk doğru bilen turu alır (3 deneme hakkı)
+
+Kimsenin bilemediği turlarda sayacın dolmasını beklemek oyunun ritmini
+bozuyordu; bir oyuncu pas teklif eder, rakip kabul ederse tur puansız
+kapanır. Akış Tiki Taka Toe'daki rövanş isteğiyle aynı mantıkta.
 """
 
 import asyncio
@@ -42,6 +46,10 @@ class PlayerGuessMode(BaseMode):
         self.attempts: dict[int, int] = {}
         self.wrong_guesses: dict[int, list[str]] = {}
         self.round_winner: int | None = None
+        # Bekleyen pas teklifini veren oyuncunun slotu.
+        self.pass_request_by: int | None = None
+        # Teklifi bu turda reddedilenler; aynı turda tekrar soramazlar.
+        self.pass_blocked: set[int] = set()
         self.solution: str | None = None
         self.solution_image: str | None = None
 
@@ -97,6 +105,8 @@ class PlayerGuessMode(BaseMode):
         self.selected_nation = None
         self.selected_club = None
         self.round_winner = None
+        self.pass_request_by = None
+        self.pass_blocked = set()
         self.solution = None
         self.solution_image = None
         self.attempts = {player.slot: settings.PG_MAX_ATTEMPTS for player in self.room.players}
@@ -167,6 +177,7 @@ class PlayerGuessMode(BaseMode):
 
     async def _round_result(self) -> None:
         self.phase = "round_over"
+        self.pass_request_by = None
         if self.solution is None and self.selected_nation and self.selected_club:
             example = await asyncio.to_thread(
                 self._find_example, self.selected_nation, self.selected_club
@@ -207,6 +218,10 @@ class PlayerGuessMode(BaseMode):
             await self._handle_pick(player, payload)
         elif action == "guess":
             await self._handle_guess(player, payload)
+        elif action == "pass_request":
+            await self._handle_pass_request(player)
+        elif action == "pass_response":
+            await self._handle_pass_response(player, payload)
 
     async def _handle_pick(self, player, payload: dict) -> None:
         if self.phase != "picking":
@@ -273,6 +288,49 @@ class PlayerGuessMode(BaseMode):
         if all(left <= 0 for left in self.attempts.values()):
             self._answer_event.set()
 
+    # --- pas teklifi ------------------------------------------------------
+
+    async def _handle_pass_request(self, player) -> None:
+        """Turu atlama teklifi gönderir; karar rakibindir."""
+        if self.phase != "answering" or self.round_winner is not None:
+            await player.send(error(ErrorCode.GAME_NOT_RUNNING, "Şu an pas verilemez."))
+            return
+        if self.pass_request_by is not None:
+            return
+        if player.slot in self.pass_blocked:
+            await player.send(
+                error(ErrorCode.INVALID_MESSAGE, "Bu turda pas teklifin zaten reddedildi.")
+            )
+            return
+        if self.room.opponent_of(player) is None:
+            return
+
+        self.pass_request_by = player.slot
+        await self.emit("pass_requested", slot=player.slot)
+        await self.push_state()
+
+    async def _handle_pass_response(self, player, payload: dict) -> None:
+        """Teklifi yalnızca rakip yanıtlayabilir."""
+        if self.pass_request_by is None or player.slot == self.pass_request_by:
+            return
+
+        requester = self.pass_request_by
+        self.pass_request_by = None
+
+        if self.phase != "answering":
+            await self.push_state()
+            return
+
+        if payload.get("accept") is True:
+            await self.emit("pass_accepted", slot=requester)
+            # Tur kimseye puan yazmadan kapanır; _round_result örnek cevabı gösterir.
+            self._answer_event.set()
+            return
+
+        self.pass_blocked.add(requester)
+        await self.emit("pass_declined", slot=requester)
+        await self.push_state()
+
     # --- durum ------------------------------------------------------------
 
     def state(self) -> dict:
@@ -290,6 +348,8 @@ class PlayerGuessMode(BaseMode):
             "attempts": self.attempts,
             "wrong_guesses": self.wrong_guesses,
             "round_winner": self.round_winner,
+            "pass_request_by": self.pass_request_by,
+            "pass_blocked": sorted(self.pass_blocked),
             "solution": self.solution,
             "solution_image": self.solution_image,
             "scores": {player.slot: player.score for player in self.room.players},
