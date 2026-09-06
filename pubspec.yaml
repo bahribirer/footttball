@@ -71,7 +71,7 @@ flutter:
     - images/create.PNG
     - images/eng.PNG
     - images/fran.PNG
-    - images/ger.PNG
+    - images/ger.png
     - images/isp.PNG
     - images/join.PNG
     - images/leave.png
@@ -80,8 +80,8 @@ flutter:
     - images/play.PNG
     - images/rand.PNG
     - images/replay.png
-    - images/seri.PNG
-    - images/tr.PNG
+    - images/seri.png
+    - images/tr.png
     - images/tahta.png
     - images/football.png
     - images/onboarding_football.png

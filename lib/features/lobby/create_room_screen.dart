@@ -29,9 +29,9 @@ class _CreateRoomScreenState extends State<CreateRoomScreen>
     'Premier League': 'images/eng.PNG',
     'Ligue1': 'images/fran.PNG',
     'LaLiga': 'images/isp.PNG',
-    'Bundesliga': 'images/ger.PNG',
-    'Super League': 'images/tr.PNG',
-    'Serie A': 'images/seri.PNG',
+    'Bundesliga': 'images/ger.png',
+    'Super League': 'images/tr.png',
+    'Serie A': 'images/seri.png',
   };
 
   /// Kategori Yarışı'nda kurucuya sunulan seçenek sayısı.
