@@ -202,13 +202,14 @@ void main() {
     final code = await createRoom(tester, GameMode.categoryRace);
 
     // Kurucuya beş kategori sunulur; seçimi sunucuya işlenmeli.
-    await pumpUntil(tester, find.text('KATEGORİ SEÇ'),
-        timeout: const Duration(seconds: 20), label: 'kategori seçenekleri');
-
+    // Başlık hemen çizilir, kartlar sunucudan gelince: kartları beklemek gerek.
     final options = find.byWidgetPredicate((widget) =>
         widget.key is ValueKey<String> &&
         (widget.key as ValueKey<String>).value.startsWith('category_') &&
         (widget.key as ValueKey<String>).value != 'category_surprise');
+
+    await pumpUntil(tester, options,
+        timeout: const Duration(seconds: 25), label: 'kategori seçenekleri');
     expect(options, findsNWidgets(5),
         reason: 'Kurucuya beş kategori seçeneği gösterilmeli');
 
