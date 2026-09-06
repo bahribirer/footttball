@@ -85,8 +85,7 @@ async def websocket_v2(
             engine = hub.build_engine(room)
             await engine.start()
 
-        await _message_loop(room, player)
-        left_for_good = True   # döngü `leave` mesajıyla bitti
+        left_for_good = await _message_loop(room, player)
 
     except WebSocketDisconnect:
         pass
@@ -116,7 +115,14 @@ async def websocket_v2(
             logger.info("Oda %s: %s bağlantısı koptu, bekleniyor", code, player.name)
 
 
-async def _message_loop(room, player) -> None:
+async def _message_loop(room, player) -> bool:
+    """Döngü biter; oyuncunun bilerek çıkıp çıkmadığını döndürür.
+
+    Boşta kalma zaman aşımı bilerek çıkış SAYILMAZ: mobil şebekede bağlantı
+    kopunca TCP çoğu zaman kapanmadan asılı kalır ve akış tam bu yoldan
+    düşer. Bunu "ayrıldı" saymak, kısa bir kopmada oyuncunun yerini anında
+    kaybetmesine yol açıyordu.
+    """
     while True:
         try:
             raw = await asyncio.wait_for(
@@ -124,9 +130,12 @@ async def _message_loop(room, player) -> None:
                 timeout=settings.WS_IDLE_TIMEOUT_SECONDS,
             )
         except asyncio.TimeoutError:
-            # İstemci uzun süredir sessiz: bağlantıyı kapat, oda sızmasın.
-            await player.socket.close(code=CLOSE_IDLE)
-            return
+            # İstemci uzun süredir sessiz: soketi kapat ama yerini koru.
+            try:
+                await player.socket.close(code=CLOSE_IDLE)
+            except Exception:
+                pass
+            return False
 
         try:
             message = json.loads(raw)
@@ -142,7 +151,7 @@ async def _message_loop(room, player) -> None:
             await player.send({"type": ServerMessage.PONG})
 
         elif message_type == ClientMessage.LEAVE:
-            return
+            return True
 
         elif message_type == ClientMessage.RELAY:
             if room.engine:

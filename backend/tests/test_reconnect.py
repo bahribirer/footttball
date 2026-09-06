@@ -99,3 +99,23 @@ async def test_tolerans_dolunca_oyuncu_dusurulur(monkeypatch):
     assert "opponent_left" in socket_b.events(), "rakibe ancak o zaman bildirilmeli"
 
     await hub.drop_room(code)
+
+
+@pytest.mark.asyncio
+async def test_bosta_kalma_zaman_asimi_ayrilma_sayilmaz():
+    """Sessiz kalan bağlantı kopma sayılır, bilerek çıkış değil.
+
+    Mobil şebekede kopan bağlantı çoğu zaman TCP'yi kapatmadan asılı kalır ve
+    sunucu bu yoldan düşer; "ayrıldı" sayılırsa oyuncu yerini anında
+    kaybediyordu.
+    """
+    import inspect
+
+    from app.realtime import gateway
+
+    source = inspect.getsource(gateway._message_loop)
+    timeout_branch = source.split("except asyncio.TimeoutError:")[1]
+    assert "return False" in timeout_branch, (
+        "zaman aşımı dalı bilerek çıkış (True) döndürmemeli"
+    )
+    assert "return True" in source, "leave mesajı bilerek çıkış saymalı"
