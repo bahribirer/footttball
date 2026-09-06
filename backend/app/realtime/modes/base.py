@@ -86,10 +86,18 @@ class BaseMode:
         `start` yükünü kaçırdığı için tahta/kategori gibi bilgileri yalnızca
         böyle geri alabilir.
         """
+        payload = self.state()
+        # Modlar farklı mesajları dinliyor: Tiki Taka Toe tahtayı `start` ile
+        # alıyor, Oyuncu Tahmin yalnızca `state` işliyor. İkisi de yollanır.
         await player.send({
             "type": ServerMessage.START,
             "mode": self.mode_id,
-            "payload": self.state(),
+            "payload": payload,
+            "resumed": True,
+        })
+        await player.send({
+            "type": ServerMessage.STATE,
+            "payload": payload,
             "resumed": True,
         })
 

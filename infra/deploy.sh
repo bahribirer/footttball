@@ -79,6 +79,17 @@ else
   echo "✓ Kadro güncelleme cron kaydı zaten var"
 fi
 
+# Kulüp tarihçesi ayda bir tazelenir: eski kadrolar ve uyruklar yavaş
+# değişir, ama yeni oyuncular geldikçe katman büyür.
+HIST_LINE="0 5 1 * * cd $(pwd) && /usr/bin/python3 backend/scripts/sync_club_history.py >> \$HOME/tikitakatoe-history.log 2>&1 && /usr/bin/python3 backend/scripts/backfill_player_gaps.py >> \$HOME/tikitakatoe-history.log 2>&1"
+if ! crontab -l 2>/dev/null | grep -qF "sync_club_history.py"; then
+  echo "▶ Aylık kulüp tarihçesi güncellemesi zamanlanıyor"
+  (crontab -l 2>/dev/null; echo "$HIST_LINE") | crontab -
+  echo "✓ Ayın 1'i 05:00 için cron kaydı eklendi"
+else
+  echo "✓ Kulüp tarihçesi cron kaydı zaten var"
+fi
+
 echo "▶ Dışarıdan erişim kontrolü"
 curl -fsS https://tikitakatoe.com/ping > /dev/null && echo "✓ https://tikitakatoe.com/ping yanıt veriyor"
 

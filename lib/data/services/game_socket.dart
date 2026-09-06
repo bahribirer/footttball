@@ -297,6 +297,17 @@ class GameSocket {
         onPlayerLeave?.call();
         break;
 
+      case 'error':
+        // Oda gerçekten yoksa yeniden bağlanmayı denemenin anlamı yok;
+        // aksi halde istemci sekiz kez boşuna deniyordu.
+        final code = message['code'];
+        if (code == 'room_not_found' || code == 'mode_mismatch') {
+          _closing = true;
+          _reconnectTimer?.cancel();
+          _reconnectTimer = null;
+        }
+        break;
+
       case 'pong':
         return; // akışa taşımaya gerek yok
     }

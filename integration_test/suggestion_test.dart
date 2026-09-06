@@ -1,4 +1,10 @@
-// Öneri listesinin göründüğünü doğrular (ve ekran görüntüsü için açık tutar).
+// Öneri listesinin davranışı.
+//
+// İki kural doğrulanır:
+//   * Son Harf'te öneri çıkmaz — modun özü futbolcuyu hatırlamak.
+//   * Öneri açılıp kapanırken giriş alanı yerinden oynamaz. Liste eskiden
+//     giriş alanının kardeşiydi ve her aramada ekran zıplıyordu.
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
@@ -8,6 +14,7 @@ import 'package:footttball/core/config/app_config.dart';
 import 'package:footttball/core/session.dart';
 import 'package:footttball/data/models/game_mode.dart';
 import 'package:footttball/data/services/game_socket.dart';
+import 'package:footttball/features/games/category_race/category_race_screen.dart';
 import 'package:footttball/features/games/last_letter/last_letter_screen.dart';
 import 'package:footttball/features/lobby/create_room_screen.dart';
 import 'package:footttball/features/lobby/start_page.dart';
@@ -26,25 +33,30 @@ void main() {
   }
 
   Future<void> waitFor(WidgetTester t, Finder f,
-      {Duration timeout = const Duration(seconds: 30)}) async {
+      {Duration timeout = const Duration(seconds: 30), String? label}) async {
     final end = DateTime.now().add(timeout);
     while (DateTime.now().isBefore(end)) {
       await t.pump(const Duration(milliseconds: 120));
       if (f.evaluate().isNotEmpty) return;
     }
-    fail('görünmedi: $f');
+    fail('görünmedi: ${label ?? f.toString()}');
   }
 
-  testWidgets('Son Harf: yazdıkça öneri çıkar', (t) async {
-    Session.instance.playerName = 'Bahri';
+  /// Seçilen modda oyunu başlatır ve sahte rakibin bağlantısını döndürür.
+  Future<WebSocketChannel> startGame(WidgetTester t, GameMode mode) async {
+    Session.instance
+      ..playerName = 'Bahri'
+      ..selectedMode = mode;
+
     await t.pumpWidget(const MaterialApp(
         debugShowCheckedModeBanner: false, home: ModeSelectScreen()));
     await waitFor(t, find.text('OYUN MODU SEÇ'));
 
-    await t.tap(find.byKey(const ValueKey('mode_card_last_letter')));
+    await t.tap(find.byKey(ValueKey('mode_card_${mode.id}')));
     await hold(t, const Duration(milliseconds: 600));
-    await t.tap(find.byKey(const ValueKey('play_last_letter')));
+    await t.tap(find.byKey(ValueKey('play_${mode.id}')));
     await waitFor(t, find.byType(StartPage));
+
     await t.tap(find.byKey(const ValueKey('btn_create_room')));
     await waitFor(t, find.byType(CreateRoomScreen));
     await waitFor(t, find.text('ODA KODU'));
@@ -63,24 +75,61 @@ void main() {
     await waitFor(t, find.byType(WaitingRoomScreen));
 
     final rival = WebSocketChannel.connect(Uri.parse(
-        '${AppConfig.wsBase}/ws/v2/$code?name=Rakip&mode=last_letter'));
+        '${AppConfig.wsBase}/ws/v2/$code?name=Rakip&mode=${mode.id}'));
     await rival.ready;
+    return rival;
+  }
 
-    await waitFor(t, find.byType(LastLetterScreen));
+  tearDown(() async {
+    await GameSocket.instance.disconnect();
+    GameSocket.instance.clearCallbacks();
+    Session.instance
+      ..playerName = ''
+      ..selectedMode = GameMode.tikiTakaToe
+      ..categoryId = null;
+  });
+
+  testWidgets('Son Harf: yazdıkça öneri çıkmaz', (t) async {
+    final rival = await startGame(t, GameMode.lastLetter);
+    await waitFor(t, find.byType(LastLetterScreen), label: 'Son Harf ekranı');
     await hold(t, const Duration(seconds: 3));
 
-    expect(find.byType(PlayerSuggestionField), findsOneWidget,
-        reason: 'öneri alanı ekranda olmalı');
-
-    // Yazdıkça öneri açılmalı
     await t.enterText(find.byType(TextField).first, 'haal');
     await hold(t, const Duration(seconds: 4));
 
-    expect(find.textContaining('Haaland'), findsWidgets,
-        reason: 'öneri listesinde eşleşen futbolcu görünmeli');
-    await hold(t, const Duration(seconds: 6)); // ekran görüntüsü için
+    expect(find.textContaining('Haaland'), findsNothing,
+        reason: 'Son Harf modunda öneri gösterilmemeli');
 
     await rival.sink.close();
-    await GameSocket.instance.disconnect();
+  });
+
+  testWidgets('Kategori Yarışı: öneri açılırken giriş alanı yerinden oynamaz',
+      (t) async {
+    final rival = await startGame(t, GameMode.categoryRace);
+    await waitFor(t, find.byType(CategoryRaceScreen),
+        label: 'Kategori Yarışı ekranı');
+    await hold(t, const Duration(seconds: 3));
+
+    expect(find.byType(PlayerSuggestionField), findsOneWidget);
+
+    final field = find.byType(TextField).first;
+    final before = t.getTopLeft(field);
+
+    await t.enterText(field, 'haal');
+    await hold(t, const Duration(seconds: 4));
+
+    // Öneriler açıldı; giriş alanı aynı yerde kalmalı.
+    expect(find.textContaining('Haaland'), findsWidgets,
+        reason: 'öneri listesi açılmalı');
+    expect(t.getTopLeft(field), before,
+        reason: 'öneriler açılınca giriş alanı kaymamalı');
+
+    // Liste kapanınca da yerinden oynamamalı.
+    await t.enterText(field, '');
+    await hold(t, const Duration(seconds: 2));
+    expect(t.getTopLeft(field), before,
+        reason: 'öneriler kapanınca giriş alanı kaymamalı');
+
+    await rival.sink.close();
   });
 }

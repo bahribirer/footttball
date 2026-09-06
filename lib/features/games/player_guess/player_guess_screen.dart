@@ -58,6 +58,8 @@ class _PlayerGuessScreenState extends State<PlayerGuessScreen> {
     if (!mounted) return;
 
     switch (event.type) {
+      // Yeniden bağlanan oyuncu durumu `start` ile de alabilir.
+      case 'start':
       case 'state':
         setState(() => _state = DuelState.fromJson(event.payload));
         break;
@@ -206,7 +208,9 @@ class _PlayerGuessScreenState extends State<PlayerGuessScreen> {
               borderRadius: BorderRadius.circular(20),
             ),
             child: Text(
-              'TUR ${_state.round}/${_state.totalRounds}',
+              // Seriyi turu ilk `totalRounds` kez kazanan alır; "3/5"
+              // gösterimi bunu sabit uzunlukta bir maç gibi okutuyordu.
+              '${_state.round}. TUR  •  İLK ${_state.totalRounds}',
               style: const TextStyle(
                 color: Colors.white,
                 fontSize: 12,
