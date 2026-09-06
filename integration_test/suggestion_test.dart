@@ -14,7 +14,6 @@ import 'package:footttball/core/config/app_config.dart';
 import 'package:footttball/core/session.dart';
 import 'package:footttball/data/models/game_mode.dart';
 import 'package:footttball/data/services/game_socket.dart';
-import 'package:footttball/features/games/category_race/category_race_screen.dart';
 import 'package:footttball/features/games/last_letter/last_letter_screen.dart';
 import 'package:footttball/features/lobby/create_room_screen.dart';
 import 'package:footttball/features/lobby/start_page.dart';
@@ -103,33 +102,43 @@ void main() {
     await rival.sink.close();
   });
 
-  testWidgets('Kategori Yarışı: öneri açılırken giriş alanı yerinden oynamaz',
+  testWidgets('öneri listesi açılıp kapanırken giriş alanı yerinden oynamaz',
       (t) async {
-    final rival = await startGame(t, GameMode.categoryRace);
-    await waitFor(t, find.byType(CategoryRaceScreen),
-        label: 'Kategori Yarışı ekranı');
-    await hold(t, const Duration(seconds: 3));
+    // Oyun ekranındaki sıra dağılımına bağlı kalmamak için alan tek başına
+    // çizilir; ölçülen şey listenin yerleşimi itip itmediği.
+    final controller = TextEditingController();
 
-    expect(find.byType(PlayerSuggestionField), findsOneWidget);
+    await t.pumpWidget(MaterialApp(
+      debugShowCheckedModeBanner: false,
+      home: Scaffold(
+        body: Column(
+          children: [
+            const Spacer(),
+            PlayerSuggestionField(
+              controller: controller,
+              onSubmit: (_) {},
+              accent: Colors.cyanAccent,
+            ),
+          ],
+        ),
+      ),
+    ));
+    await hold(t, const Duration(milliseconds: 500));
 
     final field = find.byType(TextField).first;
     final before = t.getTopLeft(field);
 
     await t.enterText(field, 'haal');
-    await hold(t, const Duration(seconds: 4));
+    await hold(t, const Duration(seconds: 5));
 
-    // Öneriler açıldı; giriş alanı aynı yerde kalmalı.
     expect(find.textContaining('Haaland'), findsWidgets,
         reason: 'öneri listesi açılmalı');
     expect(t.getTopLeft(field), before,
         reason: 'öneriler açılınca giriş alanı kaymamalı');
 
-    // Liste kapanınca da yerinden oynamamalı.
     await t.enterText(field, '');
     await hold(t, const Duration(seconds: 2));
     expect(t.getTopLeft(field), before,
         reason: 'öneriler kapanınca giriş alanı kaymamalı');
-
-    await rival.sink.close();
   });
 }

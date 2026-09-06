@@ -59,6 +59,10 @@ COUNTRY_ALIASES = {
     "Turkey": "Turkey",
     "Türkiye": "Turkey",
     "Kingdom of the Netherlands": "Netherlands",
+    # Wikidata futbolcularda çoğu zaman "United Kingdom" veriyor;
+    # veritabanı ve kategoriler ise ülke birliklerini ayrı tutuyor.
+    "United Kingdom": "England",
+    "Kingdom of Great Britain": "England",
 }
 
 SCHEMA = """

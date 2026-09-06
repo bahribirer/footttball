@@ -301,7 +301,9 @@ class GameSocket {
         // Oda gerçekten yoksa yeniden bağlanmayı denemenin anlamı yok;
         // aksi halde istemci sekiz kez boşuna deniyordu.
         final code = message['code'];
-        if (code == 'room_not_found' || code == 'mode_mismatch') {
+        if (code == 'room_not_found' ||
+            code == 'mode_mismatch' ||
+            code == 'room_full') {
           _closing = true;
           _reconnectTimer?.cancel();
           _reconnectTimer = null;
