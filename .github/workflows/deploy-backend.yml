@@ -1,0 +1,64 @@
+# Backend'i üretim sunucusuna (AWS EC2) dağıtır.
+#
+# main dalına backend/infra altını değiştiren bir itme geldiğinde çalışır.
+# Sunucudaki infra/deploy.sh zaten yedek alıyor, imajı derliyor ve sağlık
+# kontrolü yapıyor; iş akışı yalnızca onu tetikler ve dışarıdan doğrular.
+#
+# Gereken depo sırları (Settings → Secrets → Actions):
+#   DEPLOY_HOST     örn. 63.187.180.209
+#   DEPLOY_USER     örn. ubuntu
+#   DEPLOY_SSH_KEY  sunucuya erişen özel anahtarın tamamı (PEM)
+
+name: Deploy backend
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "backend/**"
+      - "infra/**"
+      - "docker-compose.yml"
+      - ".github/workflows/deploy-backend.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-backend
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Sunucuya dağıt
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: SSH anahtarını yükle
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H "${{ secrets.DEPLOY_HOST }}" >> ~/.ssh/known_hosts 2>/dev/null
+
+      - name: deploy.sh çalıştır
+        run: |
+          ssh -i ~/.ssh/deploy_key -o BatchMode=yes \
+            "${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}" \
+            'cd /srv/tikitakatoe && ./infra/deploy.sh main'
+
+      # deploy.sh içeriden sağlık kontrolü yapıyor; burada dışarıdan,
+      # nginx ve TLS dahil tüm zincir doğrulanır.
+      - name: Dışarıdan duman testi
+        run: |
+          set -e
+          curl -fsS --max-time 15 https://tikitakatoe.com/ping
+          echo
+          curl -fsS --max-time 15 "https://tikitakatoe.com/api/v1/categories?count=3" > /dev/null
+          echo "kategoriler ok"
+          # Eski istemcilerin uç noktası da ayakta kalmalı.
+          curl -fsS --max-time 15 "https://tikitakatoe.com/check_room/0000" > /dev/null
+          echo "eski uç nokta ok"
+
+      - name: Anahtarı sil
+        if: always()
+        run: rm -f ~/.ssh/deploy_key

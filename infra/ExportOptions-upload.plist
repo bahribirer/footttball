@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- Arşivi doğrudan App Store Connect'e yükler (TestFlight'a düşer).
+	     Xcode'daki oturumlu Apple ID kullanılır; ayrı bir API anahtarı
+	     gerekmez. -->
+	<key>destination</key>
+	<string>upload</string>
+	<key>method</key>
+	<string>app-store-connect</string>
+	<key>signingStyle</key>
+	<string>automatic</string>
+	<key>teamID</key>
+	<string>7235995M6D</string>
+	<!-- Sürüm pubspec.yaml'da belirleniyor; Xcode kendiliğinden
+	     değiştirmesin. -->
+	<key>manageAppVersionAndBuildNumber</key>
+	<false/>
+	<key>stripSwiftSymbols</key>
+	<true/>
+	<key>uploadSymbols</key>
+	<true/>
+</dict>
+</plist>

@@ -1,0 +1,17 @@
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+.mypy_cache/
+
+# Veri ve önbellek imaja gömülmez; compose'da volume olarak bağlanır.
+data/
+static/logos/
+scripts/
+tests/
+
+.git/
+.gitignore
+*.md
+*.log

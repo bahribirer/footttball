@@ -1,0 +1,101 @@
+# iOS derlemesini TestFlight'a yükler.
+#
+# Elle tetiklenir (Actions → Run workflow) ya da v* etiketi itilince çalışır.
+# İmzalama App Store Connect API anahtarıyla yapılır: Xcode sertifika ve
+# profili anahtar üzerinden kendisi üretir, depoda .p12 tutulmaz.
+#
+# Gereken depo sırları:
+#   APPSTORE_ISSUER_ID       App Store Connect → Users and Access → Integrations
+#   APPSTORE_KEY_ID          anahtarın kimliği (AuthKey_XXXX.p8 içindeki XXXX)
+#   APPSTORE_PRIVATE_KEY     .p8 dosyasının tam içeriği
+#
+# Sürüm pubspec.yaml'dan gelir. Aynı sürümü yeniden yüklemek için
+# build_number girdisiyle yalnızca derleme numarası artırılabilir.
+
+name: iOS TestFlight
+
+on:
+  workflow_dispatch:
+    inputs:
+      build_number:
+        description: "Derleme numarası (boşsa pubspec.yaml'daki kullanılır)"
+        required: false
+        type: string
+  push:
+    tags: ["v*"]
+
+concurrency:
+  group: ios-testflight
+  cancel-in-progress: false
+
+jobs:
+  testflight:
+    name: Derle ve yükle
+    runs-on: macos-15
+    timeout-minutes: 60
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.35.1"
+          channel: stable
+          cache: true
+
+      - name: Paketler
+        run: flutter pub get
+
+      # Cihaz gerektirmeyen testler yüklemeden önce son kapı.
+      - name: Widget testleri
+        run: flutter test test/
+
+      - name: API anahtarını yerleştir
+        env:
+          APPSTORE_PRIVATE_KEY: ${{ secrets.APPSTORE_PRIVATE_KEY }}
+        run: |
+          mkdir -p ~/private_keys
+          printf '%s\n' "$APPSTORE_PRIVATE_KEY" \
+            > ~/private_keys/AuthKey_${{ secrets.APPSTORE_KEY_ID }}.p8
+          chmod 600 ~/private_keys/AuthKey_${{ secrets.APPSTORE_KEY_ID }}.p8
+
+      # Arşiv imzasız üretilir; imzalama ve yükleme tek adımda, API
+      # anahtarıyla yapılır. Aksi halde flutter build ipa da yüklemeye
+      # kalkar ve aynı derleme iki kez gönderilir.
+      - name: Arşivi üret
+        run: |
+          ARGS="--release --no-codesign"
+          if [ -n "${{ inputs.build_number }}" ]; then
+            ARGS="$ARGS --build-number=${{ inputs.build_number }}"
+          fi
+          flutter build ipa $ARGS
+
+      # -allowProvisioningUpdates, anahtar üzerinden sertifika ve profil
+      # üretmeye izin verir; depoda .p12 tutulmaz.
+      - name: İmzala ve App Store Connect'e yükle
+        run: |
+          set -e
+          ARCHIVE=build/ios/archive/Runner.xcarchive
+          [ -d "$ARCHIVE" ] || { echo "Arşiv bulunamadı"; exit 1; }
+          xcodebuild -exportArchive \
+            -archivePath "$ARCHIVE" \
+            -exportOptionsPlist infra/ExportOptions-upload.plist \
+            -exportPath build/ios/upload-export \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath ~/private_keys/AuthKey_${{ secrets.APPSTORE_KEY_ID }}.p8 \
+            -authenticationKeyID "${{ secrets.APPSTORE_KEY_ID }}" \
+            -authenticationKeyIssuerID "${{ secrets.APPSTORE_ISSUER_ID }}"
+
+      - name: Sürümü özetle
+        if: always()
+        run: |
+          PLIST=build/ios/archive/Runner.xcarchive/Info.plist
+          if [ -f "$PLIST" ]; then
+            V=$(/usr/libexec/PlistBuddy -c "Print :ApplicationProperties:CFBundleShortVersionString" "$PLIST")
+            B=$(/usr/libexec/PlistBuddy -c "Print :ApplicationProperties:CFBundleVersion" "$PLIST")
+            echo "### Yüklenen sürüm: $V ($B)" >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Anahtarı sil
+        if: always()
+        run: rm -rf ~/private_keys
