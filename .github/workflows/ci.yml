@@ -139,10 +139,32 @@ jobs:
       # *_visual_test.dart dosyaları ekran görüntüsü alınabilsin diye ekranı
       # saniyelerce açık tutan yerel inceleme araçları; otomatik doğrulama
       # yapmıyorlar ve CI'da 12 dakikalık zaman aşımına takılıyorlar.
+      #
+      # Dosyalar tek tek koşar ve başarısız olan bir kez tekrarlanır. Bu
+      # testler canlı sunucuya konuşuyor ve paylaşılan koşucuda simülatörün
+      # uygulamayı başlatamadığı, hiç çıktı vermeden 12 dakika asıldığı
+      # görüldü — aynı testler yerelde, temiz simülatörde geçiyor. Tek
+      # dosyanın takılması diğerlerini götürmesin diye ayrıldılar.
       - name: Integration testleri
         run: |
-          flutter test \
-            integration_test/game_flow_test.dart \
-            integration_test/tiki_taka_toe_test.dart \
-            integration_test/suggestion_test.dart \
-            -d "$DEVICE"
+          set -u
+          FAILED=""
+          for f in game_flow_test tiki_taka_toe_test suggestion_test; do
+            echo "::group::$f"
+            if flutter test "integration_test/$f.dart" -d "$DEVICE" --timeout 90s; then
+              echo "✓ $f"
+            else
+              echo "↻ $f tekrar deneniyor"
+              xcrun simctl terminate "$DEVICE" com.bahribirer.footttball 2>/dev/null || true
+              if flutter test "integration_test/$f.dart" -d "$DEVICE" --timeout 90s; then
+                echo "✓ $f (ikinci denemede)"
+              else
+                FAILED="$FAILED $f"
+              fi
+            fi
+            echo "::endgroup::"
+          done
+          if [ -n "$FAILED" ]; then
+            echo "Basarisiz:$FAILED"
+            exit 1
+          fi
