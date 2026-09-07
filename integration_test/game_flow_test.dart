@@ -74,6 +74,12 @@ void main() {
     while (DateTime.now().isBefore(deadline)) {
       if (expected.evaluate().isNotEmpty) return;
       if (target.evaluate().isNotEmpty) {
+        // Yazılım klavyesi açıkken ekranın alt yarısındaki düğmelerin üstünü
+        // kapatıyor ve tık düğmeye hiç ulaşmıyor — yerel simülatörde
+        // doğrulandı: klavye kapatılınca aynı tık geçiyor. Widget testinde
+        // klavye olmadığı için bu hiç görünmüyordu.
+        FocusManager.instance.primaryFocus?.unfocus();
+        await pumpFor(tester, const Duration(milliseconds: 400));
         await tester.tap(target, warnIfMissed: false);
       }
       await pumpFor(tester, const Duration(milliseconds: 400));

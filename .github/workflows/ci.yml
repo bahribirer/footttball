@@ -118,7 +118,14 @@ jobs:
           xcrun simctl bootstatus "$DEVICE" -b
           echo "DEVICE=$DEVICE" >> "$GITHUB_ENV"
 
-      # Bu testler gerçek sunucuya konuşuyor; ağ ya da üretim kaynaklı
-      # kırmızılar diğer işleri bloke etmesin diye ayrı iş olarak duruyor.
+      # Yalnızca davranış testleri koşar. integration_test altındaki
+      # *_visual_test.dart dosyaları ekran görüntüsü alınabilsin diye ekranı
+      # saniyelerce açık tutan yerel inceleme araçları; otomatik doğrulama
+      # yapmıyorlar ve CI'da 12 dakikalık zaman aşımına takılıyorlar.
       - name: Integration testleri
-        run: flutter test integration_test -d "$DEVICE"
+        run: |
+          flutter test \
+            integration_test/game_flow_test.dart \
+            integration_test/tiki_taka_toe_test.dart \
+            integration_test/suggestion_test.dart \
+            -d "$DEVICE"
