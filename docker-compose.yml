@@ -31,10 +31,11 @@ services:
       # virgülle ayrılmış mod kimlikleri, örn. "last_letter,category_race"
       MODES_DISABLED: ${MODES_DISABLED:-}
     volumes:
-      - ./backend/data:/app/data:ro
-      # Cron işleri durumlarını buraya yazıyor; /health oradan okuyor.
-      # Ayrı bağlanıyor çünkü data salt okunur.
-      - ./backend/data/jobs:/app/data/jobs:ro
+      # Yazılabilir bağlanıyor ama uygulama bağlantıları `mode=ro`: WAL
+      # modunda SQLite okurken bile -shm dosyasını açabilmek zorunda, salt
+      # okunur bağlamada "attempt to write a readonly database" veriyor.
+      # Yazma yasağı bağlama yerine bağlantı seviyesinde (db/database.py).
+      - ./backend/data:/app/data
       - logo_cache:/app/static/logos
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/ping', timeout=4).status==200 else 1)"]

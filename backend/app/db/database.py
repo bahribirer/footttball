@@ -15,39 +15,26 @@ from app.core.config import settings
 
 logger = logging.getLogger(__name__)
 
-_wal_checked = False
+def _read_only_uri(path: str) -> str:
+    """Dosya yolunu salt okunur SQLite URI'sine çevirir."""
+    from urllib.parse import quote
 
-
-def _ensure_wal(con: sqlite3.Connection) -> None:
-    """Veritabanını bir kez WAL moduna alır.
-
-    Varsayılan `delete` günlüğünde yazma süren boyunca okumalar bloke olur;
-    aylık kulüp tarihçesi tazelemesi çalışırken oyuncular cevap doğrulaması
-    yapamıyordu. WAL okuyucuyu yazıcıdan ayırır. Kalıcı bir ayardır, ilk
-    başarılı denemeden sonra tekrar denenmez.
-
-    Veritabanı salt okunur bağlanmışsa (üretimde container böyle bağlıyor)
-    değişiklik yapılamaz; bu durumda sessizce geçilir ve host tarafında
-    ayarlanmış olması beklenir.
-    """
-    global _wal_checked
-    if _wal_checked:
-        return
-    _wal_checked = True
-    try:
-        mode = con.execute("PRAGMA journal_mode").fetchone()[0]
-        if str(mode).lower() != "wal":
-            new_mode = con.execute("PRAGMA journal_mode=WAL").fetchone()[0]
-            logger.info("SQLite gunluk modu: %s -> %s", mode, new_mode)
-    except sqlite3.Error as exc:
-        logger.warning("WAL moduna gecilemedi: %s", exc)
+    return f"file:{quote(path)}?mode=ro"
 
 
 @contextmanager
 def get_connection() -> Iterator[sqlite3.Connection]:
-    con = sqlite3.connect(settings.DB_PATH, timeout=10)
+    """Salt okunur bağlantı.
+
+    Uygulama oyuncu veritabanına hiç yazmıyor; veriyi host'taki betikler
+    üretiyor. Yazma yasağı eskiden container'ın `:ro` bağlamasıyla
+    sağlanıyordu ama WAL modunda bu çalışmıyor: SQLite okurken bile `-shm`
+    dosyasını açabilmek zorunda, salt okunur dizinde "attempt to write a
+    readonly database" veriyor. Bu yüzden yasak bağlantı seviyesine taşındı —
+    dizin yazılabilir, bağlantı `mode=ro`. Koruma aynı, WAL çalışıyor.
+    """
+    con = sqlite3.connect(_read_only_uri(settings.DB_PATH), uri=True, timeout=10)
     con.row_factory = sqlite3.Row
-    _ensure_wal(con)
     try:
         yield con
     finally:

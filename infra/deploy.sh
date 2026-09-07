@@ -147,6 +147,21 @@ else
   echo "✓ Kulüp tarihçesi cron kaydı zaten var"
 fi
 
+# Yedekler veritabanıyla aynı diskte duruyor; birim ölürse ikisi de gider.
+# TTT_BACKUP_BUCKET ayarlıysa haftalık offsite kopya zamanlanır.
+if [ -n "${TTT_BACKUP_BUCKET:-}" ]; then
+  BACKUP_LINE="0 3 * * 0 cd $(pwd) && TTT_BACKUP_BUCKET=$TTT_BACKUP_BUCKET ./infra/run_job.sh backup ./infra/backup_offsite.sh"
+  if ! crontab -l 2>/dev/null | grep -qF "run_job.sh backup"; then
+    echo "▶ Haftalık offsite yedek zamanlanıyor"
+    (crontab -l 2>/dev/null; echo "$BACKUP_LINE") | crontab -
+    echo "✓ Pazar 03:00 için cron kaydı eklendi"
+  else
+    echo "✓ Offsite yedek cron kaydı zaten var"
+  fi
+else
+  echo "⚠ TTT_BACKUP_BUCKET ayarlı değil — yedekler yalnızca yerel diskte" >&2
+fi
+
 echo "▶ Dışarıdan erişim kontrolü"
 curl -fsS https://tikitakatoe.com/ping > /dev/null && echo "✓ https://tikitakatoe.com/ping yanıt veriyor"
 
