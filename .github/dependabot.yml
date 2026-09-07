@@ -1,0 +1,40 @@
+# Bağımlılık güncellemeleri otomatik PR olarak gelsin.
+#
+# Uyarılar zaten açıktı ama kimse PR açmıyordu. Artık güncellemeler CI'ın
+# doğruladığı PR'lara dönüşüyor; yama sürümleri gruplanarak tek PR'da gelir,
+# ana sürüm atlamaları ayrı ayrı incelenir.
+
+version: 2
+updates:
+  - package-ecosystem: pip
+    directory: /backend
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    groups:
+      patch-ve-minor:
+        update-types: [minor, patch]
+    commit-message:
+      prefix: "backend"
+
+  - package-ecosystem: pub
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    groups:
+      patch-ve-minor:
+        update-types: [minor, patch]
+    commit-message:
+      prefix: "flutter"
+
+  # İş akışlarındaki action sürümleri de eskiyor (Node 20 uyarısını aldık).
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    open-pull-requests-limit: 3
+    commit-message:
+      prefix: "ci"

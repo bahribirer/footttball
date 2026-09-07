@@ -36,6 +36,8 @@ class ErrorCode(StrEnum):
     INVALID_MESSAGE = "invalid_message"
     NOT_YOUR_TURN = "not_your_turn"
     GAME_NOT_RUNNING = "game_not_running"
+    MODE_DISABLED = "mode_disabled"      # sunucudan kapatılmış mod
+    MODE_UNKNOWN = "mode_unknown"        # istemci sunucunun tanımadığı bir mod istedi
 
 
 class GameMode(StrEnum):

@@ -8,51 +8,14 @@ ret verir — Tiki Taka Toe'daki rövanş isteğiyle aynı akış.
     python -m pytest tests/test_pass_round.py -q
 """
 
-import json
-
 import pytest
 
 from app.realtime.modes.player_guess import PlayerGuessMode
+from tests.fakes import FakeRoom
 
 
-class _FakeSocket:
-    def __init__(self) -> None:
-        self.sent: list[dict] = []
-
-    async def send_text(self, raw: str) -> None:
-        self.sent.append(json.loads(raw))
-
-    def events(self) -> list[str]:
-        return [m.get("event") for m in self.sent if m.get("event")]
-
-
-class _FakePlayer:
-    def __init__(self, slot: int) -> None:
-        self.slot = slot
-        self.score = 0
-        self.socket = _FakeSocket()
-        self.connected = True
-
-    async def send(self, message: dict) -> None:
-        await self.socket.send_text(json.dumps(message))
-
-
-class _FakeRoom:
-    def __init__(self) -> None:
-        self.code = "TEST"
-        self.settings: dict = {"round_count": 3}
-        self.players = [_FakePlayer(0), _FakePlayer(1)]
-
-    def opponent_of(self, player):
-        return next((p for p in self.players if p.slot != player.slot), None)
-
-    async def broadcast(self, message: dict) -> None:
-        for player in self.players:
-            await player.send(message)
-
-
-def _mode_in_answering() -> tuple[PlayerGuessMode, _FakeRoom]:
-    room = _FakeRoom()
+def _mode_in_answering() -> tuple[PlayerGuessMode, FakeRoom]:
+    room = FakeRoom(settings={"round_count": 3})
     mode = PlayerGuessMode(room)
     mode.phase = "answering"
     mode.selected_nation = "Turkey"

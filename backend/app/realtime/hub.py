@@ -35,6 +35,15 @@ class RoomNotFound(Exception):
     pass
 
 
+class UnknownMode(Exception):
+    """İstemci sunucunun tanımadığı bir mod istedi.
+
+    Uygulama sunucudan eskiyse ya da ileride kaldırılmış bir mod hâlâ
+    istemcide duruyorsa buraya düşer. Sessizce 500 vermek yerine istemciye
+    "güncelle" diyebilmek için ayrı bir tip.
+    """
+
+
 class ModeMismatch(Exception):
     def __init__(self, expected: str) -> None:
         super().__init__(expected)
@@ -60,7 +69,11 @@ class RoomHub:
         """İstemci bağlanmadan önce odayı rezerve eder (kod çakışmasını önler)."""
         async with self._lock:
             code = self.generate_code()
-            room = Room(code=code, mode=GameMode(mode), settings=room_settings or {})
+            try:
+                resolved = GameMode(mode)
+            except ValueError as exc:
+                raise UnknownMode(mode) from exc
+            room = Room(code=code, mode=resolved, settings=room_settings or {})
             room.emptied_at = time.time()
             self._rooms[code] = room
             return room

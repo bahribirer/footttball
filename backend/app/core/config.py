@@ -11,6 +11,9 @@ class Settings:
     # Ortam
     ENVIRONMENT: str = os.getenv("ENVIRONMENT", "development")
     DEBUG: bool = os.getenv("DEBUG", "false").lower() == "true"
+    # Hata raporlarini surumle eslestirmek icin; CI dagitilan imajin
+    # commit SHA'sini gecer.
+    RELEASE: str = os.getenv("RELEASE", "dev")
 
     # Veri
     DB_PATH: str = os.getenv("DB_PATH", str(BASE_DIR / "data" / "tikitakapi.db"))

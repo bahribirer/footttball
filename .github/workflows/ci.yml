@@ -82,3 +82,43 @@ jobs:
 
       - name: Widget testleri
         run: flutter test test/
+
+  integration:
+    name: Integration testleri (iOS simülatörü)
+    # Simülatör gerektirdiği için macOS koşucusu. Yalnızca main ve PR'larda
+    # koşar, her feature itmesinde değil — süresi uzun.
+    if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main'
+    runs-on: macos-26
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.35.1"
+          channel: stable
+          cache: true
+
+      - name: Paketler
+        run: flutter pub get
+
+      - name: Simülatörü başlat
+        run: |
+          # Kurulu en yeni iPhone seçilir; runner imajı değişse de çalışır.
+          DEVICE=$(xcrun simctl list devices available \
+            | grep -oE 'iPhone [^(]*\([0-9A-F-]{36}\)' \
+            | tail -1 \
+            | grep -oE '[0-9A-F-]{36}')
+          if [ -z "$DEVICE" ]; then
+            echo "Kullanilabilir iPhone simulatoru bulunamadi"
+            xcrun simctl list devices available
+            exit 1
+          fi
+          xcrun simctl boot "$DEVICE" || true
+          xcrun simctl bootstatus "$DEVICE" -b
+          echo "DEVICE=$DEVICE" >> "$GITHUB_ENV"
+
+      # Bu testler gerçek sunucuya konuşuyor; ağ ya da üretim kaynaklı
+      # kırmızılar diğer işleri bloke etmesin diye ayrı iş olarak duruyor.
+      - name: Integration testleri
+        run: flutter test integration_test -d "$DEVICE"

@@ -63,3 +63,7 @@ backend/static/logos/*
 
 # --- Altyapı ---
 infra/certbot/
+
+# SQLite WAL yan dosyalari (veritabaninin kendisi zaten haric)
+*.db-wal
+*.db-shm
