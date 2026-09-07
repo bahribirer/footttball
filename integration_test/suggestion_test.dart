@@ -111,6 +111,10 @@ void main() {
     await t.pumpWidget(MaterialApp(
       debugShowCheckedModeBanner: false,
       home: Scaffold(
+        // Gerçek cihazda yazmaya başlayınca yazılım klavyesi açılıyor ve
+        // yerleşimi yukarı itiyor; ölçülmek istenen şey bu değil. Klavye
+        // etkisi kapatılınca geriye yalnızca öneri listesinin etkisi kalır.
+        resizeToAvoidBottomInset: false,
         body: Column(
           children: [
             const Spacer(),

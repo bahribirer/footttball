@@ -57,6 +57,30 @@ void main() {
     }
   }
 
+  /// Hedef ekran açılana kadar tıklamayı tekrarlar.
+  ///
+  /// Ekranların giriş animasyonu sırasında düğmeler `IgnorePointer` içinde
+  /// kalıyor; widget ağaçta görünse de tık düşmüyor. Yerel makinede animasyon
+  /// bekleme süresine sığıyordu, simülatörde sığmadı ve tek tıkla yapılan
+  /// testler kırıldı. Tık, sonuç görünene kadar tekrarlanır.
+  Future<void> tapUntil(
+    WidgetTester tester,
+    Finder target,
+    Finder expected, {
+    Duration timeout = const Duration(seconds: 20),
+    String? label,
+  }) async {
+    final deadline = DateTime.now().add(timeout);
+    while (DateTime.now().isBefore(deadline)) {
+      if (expected.evaluate().isNotEmpty) return;
+      if (target.evaluate().isNotEmpty) {
+        await tester.tap(target, warnIfMissed: false);
+      }
+      await pumpFor(tester, const Duration(milliseconds: 400));
+    }
+    fail('Tıklama sonuç vermedi: ${label ?? expected.toString()}');
+  }
+
   /// Testler mod menüsünden başlar; açılış akışı ayrı bir testte doğrulanır.
   Future<void> openMenu(WidgetTester tester) async {
     Session.instance.playerName = 'Bahri';
@@ -121,14 +145,14 @@ void main() {
     await pumpUntil(tester, find.byType(OnboardingScreen),
         timeout: const Duration(seconds: 15), label: 'onboarding');
 
-    await tester.tap(find.text('Atla'));
-    await pumpUntil(tester, find.byType(NameRoom), label: 'isim ekranı');
+    await tapUntil(tester, find.text('Atla'), find.byType(NameRoom),
+        label: 'isim ekranı');
 
     await tester.enterText(find.byType(TextField).first, 'Bahri');
     await pumpFor(tester, const Duration(milliseconds: 300));
 
-    await tester.tap(find.text('BAŞLA'));
-    await pumpUntil(tester, find.byType(ModeSelectScreen), label: 'mod menüsü');
+    await tapUntil(tester, find.text('BAŞLA'), find.byType(ModeSelectScreen),
+        label: 'mod menüsü');
 
     expect(find.text('BAHRI'), findsOneWidget);
     for (final mode in GameMode.values) {
