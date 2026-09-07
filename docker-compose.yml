@@ -1,13 +1,20 @@
 # Üretim yığını (AWS EC2).
-#   docker compose up -d --build
+#   docker compose up -d
 #
 # Veritabanı ve logo önbelleği imaja gömülmez; sunucudaki dizinlerden bağlanır.
+#
+# Backend imajı artık sunucuda değil CI'da derleniyor ve GHCR'a commit
+# SHA'sıyla etiketlenerek itiliyor. Böylece prod'un CPU'su derlemeye gitmiyor
+# ve her sürüm geri dönülebilir bir artefakt oluyor:
+#   BACKEND_IMAGE=ghcr.io/bahribirer/footttball-backend:<sha> docker compose up -d
+# .env dosyasındaki BACKEND_IMAGE değeri o an ayakta olan sürümü tutar.
 
 services:
   backend:
+    # Yerelde derlemek için: docker compose build backend
     build:
       context: ./backend
-    image: tikitakatoe-backend:latest
+    image: ${BACKEND_IMAGE:-ghcr.io/bahribirer/footttball-backend:latest}
     restart: unless-stopped
     expose:
       - "8000"
@@ -16,8 +23,18 @@ services:
       DEBUG: "false"
       DB_PATH: /app/data/tikitakapi.db
       LOGO_DIR: /app/static/logos
+      # Hata raporlama: DSN verilmezse sessizce kapalı kalır.
+      SENTRY_DSN: ${SENTRY_DSN:-}
+      # Hataları dağıtılan sürümle eşleştirmek için.
+      RELEASE: ${BACKEND_IMAGE:-dev}
+      # Bozulan bir modu yeni uygulama sürümü beklemeden kapatmak için:
+      # virgülle ayrılmış mod kimlikleri, örn. "last_letter,category_race"
+      MODES_DISABLED: ${MODES_DISABLED:-}
     volumes:
       - ./backend/data:/app/data:ro
+      # Cron işleri durumlarını buraya yazıyor; /health oradan okuyor.
+      # Ayrı bağlanıyor çünkü data salt okunur.
+      - ./backend/data/jobs:/app/data/jobs:ro
       - logo_cache:/app/static/logos
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/ping', timeout=4).status==200 else 1)"]

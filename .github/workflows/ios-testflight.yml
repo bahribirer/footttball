@@ -36,6 +36,10 @@ jobs:
     environment: production
     steps:
       - uses: actions/checkout@v4
+        with:
+          # Sürüm notu son etiketten bu yana gelen commit'lerden üretiliyor;
+          # sığ klon bunu göremez.
+          fetch-depth: 0
 
       # App Store Connect iOS 26 SDK'sından eskisini kabul etmiyor. Runner'da
       # birden çok Xcode kurulu olabiliyor; en yenisi seçilir ve hangisi
@@ -96,6 +100,19 @@ jobs:
             -authenticationKeyPath ~/private_keys/AuthKey_${{ secrets.APPSTORE_KEY_ID }}.p8 \
             -authenticationKeyID "${{ secrets.APPSTORE_KEY_ID }}" \
             -authenticationKeyIssuerID "${{ secrets.APPSTORE_ISSUER_ID }}"
+
+      # Yükleme bitti; işlenmesi tamamlanınca sürüm notunu yazıp testçilere
+      # açar. Bu adıma kadar dağıtım elle kalıyordu.
+      - name: Testçilere dağıt
+        run: |
+          python3 -m pip install --quiet 'pyjwt[crypto]' requests
+          PLIST=build/ios/archive/Runner.xcarchive/Info.plist
+          BUILD=$(/usr/libexec/PlistBuddy -c "Print :ApplicationProperties:CFBundleVersion" "$PLIST")
+          python3 infra/testflight_release.py --build "$BUILD" --group "${{ vars.TESTFLIGHT_GROUP || 'tiki taka' }}"
+        env:
+          APPSTORE_KEY_ID: ${{ secrets.APPSTORE_KEY_ID }}
+          APPSTORE_ISSUER_ID: ${{ secrets.APPSTORE_ISSUER_ID }}
+          APPSTORE_PRIVATE_KEY: ${{ secrets.APPSTORE_PRIVATE_KEY }}
 
       - name: Sürümü özetle
         if: always()

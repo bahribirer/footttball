@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'package:footttball/core/session.dart';
 import 'package:footttball/data/models/game_mode.dart';
+import 'package:footttball/data/services/api_service.dart';
 import 'package:footttball/features/lobby/start_page.dart';
 import 'package:footttball/shared/widgets/app_background.dart';
 
@@ -25,7 +26,22 @@ class _ModeSelectScreenState extends State<ModeSelectScreen>
       vsync: this,
       duration: const Duration(milliseconds: 700),
     )..forward();
+    _loadEnabledModes();
   }
+
+  /// Sunucudan açık modları çeker.
+  ///
+  /// Yanıt gelene kadar gömülü liste gösterilir; menü boş kalmaz. Sunucu
+  /// ulaşılamazsa da öyle: bir mod kapatma özelliğinin çevrimdışı bir
+  /// aksaklıkta oyunu tümden kullanılamaz hale getirmesi istenmez.
+  Future<void> _loadEnabledModes() async {
+    final ids = await ApiService.enabledModeIds();
+    if (!mounted || ids.isEmpty) return;
+    setState(() => _enabledIds = ids);
+  }
+
+  /// Sunucudan gelen açık mod kimlikleri; null ise henüz yanıt yok.
+  Set<String>? _enabledIds;
 
   @override
   void dispose() {
@@ -42,7 +58,10 @@ class _ModeSelectScreenState extends State<ModeSelectScreen>
 
   @override
   Widget build(BuildContext context) {
-    final modes = GameMode.values;
+    final enabled = _enabledIds;
+    final modes = enabled == null
+        ? GameMode.values
+        : GameMode.values.where((m) => enabled.contains(m.id)).toList();
 
     return Scaffold(
       body: Stack(

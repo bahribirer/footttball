@@ -1,0 +1,93 @@
+# Üretimin ayakta olduğunu düzenli aralıklarla dışarıdan doğrular.
+#
+# Container healthcheck'i yalnızca yeniden başlatır, kimseye haber vermez.
+# Bu iş akışı düşerse GitHub bildirim gönderir ve bir issue açılır.
+
+name: Uptime
+
+on:
+  schedule:
+    # 15 dakikada bir. Cron gecikmeli tetiklenebilir; kesin zamanlama değil,
+    # "uzun süre fark edilmeden ölü kalmasın" amacı taşıyor.
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: uptime
+  cancel-in-progress: true
+
+jobs:
+  probe:
+    name: Sağlık yoklaması
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    steps:
+      - name: Uç noktaları yokla
+        id: probe
+        run: |
+          set +e
+          FAILED=""
+          check() {
+            if ! curl -fsS --max-time 20 "$1" > /dev/null; then
+              FAILED="$FAILED\n  - $1"
+            fi
+          }
+          check "https://tikitakatoe.com/ping"
+          check "https://tikitakatoe.com/api/v1/categories?count=3"
+          check "https://tikitakatoe.com/api/v1/modes"
+          check "https://tikitakatoe.com/check_room/0000"
+
+          # /health veri katmanlarini ve cron islerini de bildiriyor; servis
+          # ayakta ama veri eskiyorsa bunu ayri olarak gormek gerekiyor.
+          HEALTH=$(curl -fsS --max-time 20 https://tikitakatoe.com/health || echo '{}')
+          echo "$HEALTH"
+          STATUS=$(printf '%s' "$HEALTH" | python3 -c "import json,sys; print(json.load(sys.stdin).get('status','yok'))" 2>/dev/null || echo yok)
+          if [ "$STATUS" != "ok" ]; then
+            FAILED="$FAILED\n  - /health durumu: $STATUS"
+          fi
+
+          if [ -n "$FAILED" ]; then
+            echo "Yanit vermeyen uc noktalar:"
+            printf "%b\n" "$FAILED"
+            {
+              echo "failed<<EOF"
+              printf "%b\n" "$FAILED"
+              echo "EOF"
+            } >> "$GITHUB_OUTPUT"
+            exit 1
+          fi
+          echo "tum uc noktalar ayakta"
+
+      - name: Sorun bildir
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const body = [
+              'Üretim sağlık yoklaması başarısız oldu.',
+              '',
+              '```',
+              `${{ steps.probe.outputs.failed }}`,
+              '```',
+              '',
+              `Koşu: ${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,
+            ].join('\n');
+
+            // Aynı kesinti için tekrar tekrar issue açılmasın; açık olan varsa
+            // ona yorum eklenir.
+            const { data: open } = await github.rest.issues.listForRepo({
+              owner: context.repo.owner, repo: context.repo.repo,
+              state: 'open', labels: 'uptime',
+            });
+            if (open.length > 0) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner, repo: context.repo.repo,
+                issue_number: open[0].number, body,
+              });
+            } else {
+              await github.rest.issues.create({
+                owner: context.repo.owner, repo: context.repo.repo,
+                title: 'Üretim yanıt vermiyor', body, labels: ['uptime'],
+              });
+            }

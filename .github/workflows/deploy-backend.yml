@@ -1,13 +1,14 @@
 # Backend'i üretim sunucusuna (AWS EC2) dağıtır.
 #
-# main dalına backend/infra altını değiştiren bir itme geldiğinde çalışır.
-# Sunucudaki infra/deploy.sh zaten yedek alıyor, imajı derliyor ve sağlık
-# kontrolü yapıyor; iş akışı yalnızca onu tetikler ve dışarıdan doğrular.
+# İki aşama: imaj CI'da derlenip GHCR'a commit SHA'sıyla itilir, sonra sunucu
+# o imajı çeker. Derleme artık prod makinesinde yapılmıyor ve her sürüm geri
+# dönülebilir bir artefakt olarak kayıt defterinde duruyor.
 #
-# Gereken depo sırları (Settings → Secrets → Actions):
+# Gereken depo sırları:
 #   DEPLOY_HOST     örn. 63.187.180.209
 #   DEPLOY_USER     örn. ubuntu
 #   DEPLOY_SSH_KEY  sunucuya erişen özel anahtarın tamamı (PEM)
+# GHCR için ayrı sır gerekmez; GITHUB_TOKEN yetiyor.
 
 name: Deploy backend
 
@@ -25,9 +26,51 @@ concurrency:
   group: deploy-backend
   cancel-in-progress: false
 
+env:
+  IMAGE: ghcr.io/${{ github.repository_owner }}/footttball-backend
+
 jobs:
+  build:
+    name: İmajı derle ve GHCR'a it
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      image: ${{ steps.meta.outputs.image }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Etiketleri hazırla
+        id: meta
+        run: |
+          # Küçük harfe indirgenir: GHCR büyük harfli depo adı kabul etmiyor.
+          REPO=$(echo "${{ env.IMAGE }}" | tr '[:upper:]' '[:lower:]')
+          echo "image=$REPO:${{ github.sha }}" >> "$GITHUB_OUTPUT"
+          echo "repo=$REPO" >> "$GITHUB_OUTPUT"
+
+      - name: Derle ve it
+        uses: docker/build-push-action@v6
+        with:
+          context: ./backend
+          push: true
+          tags: |
+            ${{ steps.meta.outputs.repo }}:${{ github.sha }}
+            ${{ steps.meta.outputs.repo }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
   deploy:
     name: Sunucuya dağıt
+    needs: build
     runs-on: ubuntu-latest
     environment: production
     steps:
@@ -44,10 +87,12 @@ jobs:
         run: |
           ssh -i ~/.ssh/deploy_key -o BatchMode=yes \
             "${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}" \
-            'cd /srv/tikitakatoe && ./infra/deploy.sh main'
+            "cd /srv/tikitakatoe \
+             && echo '${{ secrets.GITHUB_TOKEN }}' | docker login ghcr.io -u '${{ github.actor }}' --password-stdin \
+             && BACKEND_IMAGE='${{ needs.build.outputs.image }}' ./infra/deploy.sh main"
 
-      # deploy.sh içeriden sağlık kontrolü yapıyor; burada dışarıdan,
-      # nginx ve TLS dahil tüm zincir doğrulanır.
+      # deploy.sh içeriden sağlık kontrolü yapıyor ve düşerse önceki imaja
+      # dönüyor; burada dışarıdan, nginx ve TLS dahil tüm zincir doğrulanır.
       - name: Dışarıdan duman testi
         run: |
           set -e
@@ -55,9 +100,15 @@ jobs:
           echo
           curl -fsS --max-time 15 "https://tikitakatoe.com/api/v1/categories?count=3" > /dev/null
           echo "kategoriler ok"
+          curl -fsS --max-time 15 "https://tikitakatoe.com/api/v1/modes" > /dev/null
+          echo "mod kataloğu ok"
           # Eski istemcilerin uç noktası da ayakta kalmalı.
           curl -fsS --max-time 15 "https://tikitakatoe.com/check_room/0000" > /dev/null
           echo "eski uç nokta ok"
+
+      - name: Dağıtılan sürümü özetle
+        if: always()
+        run: echo "### Dağıtılan imaj\n\`${{ needs.build.outputs.image }}\`" >> $GITHUB_STEP_SUMMARY
 
       - name: Anahtarı sil
         if: always()

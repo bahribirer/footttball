@@ -118,6 +118,11 @@ rm -f /tmp/ttt_layers.sql
 echo "▶ Boş uyruklar dolduruluyor"
 /usr/bin/python3 backend/scripts/backfill_player_gaps.py
 
+# Katmanlar degisti; isim arama indeksi yeniden kurulmali. Bu adim atlanirsa
+# aramalar dogru calisir ama tam taramaya duser (~40 kat yavas).
+echo "> isim token indeksi kuruluyor"
+/usr/bin/python3 backend/scripts/build_name_tokens.py
+
 echo "> Yerelde bulunan uyruklar uygulaniyor"
 gunzip -f /tmp/ttt_nations.tsv.gz
 python3 - "$DB" /tmp/ttt_nations.tsv <<'NATAPPLY'

@@ -43,3 +43,15 @@ class CategoryResponse(BaseModel):
     label: str
     # "easy" | "medium" | "hard" — oda kurma ekranında rozet olarak gösterilir.
     difficulty: str = "medium"
+
+
+class ModeResponse(BaseModel):
+    """Mod kataloğu girdisi.
+
+    `enabled` sunucudan kontrol edilir: bozulan bir mod yeni uygulama sürümü
+    beklemeden kapatılabilir.
+    """
+    id: str
+    label: str
+    enabled: bool
+    min_client_version: str

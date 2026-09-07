@@ -1,0 +1,85 @@
+# Üretimi önceki bir sürüme döndürür.
+#
+# Dağıtım imajları GHCR'da commit SHA'sıyla duruyor; geri alma sadece
+# sunucuya "şu etiketi çek" demekten ibaret, yeniden derleme yok. Bu yüzden
+# saniyeler sürer.
+#
+# Kullanım: Actions → Rollback → Run workflow
+#   sha boş bırakılırsa GHCR'daki bir önceki sürüme dönülür.
+
+name: Rollback
+
+on:
+  workflow_dispatch:
+    inputs:
+      sha:
+        description: "Dönülecek commit SHA'sı (boşsa bir önceki sürüm)"
+        required: false
+        type: string
+
+concurrency:
+  group: deploy-backend
+  cancel-in-progress: false
+
+env:
+  IMAGE: ghcr.io/${{ github.repository_owner }}/footttball-backend
+
+jobs:
+  rollback:
+    name: Önceki sürüme dön
+    runs-on: ubuntu-latest
+    environment: production
+    permissions:
+      contents: read
+      packages: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Hedef sürümü belirle
+        id: target
+        run: |
+          REPO=$(echo "${{ env.IMAGE }}" | tr '[:upper:]' '[:lower:]')
+          if [ -n "${{ inputs.sha }}" ]; then
+            echo "image=$REPO:${{ inputs.sha }}" >> "$GITHUB_OUTPUT"
+          else
+            # main'deki bir önceki commit; latest zaten bozuk sürüme işaret
+            # ediyor olabileceği için ondan uzak duruluyor.
+            PREV=$(git rev-parse HEAD~1)
+            echo "image=$REPO:$PREV" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: SSH anahtarını yükle
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H "${{ secrets.DEPLOY_HOST }}" >> ~/.ssh/known_hosts 2>/dev/null
+
+      - name: İmajı geri al
+        run: |
+          ssh -i ~/.ssh/deploy_key -o BatchMode=yes \
+            "${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}" \
+            "cd /srv/tikitakatoe \
+             && echo '${{ secrets.GITHUB_TOKEN }}' | docker login ghcr.io -u '${{ github.actor }}' --password-stdin \
+             && docker pull '${{ steps.target.outputs.image }}' \
+             && grep -v '^BACKEND_IMAGE=' .env 2>/dev/null > .env.tmp || true \
+             && echo 'BACKEND_IMAGE=${{ steps.target.outputs.image }}' >> .env.tmp \
+             && mv .env.tmp .env \
+             && docker compose up -d"
+
+      - name: Doğrula
+        run: |
+          set -e
+          for i in $(seq 1 20); do
+            if curl -fsS --max-time 10 https://tikitakatoe.com/ping > /dev/null; then
+              echo "✓ ${{ steps.target.outputs.image }} ayakta"
+              exit 0
+            fi
+            sleep 3
+          done
+          echo "✗ Geri alınan sürüm de yanıt vermiyor" >&2
+          exit 1
+
+      - name: Anahtarı sil
+        if: always()
+        run: rm -f ~/.ssh/deploy_key

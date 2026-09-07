@@ -164,6 +164,29 @@ class ApiService {
     );
   }
 
+  // --- Modlar -------------------------------------------------------------
+
+  /// Sunucudan açık modların kimliklerini alır.
+  ///
+  /// Mod listesi uygulamada gömülü ama **açık olup olmadığı** sunucudan
+  /// gelir: bozulan bir mod yeni sürüm beklemeden kapatılabilir. Ağ hatasında
+  /// boş küme döner ve uygulama gömülü listeyi olduğu gibi gösterir — çevrimdışı
+  /// bir aksaklık yüzünden menünün boşalması, kapatma özelliğinden daha kötü.
+  static Future<Set<String>> enabledModeIds() async {
+    try {
+      final response = await http
+          .get(_uri('/api/v1/modes'))
+          .timeout(AppConfig.requestTimeout);
+      if (response.statusCode != 200) return const {};
+
+      final decoded = jsonDecode(utf8.decode(response.bodyBytes));
+      if (decoded is! List) return const {};
+      return decoded.map((e) => (e as Map)['id'] as String).toSet();
+    } catch (_) {
+      return const {};
+    }
+  }
+
   // --- Kategoriler --------------------------------------------------------
 
   static Future<List<GameCategory>> categories({int count = 3}) async {

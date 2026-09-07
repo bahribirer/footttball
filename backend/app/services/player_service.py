@@ -65,8 +65,28 @@ def has_history_layer() -> bool:
 # (piyasa değeri en yüksek) seçilir.
 
 
+def has_token_index() -> bool:
+    return _has_table("name_tokens")
+
+
 def _name_match(column: str, key: str) -> tuple[str, list]:
-    """Tam ad / soyad / ara isim eşleşmesi için SQL koşulu ve parametreleri."""
+    """Tam ad / soyad / ara isim eşleşmesi için SQL koşulu ve parametreleri.
+
+    Önceki sürüm baştan joker içeren `LIKE '% messi'` kullanıyordu. Bu kalıp
+    indeks kullanamıyor: SQLite her sorguda tabloyu baştan sona tarıyordu —
+    ölçümde players 43 ms, club_history 64 ms, tek doğrulama üç katmanda
+    ~110 ms. `name_tokens` isimleri kelimelerine ayırıp indekslediği için
+    arama eşitlik sorgusuna dönüşüyor.
+
+    Tablo yoksa (henüz üretilmemişse) eski davranışa düşülür; böylece
+    build_name_tokens.py çalıştırılmadan da sistem doğru sonuç verir.
+    """
+    if has_token_index():
+        return (
+            f"({column} = ? OR {column} IN "
+            "(SELECT name_normalized FROM name_tokens WHERE token = ?))",
+            [key, key],
+        )
     return (
         f"({column} = ? OR {column} LIKE ? OR {column} LIKE ? OR {column} LIKE ?)",
         [key, f"% {key}", f"{key} %", f"% {key} %"],

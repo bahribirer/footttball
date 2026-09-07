@@ -4,8 +4,9 @@ from fastapi import APIRouter, HTTPException
 
 from app.core.config import settings
 from app.models.schemas import CreateRoomRequest, CreateRoomResponse, RoomStatusResponse
-from app.realtime.hub import hub
+from app.realtime.hub import UnknownMode, hub
 from app.realtime.protocol import GameMode
+from app.services import mode_service
 
 router = APIRouter(tags=["rooms"])
 
@@ -13,6 +14,11 @@ router = APIRouter(tags=["rooms"])
 @router.post("/rooms", response_model=CreateRoomResponse)
 async def create_room(payload: CreateRoomRequest) -> CreateRoomResponse:
     """Oda kodunu sunucu üretir; iki istemcinin aynı kodu seçmesi engellenir."""
+    # Mod sunucudan kapatılmışsa oda hiç açılmasın; bozulan bir modu yeni
+    # uygulama sürümü beklemeden durdurabilmenin yolu bu.
+    if not mode_service.is_enabled(payload.mode):
+        raise HTTPException(status_code=409, detail="mode_disabled")
+
     room_settings: dict = {}
 
     if payload.mode == GameMode.TIKI_TAKA_TOE:
@@ -26,7 +32,11 @@ async def create_room(payload: CreateRoomRequest) -> CreateRoomResponse:
         if payload.category_id:
             room_settings["category_id"] = payload.category_id
 
-    room = await hub.reserve(payload.mode, room_settings)
+    try:
+        room = await hub.reserve(payload.mode, room_settings)
+    except UnknownMode:
+        # İstemci sunucudan yeni ya da kaldırılmış bir mod istiyor.
+        raise HTTPException(status_code=409, detail="mode_unknown") from None
     return CreateRoomResponse(code=room.code, mode=room.mode, settings=room.settings)
 
 

@@ -5,3 +5,5 @@ pycountry==24.6.1
 pydantic==2.10.4
 python-multipart==0.0.20
 websockets==14.1
+# Hata raporlama. SENTRY_DSN verilmezse devreye girmez.
+sentry-sdk[fastapi]==2.20.0
