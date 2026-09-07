@@ -14,7 +14,15 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY app ./app
 
 # Konteyner root olarak çalışmaz.
-RUN useradd --create-home --uid 10001 appuser \
+# Uygulama kullanıcısının uid'si host'taki sahibiyle aynı olmalı.
+#
+# Container 10001, host dizini 1000 iken WAL modu çalışmıyordu: SQLite bir
+# WAL veritabanını okurken bile -shm dosyasını oluşturmak zorunda ve
+# container o dizine yazamıyordu. Sonuç "attempt to write a readonly
+# database" — servis tümden okuyamaz hale geliyordu. APP_UID ile
+# ayarlanabilir; varsayılan, sunucudaki `ubuntu` kullanıcısının uid'si.
+ARG APP_UID=1000
+RUN useradd --create-home --uid ${APP_UID} appuser \
     && mkdir -p /app/static/logos /app/data \
     && chown -R appuser:appuser /app
 USER appuser
