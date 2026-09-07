@@ -62,18 +62,6 @@ ls -1t backend/data/tikitakapi.*.db 2>/dev/null \
       rm -f "$old_backup"
     done
 
-# Üretimde veritabanı container'a salt okunur bağlandığı için WAL'ı host
-# tarafında açmak gerekiyor; uygulama kendisi değiştiremez.
-python3 - "$DB_PATH" <<'WALPY'
-import sqlite3, sys
-con = sqlite3.connect(sys.argv[1], timeout=15)
-mode = con.execute("PRAGMA journal_mode").fetchone()[0]
-if str(mode).lower() != "wal":
-    print("  gunluk modu:", mode, "->", con.execute("PRAGMA journal_mode=WAL").fetchone()[0])
-else:
-    print("  gunluk modu: wal")
-con.close()
-WALPY
 
 # --- İmaj ve başlatma -------------------------------------------------
 # İmaj CI'da derlenip GHCR'a itiliyor. BACKEND_IMAGE verilmişse o sürüm
@@ -133,6 +121,46 @@ for i in $(seq 1 30); do
   }
   sleep 2
 done
+
+# --- Günlük modu ------------------------------------------------------
+# WAL, okuyucuyu yazıcıdan ayırır: aylık tazeleme sürerken oyuncular cevap
+# doğrulaması yapabilsin diye gerekli.
+#
+# Sırası kritik. WAL'da SQLite bir veritabanını OKURKEN bile -shm dosyasını
+# açmak zorunda; container data dizinini salt okunur bağlıyorsa bu "attempt
+# to write a readonly database" verir ve servis tümden okuyamaz hale gelir.
+# Bu yüzden yalnızca yazılabilir bağlama yapan sürüm ayağa kalkıp sağlık
+# kontrolünden geçtikten SONRA açılır, açıldıktan sonra da doğrulanır.
+# (Canlıda bir kez bu sırayla yanılıp kısa kesinti yaşandı.)
+echo "▶ Günlük modu"
+python3 - "$DB_PATH" <<'WALPY'
+import sqlite3, sys
+con = sqlite3.connect(sys.argv[1], timeout=30, isolation_level=None)
+mode = con.execute("PRAGMA journal_mode").fetchone()[0]
+if str(mode).lower() != "wal":
+    print("  gunluk modu:", mode, "->", con.execute("PRAGMA journal_mode=WAL").fetchone()[0])
+else:
+    print("  gunluk modu: wal")
+con.close()
+WALPY
+
+echo "▶ WAL sonrası sorgu doğrulaması"
+if curl -fsS --max-time 15 -X POST https://tikitakatoe.com/api/v1/guess_player/ \
+     -H 'Content-Type: application/json' \
+     -d '{"player_name":"Messi","nationality":"Argentina","club":"Paris Saint-Germain"}' \
+     2>/dev/null | grep -q true; then
+  echo "✓ WAL sonrası sorgular çalışıyor"
+else
+  echo "✗ WAL sonrası sorgular bozuldu — geri alınıyor" >&2
+  python3 - "$DB_PATH" <<'UNWALPY'
+import sqlite3, sys
+con = sqlite3.connect(sys.argv[1], timeout=30, isolation_level=None)
+con.execute("PRAGMA wal_checkpoint(TRUNCATE)")
+print("  geri alindi:", con.execute("PRAGMA journal_mode=DELETE").fetchone()[0])
+con.close()
+UNWALPY
+  exit 1
+fi
 
 # --- Güncel kadrolar --------------------------------------------------
 # Oyuncu veritabanı sezon anlık görüntülerinden oluşuyor ve son transfer
