@@ -36,11 +36,13 @@ jobs:
           check "https://tikitakatoe.com/ping"
           check "https://tikitakatoe.com/api/v1/categories?count=3"
           check "https://tikitakatoe.com/api/v1/modes"
+          check "https://tikitakatoe.com/status"
           check "https://tikitakatoe.com/check_room/0000"
 
           # /health veri katmanlarini ve cron islerini de bildiriyor; servis
           # ayakta ama veri eskiyorsa bunu ayri olarak gormek gerekiyor.
-          HEALTH=$(curl -fsS --max-time 20 https://tikitakatoe.com/health || echo '{}')
+          # /health ozel aga kisitli; /status disaridan yoklanabilen sade surumu.
+          HEALTH=$(curl -fsS --max-time 20 https://tikitakatoe.com/status || echo '{}')
           echo "$HEALTH"
           STATUS=$(printf '%s' "$HEALTH" | python3 -c "import json,sys; print(json.load(sys.stdin).get('status','yok'))" 2>/dev/null || echo yok)
           if [ "$STATUS" != "ok" ]; then

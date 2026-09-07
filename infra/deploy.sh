@@ -99,6 +99,17 @@ fi
 echo "▶ Servisler yeniden başlatılıyor"
 docker compose up -d
 
+# nginx yapılandırması bind mount ile geliyor; `up -d` onu tazelemiyor.
+# Yapılandırma sınandıktan sonra yeniden yüklenir — hatalıysa çalışan
+# nginx olduğu gibi kalır.
+if docker compose exec -T nginx nginx -t > /dev/null 2>&1; then
+  docker compose exec -T nginx nginx -s reload > /dev/null 2>&1 \
+    && echo "✓ nginx yapılandırması yeniden yüklendi"
+else
+  echo "⚠ nginx yapılandırması geçersiz, yeniden yükleme atlandı" >&2
+  docker compose exec -T nginx nginx -t || true
+fi
+
 # --- Doğrulama --------------------------------------------------------
 echo "▶ Sağlık kontrolü"
 for i in $(seq 1 30); do

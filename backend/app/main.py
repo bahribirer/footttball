@@ -86,6 +86,19 @@ def _job_statuses() -> dict:
     return result
 
 
+@app.get("/status", tags=["health"])
+async def status() -> dict:
+    """Dışarıya açık, detaysız sağlık sinyali.
+
+    `/health` oyuncu sayısı, katman durumu ve cron sonuçlarını döndürdüğü
+    için nginx'te özel ağa kısıtlı. Dışarıdan yoklama yapan izleme buna
+    erişemiyordu; burası yalnızca "ok" ya da "degraded" der, ayrıntı
+    vermez.
+    """
+    detail = await health()
+    return {"status": detail.get("status", "degraded")}
+
+
 @app.get("/health", tags=["health"])
 async def health() -> dict:
     """Konteyner sağlık kontrolü: veritabanı erişimi, katmanlar ve cron'lar."""

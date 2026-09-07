@@ -106,3 +106,57 @@ Eski `/ws/{room_id}` uç noktası mağazadaki eski sürümler için korunmuştur
 | `LOGO_DIR`             | `backend/static/logos`      |
 | `WS_IDLE_TIMEOUT_SECONDS` | `90`                     |
 | `EMPTY_ROOM_TTL_SECONDS`  | `120`                    |
+
+## Yeni oyun modu eklemek
+
+İskeleti üreteç kurar:
+
+```bash
+python backend/scripts/new_mode.py son_dakika "Son Dakika"
+```
+
+Ürettikleri: mod motoru, testi, Flutter ekranı. Kaydettikleri: `protocol.py`
+enum'u, `hub.py` motor eşlemesi, `mode_service.py` etiket ve sürüm eşiği,
+`game_mode.dart` enum girdisi.
+
+Kalan elle işler (ilk ikisi zaten derleme hatası verir):
+
+1. `lib/features/lobby/vs_screen.dart` — ekranı yönlendir
+2. `lib/features/lobby/waiting_room_screen.dart` — kural özeti
+3. `lib/features/lobby/create_room_screen.dart` — oda ayarları
+4. `test/responsive_test.dart` — ekran boyutu testi
+
+Doğrulama: `pytest tests/test_mode_registry.py` — her modun motoru, etiketi,
+sürüm eşiği ve katalog kaydı var mı bakar, ayrıca `protocol.py` ile
+`game_mode.dart` id'lerini karşılaştırır.
+
+### Modu açıp kapatmak
+
+Mod listesi `GET /api/v1/modes` ile sunucudan geliyor. Yeni modu kapalı
+gönderip hazır olunca açabilir, bozulursa App Review beklemeden
+kapatabilirsiniz:
+
+```bash
+# sunucuda
+echo 'MODES_DISABLED=son_dakika' >> .env && docker compose up -d
+```
+
+## Veri katmanları
+
+Cevap doğrulaması üç katmana sırayla bakar:
+
+| Katman | Kaynak | Ne için |
+|---|---|---|
+| `players` | sezon anlık görüntüleri | ana veri |
+| `squad_updates` | Wikipedia, haftalık | son transfer dönemi |
+| `club_history` | Wikidata, aylık | eski kadrolar ve uyruklar |
+
+`name_tokens` bunların isimlerini kelimelerine ayırıp indeksler. Katmanlar
+değiştiğinde yeniden kurulmalı:
+
+```bash
+python backend/scripts/build_name_tokens.py
+```
+
+Atlanırsa aramalar doğru çalışır ama tam taramaya düşer — ölçümde
+`verify_player` 2.6 ms yerine ~110 ms.
