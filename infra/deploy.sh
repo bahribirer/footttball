@@ -17,7 +17,11 @@ BRANCH="${1:-main}"
 DB_PATH="backend/data/tikitakapi.db"
 
 # Sağlık kontrolü düşerse dönülecek sürüm.
-PREVIOUS_IMAGE="$(grep '^BACKEND_IMAGE=' .env 2>/dev/null | tail -1 | cut -d= -f2-)"
+#
+# `|| true` şart: .env yoksa ya da içinde BACKEND_IMAGE geçmiyorsa grep
+# sıfırdan farklı döner ve `set -euo pipefail` betiği daha tek satır çıktı
+# vermeden öldürür. İlk dağıtımda tam olarak bu oldu.
+PREVIOUS_IMAGE="$(grep '^BACKEND_IMAGE=' .env 2>/dev/null | tail -1 | cut -d= -f2- || true)"
 export PREVIOUS_IMAGE
 
 echo "▶ Dal: $BRANCH"

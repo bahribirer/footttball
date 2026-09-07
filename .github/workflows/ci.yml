@@ -58,6 +58,23 @@ jobs:
       - name: pytest
         run: python -m pytest tests/ -q
 
+  scripts:
+    name: Altyapı betikleri
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Sözdizimi
+        run: |
+          for f in infra/*.sh; do
+            bash -n "$f" && echo "ok  $f"
+          done
+
+      # deploy.sh bir kez `.env` yokken tek satır çıktı vermeden ölmüştü;
+      # `set -euo pipefail` altında grep'in sıfırdan farklı dönmesi yetiyor.
+      - name: deploy.sh erken çıkmıyor
+        run: ./infra/test_deploy_sh.sh
+
   flutter:
     name: Flutter analiz + test
     runs-on: ubuntu-latest
