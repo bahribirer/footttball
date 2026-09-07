@@ -68,6 +68,12 @@ class Room:
     # Odaya hiç bağlanan olmadıysa kurucu hâlâ ayar ekranındadır; bu odalar
     # oyun bitip boşalanlardan daha uzun süre yaşatılır.
     had_players: bool = False
+    # Yeniden başlatmadan sonra geri yüklenen mod durumu; motor
+    # kurulurken okunur ve temizlenir.
+    pending_engine_state: dict | None = None
+    # Çok süreçli çalışmada yayınları paylaşılan depoya da ileten kanca;
+    # hub kurar, tek süreçte None kalır.
+    relay_broadcast: object | None = None
     lock: asyncio.Lock = field(default_factory=asyncio.Lock)
 
     @property
@@ -89,10 +95,26 @@ class Room:
         return 0 if 0 not in used else 1
 
     async def broadcast(self, message: dict, exclude: Player | None = None) -> None:
+        """Mesajı odadaki oyunculara yollar.
+
+        Çok süreçli çalışmada rakip başka bir backend sürecine bağlı
+        olabilir; yerel soketlere yazdıktan sonra mesaj paylaşılan depoya da
+        yayınlanır ve diğer süreç kendi soketlerine iletir. Tek süreçte bu
+        adım atlanır.
+        """
         for player in list(self.players):
             if player is exclude:
                 continue
             await player.send(message)
+
+        if self.relay_broadcast is not None:
+            await self.relay_broadcast(self, message)
+
+    async def deliver_local(self, message: dict) -> None:
+        """Başka bir süreçten gelen mesajı yerel soketlere yazar."""
+        for player in list(self.players):
+            if player.connected:
+                await player.send(message)
 
     async def send_room_state(self) -> None:
         await self.broadcast({

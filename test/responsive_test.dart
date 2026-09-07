@@ -13,7 +13,9 @@ import 'package:footttball/core/session.dart';
 import 'package:footttball/data/models/game_mode.dart';
 import 'package:footttball/data/models/team_model.dart';
 import 'package:footttball/features/games/tiki_taka_toe/tiki_taka_toe_screen.dart';
+import 'package:footttball/features/daily/daily_challenge_screen.dart';
 import 'package:footttball/features/lobby/create_room_screen.dart';
+import 'package:footttball/features/lobby/quick_match_sheet.dart';
 import 'package:footttball/features/lobby/join_room_screen.dart';
 import 'package:footttball/features/lobby/start_page.dart';
 import 'package:footttball/features/lobby/vs_screen.dart';
@@ -86,6 +88,26 @@ void main() {
     for (final mode in GameMode.values) {
       screenTest('Oda kur — ${mode.title}', () => const CreateRoomScreen(),
           mode: mode);
+    }
+  });
+
+  // Rakip gerektirmeyen iki yeni giriş; ikisi de mod menüsünün üstünde
+  // duruyor ve dar ekranlarda taşmaya en açık yer orası.
+  group('rakipsiz girişler', () {
+    for (final entry in _sizes.entries) {
+      testWidgets('Günün tahtası — ${entry.key}', (tester) async {
+        await render(tester, entry.value, const DailyChallengeScreen());
+      });
+    }
+
+    for (final entry in _sizes.entries) {
+      testWidgets('Hızlı eşleş — ${entry.key}', (tester) async {
+        await render(
+          tester,
+          entry.value,
+          Scaffold(body: QuickMatchSheet(modes: GameMode.values)),
+        );
+      });
     }
   });
 

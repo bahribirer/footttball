@@ -2,7 +2,7 @@
 
 from fastapi import APIRouter
 
-from app.api.v1 import categories, grid, logos, modes, players, rooms
+from app.api.v1 import categories, daily, grid, logos, modes, players, rooms
 
 api_router = APIRouter()
 api_router.include_router(grid.router)
@@ -11,3 +11,4 @@ api_router.include_router(logos.router)
 api_router.include_router(rooms.router)
 api_router.include_router(categories.router)
 api_router.include_router(modes.router)
+api_router.include_router(daily.router)

@@ -10,7 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api.v1.router import api_router
 from app.core.config import settings
 from app.core.observability import setup_error_reporting
-from app.realtime import gateway, legacy
+from app.realtime import gateway, legacy, queue_gateway
 from app.realtime.hub import hub
 
 logging.basicConfig(
@@ -25,16 +25,32 @@ setup_error_reporting(settings.ENVIRONMENT, release=settings.RELEASE)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    """Açılışta odaları geri yükler, kapanışta kaydeder.
+
+    Oda durumu süreç belleğinde olduğu için her dağıtım oynanan maçları
+    öldürüyordu. Kapanırken durum diske yazılıyor, açılışta geri okunuyor;
+    istemciler zaten belirteçle otomatik bağlandığı ve container yeniden
+    başlaması saniyeler sürdüğü için oyuncu tarafında görünmüyor.
+    """
+    await hub.start_store()
+    restored = await hub.restore()
     cleanup_task = asyncio.create_task(hub.cleanup_loop())
-    logger.info("Tiki Taka Toe API başladı (%s)", settings.ENVIRONMENT)
+    logger.info(
+        "Tiki Taka Toe API başladı (%s, %d oda geri yüklendi, çok süreç: %s)",
+        settings.ENVIRONMENT, restored, hub.multi_process,
+    )
     try:
         yield
     finally:
+        # Sıra önemli: önce oyunculara haber ver, sonra durumu yaz.
+        await hub.begin_shutdown()
+        await hub.snapshot()
         cleanup_task.cancel()
         try:
             await cleanup_task
         except asyncio.CancelledError:
             pass
+        await hub.stop_store()
 
 
 app = FastAPI(
@@ -55,6 +71,7 @@ app.add_middleware(
 
 app.include_router(api_router, prefix="/api/v1")
 app.include_router(gateway.router)
+app.include_router(queue_gateway.router)
 app.include_router(legacy.router)
 
 

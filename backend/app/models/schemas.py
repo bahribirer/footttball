@@ -55,3 +55,22 @@ class ModeResponse(BaseModel):
     label: str
     enabled: bool
     min_client_version: str
+
+
+class DailyBoardResponse(BaseModel):
+    """Günün tahtası. Tarihten türetildiği için sunucu hiçbir şey saklamaz."""
+    date: str
+    number: int
+    nations: list[str]
+    clubs: list[str]
+
+
+class DailyShareRequest(BaseModel):
+    number: int
+    # Soldan sağa, yukarıdan aşağıya 9 kutu.
+    results: list[bool]
+
+
+class DailyShareResponse(BaseModel):
+    text: str
+    score: int

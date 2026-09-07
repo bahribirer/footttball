@@ -326,6 +326,13 @@ class GameSocket {
 
   void _handleEvent(Map<String, dynamic> message) {
     switch (message['event']) {
+      // Sunucu bilerek kapanıyor (dağıtım). Normal bir kopma sanıp tolerans
+      // süresi boyunca beklemek yerine hemen dönmeye çalışılır; sunucu
+      // birkaç saniye içinde geri geliyor ve odalar korunuyor.
+      case 'server_restarting':
+        _reconnectAttempt = 0;
+        break;
+
       case 'next_round':
       case 'rematch_data':
         onNextRoundData?.call(message);

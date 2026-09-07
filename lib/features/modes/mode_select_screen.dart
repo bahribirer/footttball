@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:footttball/core/session.dart';
 import 'package:footttball/data/models/game_mode.dart';
 import 'package:footttball/data/services/api_service.dart';
+import 'package:footttball/features/daily/daily_challenge_screen.dart';
+import 'package:footttball/features/lobby/quick_match_sheet.dart';
 import 'package:footttball/features/lobby/start_page.dart';
 import 'package:footttball/shared/widgets/app_background.dart';
 
@@ -47,6 +49,27 @@ class _ModeSelectScreenState extends State<ModeSelectScreen>
   void dispose() {
     _controller.dispose();
     super.dispose();
+  }
+
+  void _openDaily() {
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => const DailyChallengeScreen()),
+    );
+  }
+
+  void _openQuickMatch() {
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (_) => QuickMatchSheet(
+        modes: _enabledIds == null
+            ? GameMode.values
+            : GameMode.values
+                .where((m) => _enabledIds!.contains(m.id))
+                .toList(),
+      ),
+    );
   }
 
   void _openMode(GameMode mode) {
@@ -121,6 +144,36 @@ class _ModeSelectScreenState extends State<ModeSelectScreen>
                     color: Colors.white.withOpacity(0.55),
                     fontSize: 12.5,
                     fontStyle: FontStyle.italic,
+                  ),
+                ),
+                const SizedBox(height: 14),
+                // Rakip gerektirmeyen iki giriş: kuyruk ve günlük tahta.
+                // Oda kodu paylaşmak tek yol olduğu sürece oyuna girmek
+                // arkadaşının o an müsait olmasına bağlıydı.
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 18),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: _QuickTile(
+                          icon: Icons.bolt_rounded,
+                          label: 'HIZLI EŞLEŞ',
+                          hint: 'Rastgele rakip',
+                          colors: const [Color(0xFFFF512F), Color(0xFFDD2476)],
+                          onTap: _openQuickMatch,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _QuickTile(
+                          icon: Icons.calendar_today_rounded,
+                          label: 'GÜNÜN TAHTASI',
+                          hint: 'Tek başına',
+                          colors: const [Color(0xFF11998E), Color(0xFF38EF7D)],
+                          onTap: _openDaily,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
                 const SizedBox(height: 16),
@@ -326,6 +379,61 @@ class _ModeCard extends StatelessWidget {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Mod listesinin üstündeki kısayol kartı.
+class _QuickTile extends StatelessWidget {
+  const _QuickTile({
+    required this.icon,
+    required this.label,
+    required this.hint,
+    required this.colors,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final String hint;
+  final List<Color> colors;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            gradient: LinearGradient(colors: colors),
+          ),
+          child: Column(
+            children: [
+              Icon(icon, color: Colors.white, size: 22),
+              const SizedBox(height: 6),
+              Text(
+                label,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 0.8,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                hint,
+                style: const TextStyle(color: Colors.white70, fontSize: 10),
+              ),
+            ],
+          ),
         ),
       ),
     );
