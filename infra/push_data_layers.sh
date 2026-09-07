@@ -1,5 +1,9 @@
 #!/usr/bin/env bash
-# Veri katmanlarını (club_history, squad_updates) sunucuya taşır.
+# Kulüp tarihçesi katmanını (club_history) sunucuya taşır.
+#
+# squad_updates BİLEREK aktarılmaz: o katmanı sunucudaki haftalık cron
+# üretiyor ve çoğu zaman yereldekinden taze oluyor. Aktarmak cron'un
+# eklediği son transferleri geri alırdı.
 #
 # Bu tablolar Wikipedia/Wikidata'dan üretiliyor ve üretimi saatler sürüyor.
 # Sunucuda yeniden üretmek yerine yerelde hazırlanıp buradan aktarılır;
@@ -30,10 +34,10 @@ with open(out, "w", encoding="utf-8") as fh:
         # Yalnızca katman tabloları; ana `players` tablosu aktarılmaz.
         # Düz alt dize araması indeks tanımlarını da yakalar
         # ("CREATE INDEX idx_club_history_name ON club_history(...)").
-        if "club_history" in line or "squad_updates" in line:
+        if "club_history" in line:
             fh.write(line + "\n")
 print(f"  club_history : {con.execute('SELECT COUNT(*) FROM club_history').fetchone()[0]} kayıt")
-print(f"  squad_updates: {con.execute('SELECT COUNT(*) FROM squad_updates').fetchone()[0]} kayıt")
+print("  squad_updates: aktarılmıyor (sunucudaki cron üretiyor)")
 PY
 echo "  $(wc -l < "$DUMP" | tr -d ' ') satır"
 
@@ -84,7 +88,7 @@ con = sqlite3.connect(db)
 # kesilirse veritabanı yarım kalıyor ve sunucu var olmayan tabloyu
 # sorguladığı için canlıda hata veriyordu.
 sql = open(dump, encoding="utf-8").read()
-for table in ("club_history", "squad_updates"):
+for table in ("club_history",):
     sql = sql.replace(f'"{table}"', f'"{table}__new"')
     sql = sql.replace(f"TABLE {table} ", f"TABLE {table}__new ")
     sql = sql.replace(f"ON {table}(", f"ON {table}__new(")
@@ -92,11 +96,11 @@ for table in ("club_history", "squad_updates"):
 sql = sql.replace("CREATE INDEX idx_", "CREATE INDEX new_idx_")
 
 con.executescript("DROP TABLE IF EXISTS club_history__new;"
-                  "DROP TABLE IF EXISTS squad_updates__new;")
+                  )
 con.executescript(sql)
 
 counts = {}
-for table in ("club_history", "squad_updates"):
+for table in ("club_history",):
     counts[table] = con.execute(f"SELECT COUNT(*) FROM {table}__new").fetchone()[0]
     if counts[table] == 0:
         raise SystemExit(f"{table} bos geldi, degisiklik uygulanmadi")
@@ -105,9 +109,7 @@ for table in ("club_history", "squad_updates"):
 con.executescript(
     "BEGIN;"
     "DROP TABLE IF EXISTS club_history;"
-    "DROP TABLE IF EXISTS squad_updates;"
     "ALTER TABLE club_history__new RENAME TO club_history;"
-    "ALTER TABLE squad_updates__new RENAME TO squad_updates;"
     "COMMIT;")
 con.commit()
 for table, n in counts.items():
