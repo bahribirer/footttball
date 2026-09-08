@@ -80,6 +80,35 @@ class BaseMode:
                 "message": "Oyun beklenmedik bir hatayla durdu.",
             })
 
+    # --- yeniden başlatmayı atlatma ---------------------------------------
+
+    def snapshot(self) -> dict | None:
+        """Yeniden başlatmada saklanacak mod durumu.
+
+        Varsayılan olarak yalnızca skorlar ve tur numarası taşınır; tur
+        zamanlayıcıları süreçle birlikte gittiği için içinde bulunulan tur
+        baştan başlar. Oyun mantığı istemcide olan modlar (Tiki Taka Toe)
+        zaten tahtayı kendileri koruyor.
+        """
+        return {
+            "mode": str(self.mode_id),
+            "round": getattr(self, "round", 0),
+        }
+
+    def restore(self, data: dict) -> None:
+        """Anlık görüntüden geri yükler.
+
+        Alt sınıflar kendi alanlarını ekleyebilir. Skorlar oyuncularda
+        tutulduğu için burada ele alınmaz; hub onları geri yüklüyor.
+        """
+        if not data:
+            return
+        if data.get("mode") != str(self.mode_id):
+            logger.warning("Farkli moda ait durum yok sayildi: %s", data.get("mode"))
+            return
+        if hasattr(self, "round"):
+            self.round = int(data.get("round", 0))
+
     async def resend_state(self, player: "Player") -> None:
         """Yeniden bağlanan oyuncuya oyunun güncel durumunu yollar.
 

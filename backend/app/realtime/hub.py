@@ -9,6 +9,7 @@ import time
 from fastapi import WebSocket
 
 from app.core.config import settings
+from app.realtime import persistence, store as room_store
 from app.realtime.modes.base import BaseMode
 from app.realtime.modes.category_race import CategoryRaceMode
 from app.realtime.modes.last_letter import LastLetterMode
@@ -54,6 +55,51 @@ class RoomHub:
     def __init__(self) -> None:
         self._rooms: dict[str, Room] = {}
         self._lock = asyncio.Lock()
+        # Tek süreçte bellek, REDIS_URL verilince Redis. Süreçler arası
+        # paylaşım ve yayın bu katmandan geçer.
+        self.store: room_store.RoomStore = room_store.build_store()
+
+    async def start_store(self) -> None:
+        try:
+            await self.store.start()
+        except Exception:
+            # Redis gelmediyse oyunu durdurmak yerine tek süreçli çalışılır.
+            logger.exception("Paylasilan depo acilamadi, bellege dusuluyor")
+            self.store = room_store.MemoryStore()
+            await self.store.start()
+
+    async def stop_store(self) -> None:
+        try:
+            await self.store.stop()
+        except Exception:
+            logger.exception("Depo kapatilamadi")
+
+    @property
+    def multi_process(self) -> bool:
+        return getattr(self.store, "multi_process", False)
+
+    async def _publish_room(self, room: Room) -> None:
+        """Oda durumunu paylaşılan depoya yazar.
+
+        Yalnızca çok süreçli modda anlamlı; tek süreçte fazladan iş
+        yapmamak için atlanır.
+        """
+        if not self.multi_process:
+            return
+        try:
+            await self.store.save_room(room.code, {
+                "code": room.code,
+                "mode": str(room.mode),
+                "settings": room.settings,
+                "owner": room_store.NODE_ID,
+                "players": [
+                    {"name": p.name, "slot": p.slot, "score": p.score,
+                     "connected": p.connected}
+                    for p in room.players
+                ],
+            })
+        except Exception:
+            logger.exception("Oda durumu paylasilamadi: %s", room.code)
 
     # --- oda yaşam döngüsü ------------------------------------------------
 
@@ -76,7 +122,9 @@ class RoomHub:
             room = Room(code=code, mode=resolved, settings=room_settings or {})
             room.emptied_at = time.time()
             self._rooms[code] = room
-            return room
+        await self.attach_relay(room)
+        await self._publish_room(room)
+        return room
 
     async def join(
         self,
@@ -128,7 +176,9 @@ class RoomHub:
             room.players.append(player)
             room.emptied_at = None
             room.had_players = True
-            return room, player, False
+        await self.attach_relay(room)
+        await self._publish_room(room)
+        return room, player, False
 
     async def mark_disconnected(self, room: Room, player: Player) -> None:
         """Oyuncuyu kopmuş işaretler ama odadan düşürmez.
@@ -155,7 +205,151 @@ class RoomHub:
 
     async def drop_room(self, code: str) -> None:
         async with self._lock:
-            self._rooms.pop(code, None)
+            room = self._rooms.pop(code, None)
+        if room is not None:
+            await self.detach_relay(room)
+        if self.multi_process:
+            try:
+                await self.store.delete_room(code)
+            except Exception:
+                logger.debug("Paylasilan oda kaydi silinemedi: %s", code)
+
+    # --- yeniden başlatmayı atlatma ---------------------------------------
+
+    async def attach_relay(self, room: Room) -> None:
+        """Odayı süreçler arası yayına bağlar.
+
+        Tek süreçte hiçbir şey yapmaz. Çok süreçte oda kanalına abone olunur
+        ve `broadcast` çağrıları depoya da yayınlanır; böylece rakibi başka
+        bir sürece bağlı olan oyuncu da mesajları görür.
+        """
+        if not self.multi_process or room.relay_broadcast is not None:
+            return
+
+        async def _relay(target: Room, message: dict) -> None:
+            try:
+                await self.store.publish(target.code, message)
+            except Exception:
+                logger.exception("Oda yayini iletilemedi: %s", target.code)
+
+        async def _incoming(message: dict) -> None:
+            message.pop("_node", None)
+            await room.deliver_local(message)
+
+        room.relay_broadcast = _relay
+        try:
+            await self.store.subscribe(room.code, _incoming)
+        except Exception:
+            logger.exception("Oda kanalina abone olunamadi: %s", room.code)
+            room.relay_broadcast = None
+
+    async def detach_relay(self, room: Room) -> None:
+        if not self.multi_process:
+            return
+        room.relay_broadcast = None
+        try:
+            await self.store.unsubscribe(room.code)
+        except Exception:
+            logger.debug("Oda kanali kapatilamadi: %s", room.code)
+
+    async def begin_shutdown(self) -> None:
+        """Kapanmadan önce oyunculara yeniden bağlanmalarını söyler.
+
+        Soketi sessizce düşürmek istemciyi normal bir kopma sanıp tolerans
+        süresi boyunca beklemeye itiyordu. Açık bir bildirim, yeniden
+        bağlanmayı hemen başlatır — sunucu birkaç saniye sonra zaten geri
+        gelmiş oluyor.
+        """
+        rooms = list(self._rooms.values())
+        for room in rooms:
+            try:
+                await room.broadcast({
+                    "type": ServerMessage.EVENT,
+                    "event": "server_restarting",
+                    "reconnect_in_seconds": 5,
+                })
+            except Exception:
+                logger.debug("Yeniden baslatma bildirimi gonderilemedi: %s", room.code)
+
+    async def snapshot(self) -> int:
+        """Ayakta olan odaları diske yazar.
+
+        Yalnızca gerçekten oynanan odalar kaydedilir: kimsenin bağlanmadığı
+        rezerve odaları ya da biten maçları diriltmenin anlamı yok.
+        """
+        rooms: list[dict] = []
+        async with self._lock:
+            for room in self._rooms.values():
+                if not room.had_players or not room.players:
+                    continue
+                engine = room.engine
+                if engine is not None and getattr(engine, "finished", False):
+                    continue
+                rooms.append({
+                    "code": room.code,
+                    "mode": str(room.mode),
+                    "settings": room.settings,
+                    "created_at": room.created_at,
+                    "players": [
+                        {
+                            "name": player.name,
+                            "slot": player.slot,
+                            "score": player.score,
+                            "token": player.token,
+                        }
+                        for player in room.players
+                    ],
+                    # Modun kendi durumu; geri yüklemede ne kadarının
+                    # kullanılabileceğine mod karar verir.
+                    "engine": engine.snapshot() if engine is not None else None,
+                })
+        return persistence.save(rooms)
+
+    async def restore(self) -> int:
+        """Diskteki odaları geri yükler.
+
+        Oyuncular kopuk olarak kurulur; istemciler belirteçleriyle geri
+        bağlanınca yerlerine otururlar. Tolerans sayacı yeniden başlar,
+        yoksa kapalı geçen süre onların hakkından yenirdi.
+        """
+        restored = 0
+        for entry in persistence.load():
+            try:
+                mode = GameMode(entry["mode"])
+            except (KeyError, ValueError):
+                logger.warning("Bilinmeyen modlu oda atlandi: %s", entry.get("code"))
+                continue
+
+            room = Room(
+                code=entry["code"],
+                mode=mode,
+                settings=entry.get("settings") or {},
+                created_at=entry.get("created_at", time.time()),
+            )
+            room.had_players = True
+            now = time.time()
+            for raw in entry.get("players") or []:
+                player = Player(
+                    socket=None,  # type: ignore[arg-type]
+                    name=raw.get("name", ""),
+                    slot=int(raw.get("slot", 0)),
+                )
+                player.connected = False
+                player.disconnected_at = now
+                player.score = int(raw.get("score", 0))
+                if raw.get("token"):
+                    player.token = raw["token"]
+                room.players.append(player)
+
+            room.emptied_at = now
+            room.pending_engine_state = entry.get("engine")
+            async with self._lock:
+                self._rooms[room.code] = room
+            restored += 1
+
+        if restored:
+            logger.info("%d oda geri yuklendi", restored)
+        return restored
 
     # --- sorgular ---------------------------------------------------------
 
@@ -181,6 +375,16 @@ class RoomHub:
     def build_engine(self, room: Room) -> BaseMode:
         engine_cls = MODE_ENGINES[room.mode]
         room.engine = engine_cls(room)
+
+        # Yeniden başlatmadan sonra geri yüklenen durum varsa uygulanır ve
+        # tüketilir; ikinci kez kurulan motora sızmamalı.
+        if room.pending_engine_state:
+            try:
+                room.engine.restore(room.pending_engine_state)
+            except Exception:
+                logger.exception("Mod durumu geri yuklenemedi: %s", room.code)
+            finally:
+                room.pending_engine_state = None
         return room.engine
 
     # --- bakım ------------------------------------------------------------
@@ -224,6 +428,10 @@ class RoomHub:
             await asyncio.sleep(5)
             try:
                 await self.expire_disconnected()
+                # Kuyrukta unutulan oyuncular da temizlenir; bağlantısı
+                # kopanlar zaten düşüyor ama çok uzun bekleyenler kalıyordu.
+                from app.realtime.matchmaking import matchmaker
+                await matchmaker.sweep()
                 now = time.time()
                 async with self._lock:
                     stale = [

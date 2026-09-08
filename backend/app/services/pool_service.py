@@ -87,17 +87,23 @@ def build_duel_board(
     club_count: int = 5,
     nation_count: int = 5,
     min_players: int = MIN_PLAYERS_PER_CELL,
+    rng: random.Random | None = None,
 ) -> tuple[list[str], list[str]]:
     """Her (millet, kulüp) çiftinde en az `min_players` oyuncu olan tahta üretir.
 
     Döndürülen (nations, clubs) ikilisinde tüm kombinasyonlar çözülebilirdir;
     böylece oyuncular hangi ikiliyi seçerse seçsin cevabı olan bir soru çıkar.
+
+    `rng` verilirse rastgelelik oradan alınır. Günlük meydan okuma tahtayı
+    tarihten türettiği için bunu kullanıyor: aynı gün her istekte, her
+    süreçte aynı tahta çıkmalı.
     """
+    rand = rng or random
     matrix = _club_nation_matrix()
     clubs_pool = available_clubs()
 
     for _ in range(MAX_BOARD_ATTEMPTS):
-        clubs = random.sample(clubs_pool, club_count)
+        clubs = rand.sample(clubs_pool, club_count)
 
         common = None
         for club in clubs:
@@ -110,19 +116,19 @@ def build_duel_board(
                 break
 
         if common and len(common) >= nation_count:
-            nations = random.sample(sorted(common), nation_count)
-            random.shuffle(clubs)
+            nations = rand.sample(sorted(common), nation_count)
+            rand.shuffle(clubs)
             return nations, clubs
 
     # Havuz daralırsa tanınırlık şartını gevşetip tekrar dene.
     for _ in range(MAX_BOARD_ATTEMPTS):
-        clubs = random.sample(clubs_pool, club_count)
+        clubs = rand.sample(clubs_pool, club_count)
         sets = [
             {n for n, total in matrix[club].items() if total >= 1}
             for club in clubs
         ]
         common = set.intersection(*sets)
         if len(common) >= nation_count:
-            return random.sample(sorted(common), nation_count), clubs
+            return rand.sample(sorted(common), nation_count), clubs
 
     raise ValueError("Oyuncu Tahmin tahtası üretilemedi")

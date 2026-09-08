@@ -30,6 +30,10 @@ services:
       # Bozulan bir modu yeni uygulama sürümü beklemeden kapatmak için:
       # virgülle ayrılmış mod kimlikleri, örn. "last_letter,category_race"
       MODES_DISABLED: ${MODES_DISABLED:-}
+      # Verilirse oda durumu Redis'te paylaşılır ve birden fazla
+      # backend süreci çalıştırılabilir. Boşsa tek süreç + disk
+      # anlık görüntüsü ile çalışılır.
+      REDIS_URL: ${REDIS_URL:-}
     volumes:
       # Yazılabilir bağlanıyor ama uygulama bağlantıları `mode=ro`: WAL
       # modunda SQLite okurken bile -shm dosyasını açabilmek zorunda, salt
@@ -50,6 +54,28 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
+
+  # Çok süreçli çalışma için paylaşılan oda durumu.
+  #
+  # `profiles` arkasında: tek backend süreciyle çalışan kurulumda gereksiz.
+  # Açmak için:  docker compose --profile scale up -d
+  # ve REDIS_URL=redis://redis:6379/0
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    profiles: [scale]
+    # 1.9 GB'lik makinede Redis'in belleği yemesi engellenir; oda durumu
+    # küçük, 64 MB fazlasıyla yeter.
+    command: >
+      redis-server --save "" --appendonly no
+      --maxmemory 64mb --maxmemory-policy allkeys-lru
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+    networks:
+      - edge
 
   nginx:
     image: nginx:1.27-alpine

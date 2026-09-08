@@ -187,6 +187,43 @@ class ApiService {
     }
   }
 
+  // --- Günlük meydan okuma -------------------------------------------------
+
+  /// Günün tahtası. Tarihten türetildiği için herkese aynı gelir.
+  static Future<DailyBoard?> dailyBoard() async {
+    try {
+      final json = await _getJson(_uri('/api/v1/daily'));
+      return DailyBoard.fromJson(json);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Sonucu paylaşılabilir emoji ızgarasına çevirir.
+  ///
+  /// Metin sunucuda üretiliyor ki biçim tek yerden değişsin ve tüm
+  /// paylaşımlar aynı görünsün.
+  static Future<String?> dailyShareText({
+    required int number,
+    required List<bool> results,
+  }) async {
+    try {
+      final response = await http
+          .post(
+            _uri('/api/v1/daily/share'),
+            headers: const {'Content-Type': 'application/json'},
+            body: jsonEncode({'number': number, 'results': results}),
+          )
+          .timeout(AppConfig.requestTimeout);
+      if (response.statusCode != 200) return null;
+      final json =
+          jsonDecode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>;
+      return json['text'] as String?;
+    } catch (_) {
+      return null;
+    }
+  }
+
   // --- Kategoriler --------------------------------------------------------
 
   static Future<List<GameCategory>> categories({int count = 3}) async {
@@ -206,6 +243,27 @@ class ApiService {
             ))
         .toList();
   }
+}
+
+class DailyBoard {
+  final String date;
+  final int number;
+  final List<String> nations;
+  final List<String> clubs;
+
+  const DailyBoard({
+    required this.date,
+    required this.number,
+    required this.nations,
+    required this.clubs,
+  });
+
+  factory DailyBoard.fromJson(Map<String, dynamic> json) => DailyBoard(
+        date: json['date'] as String? ?? '',
+        number: json['number'] as int? ?? 0,
+        nations: ((json['nations'] as List?) ?? const []).cast<String>(),
+        clubs: ((json['clubs'] as List?) ?? const []).cast<String>(),
+      );
 }
 
 class RoomTicket {
