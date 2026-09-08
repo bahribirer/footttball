@@ -45,6 +45,20 @@ dışarıdan yoklar.
 | Ayın 1'i 05:00 | Kulüp tarihçesi + uyruk doldurma + isim indeksi |
 | Pazar 03:00 | Offsite yedek (`TTT_BACKUP_BUCKET` ayarlıysa) |
 
+## production ortamı
+
+Hem backend dağıtımı hem TestFlight yüklemesi `production` ortamından
+geçiyor ve onay bekliyor. Dağıtım dalı kuralı **iki** girdi içermeli:
+
+| Tür | Değer |
+|---|---|
+| branch | `main` |
+| tag | `v*` |
+
+Yalnızca "korumalı dallar" seçiliyken etiketten tetiklenen koşu tek adım
+bile çalıştırmadan reddediliyor — etiket dal sayılmıyor. v1.2.0'da bu
+yaşandı.
+
 ## Ortam değişkenleri
 
 | Değişken | Ne işe yarar |

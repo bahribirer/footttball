@@ -33,6 +33,10 @@ jobs:
     name: Derle ve yükle
     runs-on: macos-26
     timeout-minutes: 60
+    # production ortamı onay istiyor. Dağıtım dalı kuralı hem `main`
+    # dalını hem `v*` etiketlerini kapsamalı: yalnızca "korumalı
+    # dallar" seçiliyken etiketten tetiklenen koşu, tek adım bile
+    # çalıştırmadan reddediliyor.
     environment: production
     steps:
       - uses: actions/checkout@v4
