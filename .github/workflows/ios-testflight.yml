@@ -109,10 +109,15 @@ jobs:
       # açar. Bu adıma kadar dağıtım elle kalıyordu.
       - name: Testçilere dağıt
         run: |
-          python3 -m pip install --quiet 'pyjwt[crypto]' requests
+          # Sanal ortam şart: macOS koşucusunun sistem Python'u PEP 668
+          # gereği "externally managed" ve doğrudan pip kurulumunu
+          # reddediyor ("externally-managed-environment").
+          python3 -m venv "$RUNNER_TEMP/relvenv"
+          "$RUNNER_TEMP/relvenv/bin/pip" install --quiet 'pyjwt[crypto]' requests
           PLIST=build/ios/archive/Runner.xcarchive/Info.plist
           BUILD=$(/usr/libexec/PlistBuddy -c "Print :ApplicationProperties:CFBundleVersion" "$PLIST")
-          python3 infra/testflight_release.py --build "$BUILD" --group "${{ vars.TESTFLIGHT_GROUP || 'tiki taka' }}"
+          "$RUNNER_TEMP/relvenv/bin/python" infra/testflight_release.py \
+            --build "$BUILD" --group "${{ vars.TESTFLIGHT_GROUP || 'tiki taka' }}"
         env:
           APPSTORE_KEY_ID: ${{ secrets.APPSTORE_KEY_ID }}
           APPSTORE_ISSUER_ID: ${{ secrets.APPSTORE_ISSUER_ID }}
