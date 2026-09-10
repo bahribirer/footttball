@@ -1,0 +1,48 @@
+{
+  "version": "1.2.0",
+  "git_sha": "6f1d293d15c1a0dd6d0003cfdce77833c090a29b",
+  "built_at": "2026-09-10T20:41:40+00:00",
+  "includes_database": false,
+  "images": {
+    "RELEASE_VERSION": "1.2.0",
+    "RELEASE_PLATFORM": "linux/arm64",
+    "BACKEND_IMAGE": "footttball-backend:1.2.0",
+    "NGINX_IMAGE": "ttt-nginx:1.2.0",
+    "REDIS_IMAGE": "ttt-redis:1.2.0",
+    "CERTBOT_IMAGE": "ttt-certbot:1.2.0",
+    "INCLUDED_SERVICES": "backend nginx redis certbot"
+  },
+  "sources": {
+    "backend": {
+      "pulled_from": "calisma agaci (6f1d293d15c1)",
+      "digest": "sha256:3bb4dcf7aa435a0e3055ccaefaeb4e832a92cf3e90c3cfcaf58a558817b7a53d"
+    },
+    "nginx": {
+      "pulled_from": "nginx:1.27-alpine",
+      "digest": "nginx@sha256:65645c7bb6a0661892a8b03b89d0743208a18dd2f3f17a54ef4b76fb8e2f2a10"
+    },
+    "redis": {
+      "pulled_from": "redis:7-alpine",
+      "digest": "redis@sha256:ff02b58f971e7d7d156a1267e283fcbbeee91773b6aa36c49dac28ecfe28eadf"
+    },
+    "certbot": {
+      "pulled_from": "certbot/certbot:latest",
+      "digest": "certbot/certbot@sha256:f70ad0adbb7e117f0fe42a63c553f28ea451edabc0148757b6efcd9735acaa20"
+    }
+  },
+  "artifacts": {
+    "backend.tar.gz": {
+      "bytes": 66600215
+    },
+    "certbot.tar.gz": {
+      "bytes": 83836329
+    },
+    "nginx.tar.gz": {
+      "bytes": 21719303
+    },
+    "redis.tar.gz": {
+      "bytes": 16649139
+    }
+  },
+  "total_bytes": 188819870
+}
