@@ -119,7 +119,14 @@ resolve_python() {
 PY="$(resolve_python)"
 
 GIT_SHA="$(git rev-parse HEAD)"
-GIT_DIRTY="$(git status --porcelain | head -1)"
+# Yalnızca KAYNAK değişiklikleri sayılır.
+#
+# know-how/releases/ ve üretilen güncelleme notları paketin çıktısı, girdisi
+# değil. Bir sürümü yeniden üretmek ya da eskisini silmek ağacı "kirli"
+# gösterip yeni paket üretmeyi engelliyordu — kontrolün amacı bu değil.
+GIT_DIRTY="$(git status --porcelain \
+  -- ':!know-how/releases' ':!know-how/dokumanlar/guncelleme-notlari' \
+  | head -1)"
 # Backend'in kaynağı açıkça verildiyse çalışma ağacının hâli önemsiz:
 # paket o ağaçtan değil, söylenen yapıdan çıkıyor.
 [ -n "$SRC_BACKEND" ] && ALLOW_DIRTY=1

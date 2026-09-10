@@ -1,7 +1,0 @@
-# ÜRETİLMİŞ DOSYA — elle düzenlemeyin.
-# Kaynak: docker-compose.yml, know-how/build_release.sh tarafından bölündü.
-volumes:
-  logo_cache: null
-networks:
-  edge:
-    driver: bridge
