@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
@@ -182,11 +183,24 @@ class _PlayerSuggestionFieldState extends State<PlayerSuggestionField> {
   }
 
   Widget _buildSuggestions() {
-    // Klavye açıkken panel ekranın kalanına sığmalı; sabit 260 piksel
-    // küçük telefonlarda girişin üstünü aşıyordu.
-    final available = MediaQuery.of(context).size.height;
+    // Klavye açıkken panel ekranın kalanına sığmalı ve Dynamic Island /
+    // durum çubuğunun arkasına taşmamalıdır.
+    final media = MediaQuery.of(context);
+    final available = media.size.height;
+    final topPadding = media.padding.top;
+
+    double maxHeight = available * 0.32;
+    final renderBox = context.findRenderObject() as RenderBox?;
+    if (renderBox != null && renderBox.hasSize) {
+      final inputTop = renderBox.localToGlobal(Offset.zero).dy;
+      final spaceAbove = inputTop - topPadding - 12;
+      if (spaceAbove > 60) {
+        maxHeight = math.min(maxHeight, spaceAbove);
+      }
+    }
+
     return Container(
-      constraints: BoxConstraints(maxHeight: available * 0.32),
+      constraints: BoxConstraints(maxHeight: maxHeight),
       margin: const EdgeInsets.fromLTRB(12, 0, 12, 6),
       decoration: BoxDecoration(
         color: const Color(0xFF16132C),

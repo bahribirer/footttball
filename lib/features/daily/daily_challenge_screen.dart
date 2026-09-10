@@ -8,6 +8,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:footttball/data/services/api_service.dart';
 import 'package:footttball/data/services/country_catalog.dart';
 import 'package:footttball/shared/widgets/app_background.dart';
+import 'package:footttball/shared/widgets/player_avatar.dart';
 import 'package:footttball/shared/widgets/player_suggestion_field.dart';
 
 /// Günlük meydan okuma.
@@ -231,17 +232,16 @@ class _DailyChallengeScreenState extends State<DailyChallengeScreen> {
             children: [
               const SizedBox(width: 78),
               for (final club in board.clubs)
-                Expanded(child: _AxisLabel(text: club)),
+                Expanded(child: _ClubHeader(club: club)),
             ],
           ),
+          const SizedBox(height: 6),
           for (var row = 0; row < 3; row++)
             Row(
               children: [
                 SizedBox(
                   width: 78,
-                  child: _AxisLabel(
-                    text: CountryCatalog.turkish(board.nations[row]),
-                  ),
+                  child: _NationHeader(nation: board.nations[row]),
                 ),
                 for (var col = 0; col < 3; col++)
                   Expanded(
@@ -282,25 +282,74 @@ class _DailyChallengeScreenState extends State<DailyChallengeScreen> {
   }
 }
 
-class _AxisLabel extends StatelessWidget {
-  const _AxisLabel({required this.text});
+class _ClubHeader extends StatelessWidget {
+  const _ClubHeader({required this.club});
 
-  final String text;
+  final String club;
 
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.all(4),
-      child: Text(
-        text,
-        textAlign: TextAlign.center,
-        maxLines: 2,
-        overflow: TextOverflow.ellipsis,
-        style: const TextStyle(
-          color: Colors.white70,
-          fontSize: 11,
-          fontWeight: FontWeight.bold,
-        ),
+      padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 4),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Image.network(
+            ApiService.logoUrl(club),
+            width: 34,
+            height: 34,
+            fit: BoxFit.contain,
+            headers: const {"User-Agent": "TikiTaka/1.0"},
+            errorBuilder: (_, __, ___) => const Icon(
+              Icons.shield_outlined,
+              color: Colors.white38,
+              size: 26,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            club,
+            textAlign: TextAlign.center,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              color: Colors.white70,
+              fontSize: 10,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _NationHeader extends StatelessWidget {
+  const _NationHeader({required this.nation});
+
+  final String nation;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 4),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          CountryFlag(country: nation, width: 34),
+          const SizedBox(height: 4),
+          Text(
+            CountryCatalog.turkish(nation),
+            textAlign: TextAlign.center,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              color: Colors.white70,
+              fontSize: 10,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -389,6 +438,28 @@ class _GuessDialogState extends State<_GuessDialog> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                CountryFlag(country: widget.nation, width: 28),
+                const SizedBox(width: 8),
+                const Text('×', style: TextStyle(color: Colors.white54, fontSize: 16)),
+                const SizedBox(width: 8),
+                Image.network(
+                  ApiService.logoUrl(widget.club),
+                  width: 28,
+                  height: 28,
+                  fit: BoxFit.contain,
+                  headers: const {"User-Agent": "TikiTaka/1.0"},
+                  errorBuilder: (_, __, ___) => const Icon(
+                    Icons.shield_outlined,
+                    color: Colors.white38,
+                    size: 24,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
             NeonTitle(
               '${CountryCatalog.turkish(widget.nation)} × ${widget.club}',
               fontSize: 15,
