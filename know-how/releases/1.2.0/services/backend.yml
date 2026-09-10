@@ -1,0 +1,38 @@
+# ÜRETİLMİŞ DOSYA — elle düzenlemeyin.
+# Kaynak: docker-compose.yml, know-how/build_release.sh tarafından bölündü.
+services:
+  backend:
+    image: ${BACKEND_IMAGE:-ghcr.io/bahribirer/footttball-backend:latest}
+    restart: unless-stopped
+    expose:
+    - '8000'
+    environment:
+      ENVIRONMENT: production
+      DEBUG: 'false'
+      DB_PATH: /app/data/tikitakapi.db
+      LOGO_DIR: /app/static/logos
+      SENTRY_DSN: ${SENTRY_DSN:-}
+      RELEASE: ${BACKEND_IMAGE:-dev}
+      MODES_DISABLED: ${MODES_DISABLED:-}
+      REDIS_URL: ${REDIS_URL:-}
+    volumes:
+    - ./backend/data:/app/data
+    - logo_cache:/app/static/logos
+    healthcheck:
+      test:
+      - CMD
+      - python
+      - -c
+      - import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/ping',
+        timeout=4).status==200 else 1)
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    networks:
+    - edge
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: '3'

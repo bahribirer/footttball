@@ -66,7 +66,8 @@ jobs:
 
       - name: Sözdizimi
         run: |
-          for f in infra/*.sh; do
+          for f in infra/*.sh know-how/*.sh know-how/templates/*.sh; do
+            [ -f "$f" ] || continue
             bash -n "$f" && echo "ok  $f"
           done
 
@@ -74,6 +75,20 @@ jobs:
       # `set -euo pipefail` altında grep'in sıfırdan farklı dönmesi yetiyor.
       - name: deploy.sh erken çıkmıyor
         run: ./infra/test_deploy_sh.sh
+
+      # Servis tanımları paketlere compose'dan türetiliyor; bölücü bozulursa
+      # paket sessizce eksik tanımla çıkardı.
+      - name: Sürüm paketi bölücüsü
+        run: |
+          python3 -m pip install --quiet --break-system-packages pyyaml
+          python3 know-how/templates/split_compose.py docker-compose.yml /tmp/split
+          for f in _base backend nginx redis certbot; do
+            test -s "/tmp/split/$f.yml" || { echo "eksik: $f.yml"; exit 1; }
+          done
+          # Üçüncü parti imajlar değişkenleştirilmeli, yoksa version.env'deki
+          # sürüm etiketi hiç kullanılmaz.
+          grep -q 'NGINX_IMAGE' /tmp/split/nginx.yml || { echo "nginx imajı değişkenleşmemiş"; exit 1; }
+          echo "✓ bölücü doğru çalışıyor"
 
   flutter:
     name: Flutter analiz + test

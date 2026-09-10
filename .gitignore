@@ -67,3 +67,8 @@ infra/certbot/
 # SQLite WAL yan dosyalari (veritabaninin kendisi zaten haric)
 *.db-wal
 *.db-shm
+
+# Sürüm paketlerinin ağır içeriği depoya girmez; betikle yeniden üretilir.
+# Metin dosyaları (version.env, manifest.json, servis tanımları) izlenir.
+know-how/releases/*/images/
+know-how/releases/*/data/

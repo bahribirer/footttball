@@ -1,0 +1,11 @@
+# ÜRETİLMİŞ DOSYA — elle düzenlemeyin.
+# Kaynak: docker-compose.yml, know-how/build_release.sh tarafından bölündü.
+services:
+  certbot:
+    image: ${CERTBOT_IMAGE:-certbot/certbot:latest}
+    restart: unless-stopped
+    volumes:
+    - ./infra/certbot/conf:/etc/letsencrypt
+    - ./infra/certbot/www:/var/www/certbot
+    entrypoint: "sh -c \"trap exit TERM;\n       while :; do certbot renew --webroot\
+      \ -w /var/www/certbot --quiet;\n       sleep 12h & wait $${!}; done\"\n"
