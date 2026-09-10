@@ -10,6 +10,22 @@
 #   ./know-how/build_release.sh 1.2.1 --with-data     # oyuncu veritabanı dahil
 #   ./know-how/build_release.sh 1.2.1 --allow-dirty   # commit edilmemiş değişikliklerle
 #
+# Servis kaynağı seçmek:
+#
+#   ./know-how/build_release.sh 2.5.0 --backend 011c19b     # o commit'ten derle
+#   ./know-how/build_release.sh 2.5.0 --backend v1.1.0      # o etiketten derle
+#
+# Kendi servislerimiz her zaman KAYNAKTAN DERLENİR, kayıt defterinden
+# çekilmez. --backend bir git referansı alır; o commit geçici bir
+# worktree'ye çıkarılıp oradan derlenir. Verilmezse çalışma ağacı kullanılır.
+#
+# Hangi commit'ten çıktığı manifest.json'da kalır; müşteri yalnızca sürüm
+# numarasını görür.
+#
+# Üçüncü parti imajlar (nginx, redis, certbot) upstream'den gelir; onlar
+# derlenemez, derleme makinesinde çekilir. Hedef makinede internet
+# gerekmez — paket zaten hepsini taşır.
+#
 # Delta paketleme: her sürüm yalnızca bir öncekine göre DEĞİŞEN servisleri
 # taşır. Dokunulmayan bir servisin imajını yeniden yüklemek onu gereksiz
 # yere yeniden başlatır ve USB'de yer yakar.
@@ -29,14 +45,31 @@ VERSION="${1:-}"
 WITH_DATA=0
 ALLOW_DIRTY=0
 FULL=0
+# Servis kaynakları: verilmezse yerelden derlenir / compose'daki etiket alınır.
+SRC_BACKEND=""
+SRC_NGINX=""
+SRC_REDIS=""
+SRC_CERTBOT=""
+# Paketin çalışacağı makinenin mimarisi — bu makinenin değil.
+#
+# Apple Silicon'da derlenen imaj arm64 olur ve x86 sunucuda çalışmaz;
+# `docker load` sessizce geçer, konteyner "exec format error" ile ölür.
+# Varsayılan üretim sunucusunun mimarisi.
+PLATFORM="${TTT_PLATFORM:-linux/amd64}"
 shift || true
-for arg in "$@"; do
-  case "$arg" in
+while [ "$#" -gt 0 ]; do
+  case "$1" in
     --with-data)   WITH_DATA=1 ;;
     --allow-dirty) ALLOW_DIRTY=1 ;;
     --full)        FULL=1 ;;
-    *) echo "Bilinmeyen seçenek: $arg" >&2; exit 2 ;;
+    --backend)     SRC_BACKEND="${2:?--backend bir değer ister}"; shift ;;
+    --nginx)       SRC_NGINX="${2:?--nginx bir değer ister}"; shift ;;
+    --redis)       SRC_REDIS="${2:?--redis bir değer ister}"; shift ;;
+    --certbot)     SRC_CERTBOT="${2:?--certbot bir değer ister}"; shift ;;
+    --platform)    PLATFORM="${2:?--platform bir değer ister}"; shift ;;
+    *) echo "Bilinmeyen seçenek: $1" >&2; exit 2 ;;
   esac
+  shift
 done
 
 if [ -z "$VERSION" ]; then
@@ -87,6 +120,9 @@ PY="$(resolve_python)"
 
 GIT_SHA="$(git rev-parse HEAD)"
 GIT_DIRTY="$(git status --porcelain | head -1)"
+# Backend'in kaynağı açıkça verildiyse çalışma ağacının hâli önemsiz:
+# paket o ağaçtan değil, söylenen yapıdan çıkıyor.
+[ -n "$SRC_BACKEND" ] && ALLOW_DIRTY=1
 if [ -n "$GIT_DIRTY" ] && [ "$ALLOW_DIRTY" = "0" ]; then
   echo "✗ Çalışma ağacı temiz değil. Paketin hangi koddan çıktığı belirsiz kalır." >&2
   echo "  Yine de üretmek için: --allow-dirty" >&2
@@ -94,6 +130,16 @@ if [ -n "$GIT_DIRTY" ] && [ "$ALLOW_DIRTY" = "0" ]; then
 fi
 
 echo "▶ Sürüm $VERSION  (commit ${GIT_SHA:0:8}${GIT_DIRTY:+, KİRLİ})"
+echo "▶ Hedef mimari: $PLATFORM"
+HOST_ARCH="$(docker info --format '{{.OSType}}/{{.Architecture}}' 2>/dev/null || echo bilinmiyor)"
+case "$HOST_ARCH" in
+  *aarch64*|*arm64*) HOST_NORM="linux/arm64" ;;
+  *x86_64*|*amd64*)  HOST_NORM="linux/amd64" ;;
+  *)                 HOST_NORM="$HOST_ARCH" ;;
+esac
+if [ "$HOST_NORM" != "$PLATFORM" ]; then
+  echo "  (bu makine $HOST_NORM — çapraz derleme, biraz yavaş olabilir)"
+fi
 mkdir -p "$OUT/images" "$OUT/containers"
 
 # --- servis tanımlarını compose'dan türet -----------------------------
@@ -132,9 +178,35 @@ fi
 # --- imajlar ----------------------------------------------------------
 BACKEND_IMAGE="footttball-backend:$VERSION"
 
-echo "▶ Backend imajı derleniyor"
-docker build --quiet -t "$BACKEND_IMAGE" "$ROOT/backend" > /dev/null
-echo "  $BACKEND_IMAGE"
+# Backend her zaman KAYNAKTAN derlenir; kayıt defterinden çekilmez.
+#
+# --backend ile bir git referansı (commit sha, etiket, dal) verilirse o
+# commit'in kodu geçici bir worktree'ye çıkarılıp oradan derlenir. Böylece
+# paket, çalışma ağacının o anki hâlinden bağımsız olarak istenen sürümün
+# kodunu taşır — ve internet gerekmez.
+BACKEND_SOURCE=""
+if [ -n "$SRC_BACKEND" ]; then
+  if ! git rev-parse --verify --quiet "$SRC_BACKEND^{commit}" >/dev/null; then
+    echo "✗ Böyle bir commit yok: $SRC_BACKEND" >&2
+    exit 1
+  fi
+  RESOLVED_SHA="$(git rev-parse "$SRC_BACKEND")"
+  WORKTREE="${TMPDIR:-/tmp}/ttt-build-${RESOLVED_SHA:0:12}"
+  echo "▶ Backend kaynağı: commit ${RESOLVED_SHA:0:12}"
+  rm -rf "$WORKTREE"
+  git worktree add --detach --quiet "$WORKTREE" "$RESOLVED_SHA"
+  # Worktree geçici; derleme bitince kaldırılır, yarım kalsa bile
+  # `git worktree prune` toparlar.
+  trap 'git worktree remove --force "$WORKTREE" >/dev/null 2>&1 || true' EXIT
+  docker build --quiet --platform "$PLATFORM" -t "$BACKEND_IMAGE" "$WORKTREE/backend" > /dev/null
+  BACKEND_SOURCE="commit $RESOLVED_SHA"
+  echo "  -> $BACKEND_IMAGE"
+else
+  echo "▶ Backend imajı çalışma ağacından derleniyor"
+  docker build --quiet --platform "$PLATFORM" -t "$BACKEND_IMAGE" "$ROOT/backend" > /dev/null
+  BACKEND_SOURCE="calisma agaci (${GIT_SHA:0:12})"
+  echo "  $BACKEND_IMAGE"
+fi
 
 # Üçüncü parti imajlar: compose'daki etiketten çekip digest'e sabitle.
 declare -a PINNED=()
@@ -144,7 +216,16 @@ pin_image() {
   # version.env'i bozuyordu ve hedef makinede compose kırılıyordu.
   local service="$1" ref="$2"
   echo "  $service: $ref" >&2
-  docker pull --quiet "$ref" > /dev/null 2>&1
+
+  # Yereldeki kopya başka mimaridense `pull` işlem yapmaz ve yanlış imaj
+  # pakete girer. Uyuşmuyorsa önce silinir.
+  local local_arch
+  local_arch="$(docker image inspect --format '{{.Os}}/{{.Architecture}}' "$ref" 2>/dev/null || true)"
+  if [ -n "$local_arch" ] && [ "$local_arch" != "$PLATFORM" ]; then
+    echo "    yereldeki kopya $local_arch, siliniyor" >&2
+    docker rmi -f "$ref" > /dev/null 2>&1 || true
+  fi
+  docker pull --quiet --platform "$PLATFORM" "$ref" > /dev/null 2>&1
   local digest
   digest="$(docker inspect --format '{{index .RepoDigests 0}}' "$ref" 2>/dev/null || true)"
   # Yerelde derlenmiş ya da digest'i olmayan imajlar için etikete düşülür.
@@ -153,12 +234,14 @@ pin_image() {
 }
 
 echo "▶ Üçüncü parti imajlar digest'e sabitleniyor"
-NGINX_REF="$("$PY" -c "
-import yaml; print(yaml.safe_load(open('$ROOT/docker-compose.yml'))['services']['nginx']['image'])")"
-REDIS_REF="$("$PY" -c "
-import yaml; print(yaml.safe_load(open('$ROOT/docker-compose.yml'))['services']['redis']['image'])")"
-CERTBOT_REF="$("$PY" -c "
-import yaml; print(yaml.safe_load(open('$ROOT/docker-compose.yml'))['services']['certbot']['image'])")"
+compose_image() {
+  "$PY" -c "
+import yaml; print(yaml.safe_load(open('$ROOT/docker-compose.yml'))['services']['$1']['image'])"
+}
+# Kaynak açıkça verilmişse o, verilmemişse compose'daki etiket.
+NGINX_REF="${SRC_NGINX:-$(compose_image nginx)}"
+REDIS_REF="${SRC_REDIS:-$(compose_image redis)}"
+CERTBOT_REF="${SRC_CERTBOT:-$(compose_image certbot)}"
 
 NGINX_DIGEST="$(pin_image nginx "$NGINX_REF")"
 REDIS_DIGEST="$(pin_image redis "$REDIS_REF")"
@@ -175,16 +258,35 @@ CERTBOT_DIGEST="$(pin_image certbot "$CERTBOT_REF")"
 NGINX_IMAGE="ttt-nginx:$VERSION"
 REDIS_IMAGE="ttt-redis:$VERSION"
 CERTBOT_IMAGE="ttt-certbot:$VERSION"
-docker tag "$NGINX_REF"   "$NGINX_IMAGE"
-docker tag "$REDIS_REF"   "$REDIS_IMAGE"
-docker tag "$CERTBOT_REF" "$CERTBOT_IMAGE"
-echo "  sürüm etiketleri: $NGINX_IMAGE, $REDIS_IMAGE, $CERTBOT_IMAGE"
+
+# `docker tag` burada yetmiyor. containerd imaj deposu bir etiketin birden
+# fazla platformunu birlikte saklıyor ve `tag` hangisini aldığını
+# söylemiyor; sonuç, hedef mimari amd64 iken pakete arm64 imaj girmesi
+# oluyordu. buildx'ten tek platformlu imaj istemek bunu kesinleştiriyor:
+# çıkan imajın mimarisi tek ve `inspect` doğru söylüyor.
+retag_platform() {
+  local source_ref="$1" target_tag="$2"
+  printf 'FROM %s\n' "$source_ref" \
+    | docker buildx build --platform "$PLATFORM" -t "$target_tag" --load - >/dev/null 2>&1
+}
+retag_platform "$NGINX_REF"   "$NGINX_IMAGE"
+retag_platform "$REDIS_REF"   "$REDIS_IMAGE"
+retag_platform "$CERTBOT_REF" "$CERTBOT_IMAGE"
+echo "  sürüm etiketleri: $NGINX_IMAGE, $REDIS_IMAGE, $CERTBOT_IMAGE ($PLATFORM)"
 
 # --- imajları tar'la --------------------------------------------------
 save_image() {
   local name="$1" ref="$2"
+  # Yanlış mimarili bir imajı pakete koymak sessiz bir tuzak: docker load
+  # geçer, konteyner çalışmaz. Burada durulur.
+  local arch
+  arch="$(docker image inspect --format '{{.Os}}/{{.Architecture}}' "$ref" 2>/dev/null || echo '?')"
+  if [ "$arch" != "$PLATFORM" ]; then
+    echo "✗ $name imajı $arch, hedef $PLATFORM — paket üretilmedi" >&2
+    exit 1
+  fi
   printf '  %-10s ' "$name"
-  docker save "$ref" | gzip -6 > "$OUT/images/$name.tar.gz"
+  docker save --platform "$PLATFORM" "$ref" | gzip -6 > "$OUT/images/$name.tar.gz"
   du -h "$OUT/images/$name.tar.gz" | cut -f1
 }
 
@@ -289,6 +391,7 @@ cat > "$OUT/version.env" <<ENVEOF
 # Üretim: $(date -u +%Y-%m-%dT%H:%M:%SZ)  commit ${GIT_SHA:0:12}
 
 RELEASE_VERSION=$VERSION
+RELEASE_PLATFORM=$PLATFORM
 BACKEND_IMAGE=$BACKEND_IMAGE
 NGINX_IMAGE=$NGINX_IMAGE
 REDIS_IMAGE=$REDIS_IMAGE
@@ -342,6 +445,7 @@ echo "  know-how/dokumanlar/guncelleme-notlari/md/$VERSION.md"
 # --- manifest ---------------------------------------------------------
 echo "▶ manifest.json"
 cat > "$OUT/.sources.tmp" <<SRCEOF
+backend|$BACKEND_SOURCE|$(docker image inspect --format '{{.Id}}' "$BACKEND_IMAGE" 2>/dev/null || true)
 nginx|$NGINX_REF|$NGINX_DIGEST
 redis|$REDIS_REF|$REDIS_DIGEST
 certbot|$CERTBOT_REF|$CERTBOT_DIGEST

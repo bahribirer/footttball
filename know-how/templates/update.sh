@@ -76,6 +76,31 @@ PREVIOUS_ENV=""
 [ -f "$BACKUP/.env" ] && PREVIOUS_ENV="$BACKUP/.env"
 
 # --- imajlar ----------------------------------------------------------
+# Mimari denetimi.
+#
+# Yanlış mimarili bir paket sessiz bir tuzak: `docker load` sorunsuz geçer,
+# konteyner "exec format error" ile ölür ve sebebi log'da açık yazmaz.
+# Apple Silicon'da derlenip x86 sunucuya götürülen paket tam olarak böyle
+# davranır. Yüklemeden önce durulur.
+EXPECTED_PLATFORM="$(grep '^RELEASE_PLATFORM=' "$HERE/version.env" 2>/dev/null | cut -d= -f2 || true)"
+HOST_INFO="$(docker info --format '{{.OSType}}/{{.Architecture}}' 2>/dev/null || echo '?')"
+case "$HOST_INFO" in
+  *aarch64*|*arm64*) HOST_PLATFORM="linux/arm64" ;;
+  *x86_64*|*amd64*)  HOST_PLATFORM="linux/amd64" ;;
+  *)                 HOST_PLATFORM="$HOST_INFO" ;;
+esac
+
+if [ -n "$EXPECTED_PLATFORM" ] && [ "$EXPECTED_PLATFORM" != "$HOST_PLATFORM" ]; then
+  echo "✗ Mimari uyuşmuyor — hiçbir şeye dokunulmadı." >&2
+  echo "  Paket : $EXPECTED_PLATFORM" >&2
+  echo "  Makine: $HOST_PLATFORM" >&2
+  echo >&2
+  echo "  Paketi doğru mimariyle yeniden üretin:" >&2
+  echo "    ./know-how/build_release.sh <sürüm> --platform $HOST_PLATFORM" >&2
+  exit 1
+fi
+[ -n "$EXPECTED_PLATFORM" ] && echo "▶ Mimari: $EXPECTED_PLATFORM ✓"
+
 echo "▶ İmajlar yükleniyor"
 for archive in "$HERE"/images/*.tar.gz; do
   printf '  %-14s ' "$(basename "$archive" .tar.gz)"

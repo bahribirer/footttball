@@ -1,10 +1,11 @@
 {
   "version": "1.2.0",
-  "git_sha": "0ecdac98dd0b70a96e0b5120225dc2ae35573ada",
-  "built_at": "2026-09-10T20:18:22+00:00",
+  "git_sha": "1c65a33bc022c64d53814cd65df5bdd7d32f0613",
+  "built_at": "2026-09-10T20:32:41+00:00",
   "includes_database": false,
   "images": {
     "RELEASE_VERSION": "1.2.0",
+    "RELEASE_PLATFORM": "linux/amd64",
     "BACKEND_IMAGE": "footttball-backend:1.2.0",
     "NGINX_IMAGE": "ttt-nginx:1.2.0",
     "REDIS_IMAGE": "ttt-redis:1.2.0",
@@ -12,6 +13,10 @@
     "INCLUDED_SERVICES": "backend nginx redis certbot"
   },
   "sources": {
+    "backend": {
+      "pulled_from": "calisma agaci (1c65a33bc022)",
+      "digest": "sha256:e4f6f50f89bc17b5d0a2c8081e6eecb956fa71566d67a10bd1ff894131e451e3"
+    },
     "nginx": {
       "pulled_from": "nginx:1.27-alpine",
       "digest": "nginx@sha256:65645c7bb6a0661892a8b03b89d0743208a18dd2f3f17a54ef4b76fb8e2f2a10"
@@ -27,17 +32,17 @@
   },
   "artifacts": {
     "backend.tar.gz": {
-      "bytes": 66601677
+      "bytes": 66377267
     },
     "certbot.tar.gz": {
-      "bytes": 83836699
+      "bytes": 85633180
     },
     "nginx.tar.gz": {
-      "bytes": 21721074
+      "bytes": 20915740
     },
     "redis.tar.gz": {
-      "bytes": 16651281
+      "bytes": 16158709
     }
   },
-  "total_bytes": 188824450
+  "total_bytes": 189099780
 }

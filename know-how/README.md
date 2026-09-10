@@ -21,11 +21,42 @@ know-how/
 ## Paket üretmek
 
 ```bash
-./know-how/build_release.sh 1.2.1                 # delta: yalnızca değişen servisler
-./know-how/build_release.sh 1.2.1 --full          # tam paket (ilk kurulum)
-./know-how/build_release.sh 1.2.1 --with-data     # futbolcu veritabanı dahil
-./know-how/build_release.sh 1.2.1 --allow-dirty   # commit edilmemiş değişikliklerle
+./know-how/build_release.sh 1.2.1                    # çalışma ağacından
+./know-how/build_release.sh 1.2.1 --backend 011c19b  # o commit'ten derle
+./know-how/build_release.sh 1.2.1 --full             # tam paket (ilk kurulum)
+./know-how/build_release.sh 1.2.1 --with-data        # futbolcu veritabanı dahil
 ```
+
+### Kaynak seçimi
+
+Kendi servislerimiz **kaynaktan derlenir**, kayıt defterinden çekilmez.
+`--backend` bir git referansı alır (commit sha, etiket, dal); o commit
+geçici bir worktree'ye çıkarılıp oradan derlenir. Böylece paket, çalışma
+ağacının o anki hâlinden bağımsız olarak istenen kodu taşır.
+
+Çıkan imaj **sürüm numarasıyla** etiketlenir: müşteri `1.2.1` görür,
+arkasındaki commit `manifest.json`'da kalır. Sürümler arası tag şemasının
+kayması böyle engellenir.
+
+Üçüncü parti imajlar (nginx, redis, certbot) upstream'den gelir; derleme
+makinesinde çekilirler. Hedef makinede internet gerekmez — paket hepsini
+taşır.
+
+### Mimari
+
+Paket **hedef makinenin** mimarisi için üretilir, derleme makinesinin değil.
+Varsayılan `linux/amd64` (üretim sunucusu); değiştirmek için
+`--platform linux/arm64` ya da `TTT_PLATFORM` ortam değişkeni.
+
+Bu, sessiz bir tuzağı kapatıyor: Apple Silicon'da derlenen imaj arm64 olur,
+x86 sunucuda `docker load` sorunsuz geçer ama konteyner "exec format error"
+ile ölür ve sebebi log'da açık yazmaz. Betik yanlış mimarili imajı pakete
+koymayı reddediyor, `update.sh` de yanlış mimarili paketi uygulamayı.
+
+`docker tag` bu iş için yetmiyor: containerd imaj deposu bir etiketin
+birden fazla platformunu birlikte saklıyor ve `tag` hangisini aldığını
+söylemiyor. Üçüncü parti imajlar buildx'ten tek platformlu olarak
+isteniyor.
 
 Çıktı `know-how/releases/release_1.2.1/`. USB'ye olduğu gibi kopyalanır.
 Müşteri talimatı `know-how/dokumanlar/guncelleme-notlari/md/1.2.1.md`
