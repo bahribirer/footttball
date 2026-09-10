@@ -1,7 +1,7 @@
 {
   "version": "1.2.0",
-  "git_sha": "12e50a8752edc65639dab5f56c0a907647da5a9a",
-  "built_at": "2026-09-10T17:25:24+00:00",
+  "git_sha": "0ecdac98dd0b70a96e0b5120225dc2ae35573ada",
+  "built_at": "2026-09-10T20:18:22+00:00",
   "includes_database": false,
   "images": {
     "RELEASE_VERSION": "1.2.0",
@@ -27,7 +27,7 @@
   },
   "artifacts": {
     "backend.tar.gz": {
-      "bytes": 66601779
+      "bytes": 66601677
     },
     "certbot.tar.gz": {
       "bytes": 83836699
@@ -39,5 +39,5 @@
       "bytes": 16651281
     }
   },
-  "total_bytes": 188824673
+  "total_bytes": 188824450
 }

@@ -219,7 +219,7 @@ tar_if_changed() {
     SKIPPED="$SKIPPED $service"
     # Değişmeyen servisin tanımı da pakete girmez: delta paketi yalnızca
     # dokunulan servisleri anlatmalı.
-    rm -rf "$OUT/containers/$service"
+    rm -f "$OUT/containers/$service.yml"
   fi
 }
 

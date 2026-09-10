@@ -19,9 +19,9 @@ servise göre adlandırılsaydı aynı dizin iki ad alıp yanlışlıkla farklı
 yerlere bakabilirdi.
 
 Üretilenler:
-    _base.yml                    ağlar, birimler ve ortak tanımlar
-    <servis>/<servis>.yml        tek servis
-    bind_defaults.env            bind ve port değişkenleri, varsayılanlarıyla
+    _base.yml           ağlar, birimler ve ortak tanımlar
+    <servis>.yml        tek servis
+    bind_defaults.env   bind ve port değişkenleri, varsayılanlarıyla
 
 update.sh hepsini `-f` ile birleştirir; docker compose üst düzey anahtarları
 birleştirdiği için sonuç kaynakla aynı yığındır.
@@ -155,11 +155,7 @@ def main() -> int:
                 bind_vars[var] = host
                 rewritten_ports.append("${%s:-%s}:%s" % (var, host, container))
             cleaned["ports"] = rewritten_ports
-        # Servis başına klasör: hedef projede de böyle duruyor ve delta
-        # paketinde atlanan servisi silmek tek dizin silmeye iniyor.
-        service_dir = out / name
-        service_dir.mkdir(parents=True, exist_ok=True)
-        (service_dir / f"{name}.yml").write_text(
+        (out / f"{name}.yml").write_text(
             HEADER
             + yaml.safe_dump(
                 {"services": {name: cleaned}}, allow_unicode=True, sort_keys=False

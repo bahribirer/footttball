@@ -85,14 +85,14 @@ jobs:
           test -s /tmp/split/_base.yml || { echo "eksik: _base.yml"; exit 1; }
           test -s /tmp/split/bind_defaults.env || { echo "eksik: bind_defaults.env"; exit 1; }
           for f in backend nginx redis certbot; do
-            test -s "/tmp/split/$f/$f.yml" || { echo "eksik: $f/$f.yml"; exit 1; }
+            test -s "/tmp/split/$f.yml" || { echo "eksik: $f.yml"; exit 1; }
           done
           # Üçüncü parti imajlar değişkenleştirilmeli, yoksa version.env'deki
           # sürüm etiketi hiç kullanılmaz.
-          grep -q 'NGINX_IMAGE' /tmp/split/nginx/nginx.yml || { echo "nginx imajı değişkenleşmemiş"; exit 1; }
+          grep -q 'NGINX_IMAGE' /tmp/split/nginx.yml || { echo "nginx imajı değişkenleşmemiş"; exit 1; }
           # Bind yolları da değişkenleşmeli; sabit kalırsa hedef makinede
           # dizin taşınamaz.
-          grep -q 'INFRA_CERTBOT_CONF_DIR' /tmp/split/nginx/nginx.yml || { echo "bind yolu değişkenleşmemiş"; exit 1; }
+          grep -q 'INFRA_CERTBOT_CONF_DIR' /tmp/split/nginx.yml || { echo "bind yolu değişkenleşmemiş"; exit 1; }
           echo "✓ bölücü doğru çalışıyor"
 
   flutter:

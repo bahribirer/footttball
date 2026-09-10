@@ -87,11 +87,7 @@ echo "▶ Servis tanımları"
 mkdir -p "$TARGET/know-how-services"
 # Delta paketinde yalnızca değişen servislerin tanımı var;
 # hedefteki diğerleri olduğu gibi kalır.
-cp "$HERE"/containers/_base.yml "$TARGET/know-how-services/"
-for dir in "$HERE"/containers/*/; do
-  [ -d "$dir" ] || continue
-  cp "$dir"/*.yml "$TARGET/know-how-services/"
-done
+cp "$HERE"/containers/*.yml "$TARGET/know-how-services/"
 
 # --project-directory ve --env-file ŞART.
 #
