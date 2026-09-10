@@ -85,7 +85,13 @@ done
 # --- servis tanımları -------------------------------------------------
 echo "▶ Servis tanımları"
 mkdir -p "$TARGET/know-how-services"
-cp "$HERE"/services/*.yml "$TARGET/know-how-services/"
+# Delta paketinde yalnızca değişen servislerin tanımı var;
+# hedefteki diğerleri olduğu gibi kalır.
+cp "$HERE"/containers/_base.yml "$TARGET/know-how-services/"
+for dir in "$HERE"/containers/*/; do
+  [ -d "$dir" ] || continue
+  cp "$dir"/*.yml "$TARGET/know-how-services/"
+done
 
 # --project-directory ve --env-file ŞART.
 #
@@ -125,6 +131,31 @@ grep -vE '^(RELEASE_VERSION|BACKEND_IMAGE|NGINX_IMAGE|REDIS_IMAGE|CERTBOT_IMAGE)
 grep -vE '^\s*(#|$)' "$HERE/version.env" >> "$TARGET/.env.tmp"
 mv "$TARGET/.env.tmp" "$TARGET/.env"
 
+# --- bind yolları ve portlar -----------------------------------------
+# Servis tanımlarındaki bind kaynakları ve host portları değişkene çevrildi.
+# Burada .env'e YALNIZCA eksik olanlar yazılır: operatör bir dizini başka
+# yere taşımışsa (örneğin veritabanını büyük diske) sonraki güncelleme onu
+# geri almamalı.
+echo "▶ Bind yolları ve portlar"
+ADDED=0
+while IFS='=' read -r key default; do
+  case "$key" in ''|\#*) continue ;; esac
+  if grep -qE "^${key}=" "$TARGET/.env"; then
+    echo "  = $key (mevcut değer korundu)"
+    continue
+  fi
+  # Göreli varsayılanlar hedefe göre mutlaklaştırılır; operatör .env'e
+  # bakınca dizinin nerede olduğunu görebilmeli.
+  value="$default"
+  case "$default" in
+    ./*) value="$TARGET/${default#./}" ;;
+  esac
+  printf '%s=%s\n' "$key" "$value" >> "$TARGET/.env"
+  echo "  + $key=$value"
+  ADDED=$((ADDED + 1))
+done < "$HERE/containers/bind_defaults.env"
+[ "$ADDED" = "0" ] && echo "  (hepsi zaten tanımlı)"
+
 # --- başlat -----------------------------------------------------------
 echo "▶ Servisler başlatılıyor"
 # --pull never: paket kendi kendine yetmeli. Compose bir imajı çekmeye
@@ -160,7 +191,12 @@ echo "  ✓ Backend ayakta"
 # Backend sağlıklı olsa bile başka bir servis çöküp duruyor olabilir.
 # Testte nginx sertifika bulamayıp yeniden başlama döngüsüne girdi ve
 # update.sh yine de "başarılı" dedi — sessiz kalmamalı.
-echo "▶ Diğer servisler"
+# Servislerin oturması beklenir. Kontrol hemen koşarsa çökmek üzere olan
+# bir servis hâlâ "Up" görünür ve elden kaçar: denemede nginx sertifika
+# bulamayıp döngüye giriyordu ama kontrol onu "Up" yakalayıp başarılı
+# demişti.
+echo "▶ Diğer servisler (oturması bekleniyor)"
+sleep 8
 UNSTABLE=""
 while read -r line; do
   name="${line%%|*}"
@@ -172,6 +208,21 @@ while read -r line; do
     *) echo "  ✓ $name: $state" ;;
   esac
 done < <( cd "$TARGET" && docker compose $COMPOSE_ARGS ps --format '{{.Service}}|{{.Status}}' 2>/dev/null )
+
+# İkinci örnekleme: ilk turda "Up" görünüp hemen sonra çöken servisler
+# yakalansın.
+if [ -z "$UNSTABLE" ]; then
+  sleep 6
+  while read -r line; do
+    name="${line%%|*}"
+    state="${line#*|}"
+    case "$state" in
+      *Restarting*|*Exited*|*unhealthy*)
+        UNSTABLE="$UNSTABLE $name"
+        echo "  ✗ $name: $state (ilk kontrolden sonra çöktü)" ;;
+    esac
+  done < <( cd "$TARGET" && docker compose $COMPOSE_ARGS ps --format '{{.Service}}|{{.Status}}' 2>/dev/null )
+fi
 
 if [ -n "$UNSTABLE" ]; then
   echo >&2

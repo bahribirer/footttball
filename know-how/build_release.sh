@@ -5,9 +5,14 @@
 # dosyalarını yazar ve doğrulama toplamlarını üretir. Çıktı, hedef makineye
 # kopyalanmaya hazır tek bir dizin.
 #
-#   ./know-how/build_release.sh 1.2.0
-#   ./know-how/build_release.sh 1.2.0 --with-data     # oyuncu veritabanı dahil
-#   ./know-how/build_release.sh 1.2.0 --allow-dirty   # commit edilmemiş değişikliklerle
+#   ./know-how/build_release.sh 1.2.1                 # delta: yalnızca değişenler
+#   ./know-how/build_release.sh 1.2.1 --full          # tam paket (ilk kurulum)
+#   ./know-how/build_release.sh 1.2.1 --with-data     # oyuncu veritabanı dahil
+#   ./know-how/build_release.sh 1.2.1 --allow-dirty   # commit edilmemiş değişikliklerle
+#
+# Delta paketleme: her sürüm yalnızca bir öncekine göre DEĞİŞEN servisleri
+# taşır. Dokunulmayan bir servisin imajını yeniden yüklemek onu gereksiz
+# yere yeniden başlatır ve USB'de yer yakar.
 #
 # Servis tanımları docker-compose.yml'dan TÜRETİLİR, elle yazılmaz; böylece
 # paketteki tanım kaynakla ayrışamaz.
@@ -23,17 +28,19 @@ ROOT="$(pwd)"
 VERSION="${1:-}"
 WITH_DATA=0
 ALLOW_DIRTY=0
+FULL=0
 shift || true
 for arg in "$@"; do
   case "$arg" in
     --with-data)   WITH_DATA=1 ;;
     --allow-dirty) ALLOW_DIRTY=1 ;;
+    --full)        FULL=1 ;;
     *) echo "Bilinmeyen seçenek: $arg" >&2; exit 2 ;;
   esac
 done
 
 if [ -z "$VERSION" ]; then
-  echo "Kullanım: $0 <versiyon> [--with-data] [--allow-dirty]" >&2
+  echo "Kullanım: $0 <versiyon> [--full] [--with-data] [--allow-dirty]" >&2
   exit 2
 fi
 if ! printf '%s' "$VERSION" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$'; then
@@ -41,7 +48,7 @@ if ! printf '%s' "$VERSION" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$'; then
   exit 2
 fi
 
-OUT="$ROOT/know-how/releases/$VERSION"
+OUT="$ROOT/know-how/releases/release_$VERSION"
 if [ -d "$OUT" ]; then
   echo "✗ $VERSION zaten var: $OUT" >&2
   echo "  Yeniden üretmek için önce silin." >&2
@@ -87,12 +94,12 @@ if [ -n "$GIT_DIRTY" ] && [ "$ALLOW_DIRTY" = "0" ]; then
 fi
 
 echo "▶ Sürüm $VERSION  (commit ${GIT_SHA:0:8}${GIT_DIRTY:+, KİRLİ})"
-mkdir -p "$OUT/images" "$OUT/services"
+mkdir -p "$OUT/images" "$OUT/containers"
 
 # --- servis tanımlarını compose'dan türet -----------------------------
 echo "▶ Servis tanımları türetiliyor"
 "$PY" "$ROOT/know-how/templates/split_compose.py" \
-  "$ROOT/docker-compose.yml" "$OUT/services"
+  "$ROOT/docker-compose.yml" "$OUT/containers"
 
 SERVICES="$("$PY" -c "
 import yaml, sys
@@ -100,6 +107,27 @@ d = yaml.safe_load(open('$ROOT/docker-compose.yml'))
 print(' '.join(d['services'].keys()))
 " 2>/dev/null || echo "backend nginx certbot redis")"
 echo "  servisler: $SERVICES"
+
+# --- delta: hangi servisler pakete girecek ---------------------------
+# Her paket yalnızca DEĞİŞEN servisleri taşır. Sekiz servisli bir yığında
+# tek satır değişince gigabaytlarca imajı USB'ye kopyalamak hem zaman
+# kaybı hem de gereksiz risk: dokunulmayan bir servisin imajını yeniden
+# yüklemek onu yeniden başlatır.
+#
+# Karşılaştırma en son üretilmiş pakete göre yapılır. --full ile hepsi
+# alınır; ilk kurulum paketi böyle üretilir.
+PREVIOUS_RELEASE=""
+if [ "$FULL" = "0" ]; then
+  PREVIOUS_RELEASE="$(ls -1d "$ROOT"/know-how/releases/release_* 2>/dev/null \
+    | grep -v "release_$VERSION\$" | sort -V | tail -1)"
+fi
+
+CHANGED=""
+if [ -n "$PREVIOUS_RELEASE" ] && [ -f "$PREVIOUS_RELEASE/version.env" ]; then
+  echo "▶ Delta tabanı: $(basename "$PREVIOUS_RELEASE")"
+else
+  echo "▶ Tam paket (karşılaştırılacak önceki sürüm yok)"
+fi
 
 # --- imajlar ----------------------------------------------------------
 BACKEND_IMAGE="footttball-backend:$VERSION"
@@ -160,11 +188,70 @@ save_image() {
   du -h "$OUT/images/$name.tar.gz" | cut -f1
 }
 
+# Bir servisin imajı önceki pakettekiyle aynıysa tar'lanmaz.
+should_include() {
+  local service="$1" new_ref="$2" var="$3"
+  [ "$FULL" = "1" ] && return 0
+  [ -z "$PREVIOUS_RELEASE" ] && return 0
+  local old_ref
+  old_ref="$(grep "^${var}=" "$PREVIOUS_RELEASE/version.env" 2>/dev/null | cut -d= -f2- || true)"
+  [ -z "$old_ref" ] && return 0
+
+  # Etiket sürümü taşıdığı için ("ttt-nginx:1.2.0") isim her sürümde
+  # değişir; asıl soru İÇERİĞİN değişip değişmediği. Imaj kimliği
+  # karşılaştırılır.
+  local new_id old_id
+  new_id="$(docker image inspect --format '{{.Id}}' "$new_ref" 2>/dev/null || echo new)"
+  old_id="$(grep "^#ID_${var}=" "$PREVIOUS_RELEASE/version.env" 2>/dev/null | cut -d= -f2- || echo old)"
+  [ "$new_id" != "$old_id" ]
+}
+
 echo "▶ İmajlar tar'lanıyor"
-save_image backend "$BACKEND_IMAGE"
-save_image nginx   "$NGINX_IMAGE"
-save_image redis   "$REDIS_IMAGE"
-save_image certbot "$CERTBOT_IMAGE"
+INCLUDED=""
+SKIPPED=""
+tar_if_changed() {
+  local service="$1" ref="$2" var="$3"
+  if should_include "$service" "$ref" "$var"; then
+    save_image "$service" "$ref"
+    INCLUDED="$INCLUDED $service"
+  else
+    printf '  %-10s değişmedi, atlandı\n' "$service"
+    SKIPPED="$SKIPPED $service"
+    # Değişmeyen servisin tanımı da pakete girmez: delta paketi yalnızca
+    # dokunulan servisleri anlatmalı.
+    rm -rf "$OUT/containers/$service"
+  fi
+}
+
+tar_if_changed backend "$BACKEND_IMAGE" BACKEND_IMAGE
+tar_if_changed nginx   "$NGINX_IMAGE"   NGINX_IMAGE
+tar_if_changed redis   "$REDIS_IMAGE"   REDIS_IMAGE
+tar_if_changed certbot "$CERTBOT_IMAGE" CERTBOT_IMAGE
+
+# Atlanan servisler ÖNCEKİ sürümün etiketinde kalmalı.
+#
+# Aksi halde version.env pakette olmayan bir imajı işaret eder: bu makinede
+# etiket var (derleme sırasında konuldu) ama hedefte yok ve `--pull never`
+# ile dağıtım patlar. Ayrıca etiket değiştiği için compose dokunulmayan
+# servisleri de yeniden başlatır — deltanın amacı tam olarak bunu önlemek.
+carry_forward() {
+  local service="$1" var="$2"
+  case " $SKIPPED " in *" $service "*) ;; *) return 0 ;; esac
+  local old_ref
+  old_ref="$(grep "^${var}=" "$PREVIOUS_RELEASE/version.env" 2>/dev/null | cut -d= -f2- || true)"
+  [ -z "$old_ref" ] && return 0
+  printf -v "$var" '%s' "$old_ref"
+  echo "  $service: $old_ref (önceki sürümden devralındı)"
+}
+
+if [ -n "$SKIPPED" ]; then
+  echo "▶ Atlanan servislerin etiketleri"
+  carry_forward nginx   NGINX_IMAGE
+  carry_forward redis   REDIS_IMAGE
+  carry_forward certbot CERTBOT_IMAGE
+fi
+
+[ -z "$INCLUDED" ] && { echo "✗ Hiçbir servis değişmemiş; paketlenecek bir şey yok." >&2; rm -rf "$OUT"; exit 1; }
 
 # --- veritabanı -------------------------------------------------------
 DB_PATH="$ROOT/backend/data/tikitakapi.db"
@@ -206,11 +293,51 @@ BACKEND_IMAGE=$BACKEND_IMAGE
 NGINX_IMAGE=$NGINX_IMAGE
 REDIS_IMAGE=$REDIS_IMAGE
 CERTBOT_IMAGE=$CERTBOT_IMAGE
+
+# Bu pakette taşınan servisler. update.sh yalnızca bunları yükler;
+# geri kalanlar hedef makinede zaten çalışıyor.
+INCLUDED_SERVICES=$(echo $INCLUDED | xargs)
+
+# Sonraki paketin delta karşılaştırması için imaj kimlikleri.
+# Yorum satırı: docker compose bunları okumaz.
+#ID_BACKEND_IMAGE=$(docker image inspect --format '{{.Id}}' "$BACKEND_IMAGE" 2>/dev/null || true)
+#ID_NGINX_IMAGE=$(docker image inspect --format '{{.Id}}' "$NGINX_IMAGE" 2>/dev/null || true)
+#ID_REDIS_IMAGE=$(docker image inspect --format '{{.Id}}' "$REDIS_IMAGE" 2>/dev/null || true)
+#ID_CERTBOT_IMAGE=$(docker image inspect --format '{{.Id}}' "$CERTBOT_IMAGE" 2>/dev/null || true)
 ENVEOF
 
 # --- update.sh --------------------------------------------------------
 cp "$ROOT/know-how/templates/update.sh" "$OUT/update.sh"
 chmod +x "$OUT/update.sh"
+
+# --- revert betiği ----------------------------------------------------
+# Geri dönüş, önceki sürümün imaj kilidini geri yazmaktan ibaret: imajlar
+# hedef makinede duruyor, yeniden yükleme gerekmiyor. Betik elle
+# yazılmıyor çünkü elle yazıldığında hangi sürüme döndüğü kolayca
+# yanlış kalıyor.
+if [ -n "$PREVIOUS_RELEASE" ] && [ -f "$PREVIOUS_RELEASE/version.env" ]; then
+  PREV_VERSION="$(grep '^RELEASE_VERSION=' "$PREVIOUS_RELEASE/version.env" | cut -d= -f2)"
+  echo "▶ revert_$PREV_VERSION.sh"
+  sed -e "s|@@PREV_VERSION@@|$PREV_VERSION|g" \
+      -e "s|@@THIS_VERSION@@|$VERSION|g" \
+      "$ROOT/know-how/templates/revert.sh" > "$OUT/revert_$PREV_VERSION.sh"
+  chmod +x "$OUT/revert_$PREV_VERSION.sh"
+  # Dönülecek sürümün kilidi pakette taşınır; hedefte bulunmayabilir.
+  cp "$PREVIOUS_RELEASE/version.env" "$OUT/version_$PREV_VERSION.env"
+fi
+
+# --- müşteri talimatı -------------------------------------------------
+echo "▶ Güncelleme notu"
+mkdir -p "$ROOT/know-how/dokumanlar/guncelleme-notlari/md"
+NOTE="$ROOT/know-how/dokumanlar/guncelleme-notlari/md/$VERSION.md"
+"$PY" "$ROOT/know-how/templates/render_note.py" \
+  --version "$VERSION" \
+  --included "$(echo $INCLUDED | xargs)" \
+  --skipped "$(echo $SKIPPED | xargs)" \
+  --previous "${PREV_VERSION:-}" \
+  --with-data "$WITH_DATA" \
+  --output "$NOTE"
+echo "  know-how/dokumanlar/guncelleme-notlari/md/$VERSION.md"
 
 # --- manifest ---------------------------------------------------------
 echo "▶ manifest.json"
@@ -272,10 +399,10 @@ echo "▶ checksums.sha256"
 # --- özet -------------------------------------------------------------
 TOTAL="$(du -sh "$OUT" | cut -f1)"
 echo
-echo "✓ Paket hazır: know-how/releases/$VERSION  ($TOTAL)"
+echo "✓ Paket hazır: know-how/releases/release_$VERSION  ($TOTAL)"
 echo
 echo "  USB'ye kopyala:"
-echo "    cp -R know-how/releases/$VERSION /Volumes/<USB>/"
+echo "    cp -R know-how/releases/release_$VERSION /Volumes/<USB>/"
 echo
 echo "  Hedef makinede:"
-echo "    cd $VERSION && sudo ./update.sh /srv/tikitakatoe"
+echo "    cd release_$VERSION && sudo ./update.sh /srv/tikitakatoe"

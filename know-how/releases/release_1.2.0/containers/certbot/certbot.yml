@@ -5,7 +5,7 @@ services:
     image: ${CERTBOT_IMAGE:-certbot/certbot:latest}
     restart: unless-stopped
     volumes:
-    - ./infra/certbot/conf:/etc/letsencrypt
-    - ./infra/certbot/www:/var/www/certbot
+    - ${INFRA_CERTBOT_CONF_DIR:-./infra/certbot/conf}:/etc/letsencrypt
+    - ${INFRA_CERTBOT_WWW_DIR:-./infra/certbot/www}:/var/www/certbot
     entrypoint: "sh -c \"trap exit TERM;\n       while :; do certbot renew --webroot\
       \ -w /var/www/certbot --quiet;\n       sleep 12h & wait $${!}; done\"\n"

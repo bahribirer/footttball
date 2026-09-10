@@ -1,14 +1,15 @@
 {
   "version": "1.2.0",
-  "git_sha": "3c3aa1dd813e6ccd722bf237ede0ec958453e1ad",
-  "built_at": "2026-09-10T17:03:43+00:00",
+  "git_sha": "12e50a8752edc65639dab5f56c0a907647da5a9a",
+  "built_at": "2026-09-10T17:25:24+00:00",
   "includes_database": false,
   "images": {
     "RELEASE_VERSION": "1.2.0",
     "BACKEND_IMAGE": "footttball-backend:1.2.0",
     "NGINX_IMAGE": "ttt-nginx:1.2.0",
     "REDIS_IMAGE": "ttt-redis:1.2.0",
-    "CERTBOT_IMAGE": "ttt-certbot:1.2.0"
+    "CERTBOT_IMAGE": "ttt-certbot:1.2.0",
+    "INCLUDED_SERVICES": "backend nginx redis certbot"
   },
   "sources": {
     "nginx": {
@@ -26,7 +27,7 @@
   },
   "artifacts": {
     "backend.tar.gz": {
-      "bytes": 66601931
+      "bytes": 66601779
     },
     "certbot.tar.gz": {
       "bytes": 83836699
@@ -38,5 +39,5 @@
       "bytes": 16651281
     }
   },
-  "total_bytes": 188819947
+  "total_bytes": 188824673
 }

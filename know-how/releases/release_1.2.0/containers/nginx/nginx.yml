@@ -8,13 +8,13 @@ services:
       backend:
         condition: service_healthy
     ports:
-    - 80:80
-    - 443:443
+    - ${HTTP_PORT:-80}:80
+    - ${HTTPS_PORT:-443}:443
     volumes:
-    - ./infra/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
-    - ./infra/nginx/conf.d:/etc/nginx/conf.d:ro
-    - ./infra/certbot/conf:/etc/letsencrypt:ro
-    - ./infra/certbot/www:/var/www/certbot
+    - ${INFRA_NGINX_CONF_FILE:-./infra/nginx/nginx.conf}:/etc/nginx/nginx.conf:ro
+    - ${INFRA_NGINX_CONFD_DIR:-./infra/nginx/conf.d}:/etc/nginx/conf.d:ro
+    - ${INFRA_CERTBOT_CONF_DIR:-./infra/certbot/conf}:/etc/letsencrypt:ro
+    - ${INFRA_CERTBOT_WWW_DIR:-./infra/certbot/www}:/var/www/certbot
     networks:
     - edge
     logging:

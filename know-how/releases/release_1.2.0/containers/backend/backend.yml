@@ -16,7 +16,7 @@ services:
       MODES_DISABLED: ${MODES_DISABLED:-}
       REDIS_URL: ${REDIS_URL:-}
     volumes:
-    - ./backend/data:/app/data
+    - ${BACKEND_DATA_DIR:-./backend/data}:/app/data
     - logo_cache:/app/static/logos
     healthcheck:
       test:
