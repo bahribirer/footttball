@@ -443,7 +443,8 @@ class _GuessDialogState extends State<_GuessDialog> {
               children: [
                 CountryFlag(country: widget.nation, width: 28),
                 const SizedBox(width: 8),
-                const Text('×', style: TextStyle(color: Colors.white54, fontSize: 16)),
+                const Text('×',
+                    style: TextStyle(color: Colors.white54, fontSize: 16)),
                 const SizedBox(width: 8),
                 Image.network(
                   ApiService.logoUrl(widget.club),
