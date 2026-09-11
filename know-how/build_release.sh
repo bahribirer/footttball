@@ -171,8 +171,18 @@ echo "  servisler: $SERVICES"
 # alınır; ilk kurulum paketi böyle üretilir.
 PREVIOUS_RELEASE=""
 if [ "$FULL" = "0" ]; then
-  PREVIOUS_RELEASE="$(ls -1d "$ROOT"/know-how/releases/release_* 2>/dev/null \
-    | grep -v "release_$VERSION\$" | sort -V | tail -1)"
+  # Yalnızca gerçek sürüm DİZİNLERİ aday: adı tam olarak release_X.Y.Z olan
+  # ve içinde version.env bulunan. Gevşek `ls release_*` yanındaki
+  # release_1.3.0.tar.gz dosyasını ya da release_1.3.0_elle gibi bir
+  # çalışma kopyasını "en yeni sürüm" sanıyordu; tar'ın içinde version.env
+  # olmayınca da sessizce tam pakete düşüyordu.
+  PREVIOUS_RELEASE="$(
+    find "$ROOT/know-how/releases" -mindepth 1 -maxdepth 1 -type d \
+         -name 'release_[0-9]*.[0-9]*.[0-9]*' 2>/dev/null \
+    | grep -E '/release_[0-9]+\.[0-9]+\.[0-9]+$' \
+    | grep -v "/release_$VERSION\$" \
+    | while read -r dir; do [ -f "$dir/version.env" ] && echo "$dir"; done \
+    | sort -V | tail -1)"
 fi
 
 CHANGED=""
