@@ -307,22 +307,46 @@ save_image() {
   du -h "$OUT/images/$name.tar.gz" | cut -f1
 }
 
-# Bir servisin imajı önceki pakettekiyle aynıysa tar'lanmaz.
+# Her servisin "kaynak parmak izi": içerik değişmediyse aynı kalan bir değer.
+#
+# Imaj kimliği bu iş için kullanılamaz: buildx her derlemeye zaman damgalı
+# kanıt (attestation) ekliyor, üçüncü partiyi yeniden etiketleme her
+# seferinde yeni kimlik üretiyor. Kod aynı olsa bile kimlik farklı çıkıyor
+# ve delta hiçbir zaman hiçbir şeyi atlamıyordu — elle paket egzersizinde
+# ortaya çıktı.
+#
+#   backend        : backend/ dizininin git ağaç özeti (kaynak değiştiyse değişir)
+#   üçüncü parti   : upstream imajın digest'i (nginx@sha256:...)
+source_fingerprint() {
+  local service="$1"
+  case "$service" in
+    backend)
+      if [ -n "${RESOLVED_SHA:-}" ]; then
+        git rev-parse "$RESOLVED_SHA:backend"
+      else
+        # Çalışma ağacı: commitlenmemiş değişiklikler de sayılsın diye
+        # dizin içeriği doğrudan özetlenir.
+        ( cd "$ROOT/backend" && find . -type f ! -path './__pycache__/*' ! -name '*.pyc' \
+            -print0 | sort -z | xargs -0 shasum -a 256 | shasum -a 256 | cut -d' ' -f1 )
+      fi ;;
+    nginx)   printf '%s' "$NGINX_DIGEST" ;;
+    redis)   printf '%s' "$REDIS_DIGEST" ;;
+    certbot) printf '%s' "$CERTBOT_DIGEST" ;;
+  esac
+}
+
+# Bir servisin kaynağı önceki pakettekiyle aynıysa tar'lanmaz.
 should_include() {
   local service="$1" new_ref="$2" var="$3"
   [ "$FULL" = "1" ] && return 0
   [ -z "$PREVIOUS_RELEASE" ] && return 0
-  local old_ref
-  old_ref="$(grep "^${var}=" "$PREVIOUS_RELEASE/version.env" 2>/dev/null | cut -d= -f2- || true)"
-  [ -z "$old_ref" ] && return 0
-
-  # Etiket sürümü taşıdığı için ("ttt-nginx:1.2.0") isim her sürümde
-  # değişir; asıl soru İÇERİĞİN değişip değişmediği. Imaj kimliği
-  # karşılaştırılır.
-  local new_id old_id
-  new_id="$(docker image inspect --format '{{.Id}}' "$new_ref" 2>/dev/null || echo new)"
-  old_id="$(grep "^#ID_${var}=" "$PREVIOUS_RELEASE/version.env" 2>/dev/null | cut -d= -f2- || echo old)"
-  [ "$new_id" != "$old_id" ]
+  local old_fp new_fp
+  old_fp="$(grep "^#SRC_${var}=" "$PREVIOUS_RELEASE/version.env" 2>/dev/null | cut -d= -f2- || true)"
+  # Önceki paket parmak izi kaydetmemişse (eski betikle üretilmiş)
+  # karşılaştırma yapılamaz; güvenli taraf pakete almak.
+  [ -z "$old_fp" ] && return 0
+  new_fp="$(source_fingerprint "$service")"
+  [ "$new_fp" != "$old_fp" ]
 }
 
 echo "▶ İmajlar tar'lanıyor"
@@ -418,12 +442,12 @@ CERTBOT_IMAGE=$CERTBOT_IMAGE
 # geri kalanlar hedef makinede zaten çalışıyor.
 INCLUDED_SERVICES=$(echo $INCLUDED | xargs)
 
-# Sonraki paketin delta karşılaştırması için imaj kimlikleri.
+# Sonraki paketin delta karşılaştırması için kaynak parmak izleri.
 # Yorum satırı: docker compose bunları okumaz.
-#ID_BACKEND_IMAGE=$(docker image inspect --format '{{.Id}}' "$BACKEND_IMAGE" 2>/dev/null || true)
-#ID_NGINX_IMAGE=$(docker image inspect --format '{{.Id}}' "$NGINX_IMAGE" 2>/dev/null || true)
-#ID_REDIS_IMAGE=$(docker image inspect --format '{{.Id}}' "$REDIS_IMAGE" 2>/dev/null || true)
-#ID_CERTBOT_IMAGE=$(docker image inspect --format '{{.Id}}' "$CERTBOT_IMAGE" 2>/dev/null || true)
+#SRC_BACKEND_IMAGE=$(source_fingerprint backend)
+#SRC_NGINX_IMAGE=$(source_fingerprint nginx)
+#SRC_REDIS_IMAGE=$(source_fingerprint redis)
+#SRC_CERTBOT_IMAGE=$(source_fingerprint certbot)
 ENVEOF
 
 # --- update.sh --------------------------------------------------------
