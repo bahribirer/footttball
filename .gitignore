@@ -72,3 +72,7 @@ infra/certbot/
 # Metin dosyaları (version.env, manifest.json, servis tanımları) izlenir.
 know-how/releases/*/images/
 know-how/releases/*/data/
+# Paket tar.gz'leri ve sha256'ları klasörün içinde; ağır, yeniden üretilir
+know-how/releases/*/*.tar.gz
+know-how/releases/*/*.tar.gz.sha256
+build_release.sh.eski

@@ -66,7 +66,7 @@ jobs:
 
       - name: Sözdizimi
         run: |
-          for f in infra/*.sh know-how/*.sh know-how/templates/*.sh; do
+          for f in infra/*.sh know-how/build.sh know-how/templates/*.sh; do
             [ -f "$f" ] || continue
             bash -n "$f" && echo "ok  $f"
           done

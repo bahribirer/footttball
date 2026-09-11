@@ -8,84 +8,89 @@ internete ya da kayıt defterine erişmesi gerekmez.
 
 ```
 know-how/
-├── build_release.sh      paket üretir
-├── templates/            update.sh, revert.sh, compose bölücü, not şablonu
+├── build.sh              üç adımlı paketleyici
+├── templates/
+│   ├── targets.env         hedef kataloğu: mimari + kurulum dizini
+│   ├── variables.env.example
+│   ├── update.sh           sahada çalışan güncelleyici
+│   ├── revert.sh           geri dönüş şablonu
+│   ├── split_compose.py    compose → servis başına yml
+│   └── render_note.py      müşteri talimatı
 ├── deployment/           iç teknik kayıt: log, changelog, olaylar, kararlar
 ├── dokumanlar/           müşteriye giden belgeler
-│   ├── bilgi-notlari/
-│   └── guncelleme-notlari/md/
 └── releases/
-    └── release_X.Y.Z/    USB'ye kopyalanacak paket
+    └── release_X.Y.Z/    USB'ye giden paket (tar.gz + .sha256 içinde)
 ```
 
-## Paket üretmek
+## Paket üretmek — üç adım
 
 ```bash
-./know-how/build_release.sh 1.2.1                    # çalışma ağacından
-./know-how/build_release.sh 1.2.1 --backend 011c19b  # o commit'ten derle
-./know-how/build_release.sh 1.2.1 --full             # tam paket (ilk kurulum)
-./know-how/build_release.sh 1.2.1 --with-data        # futbolcu veritabanı dahil
+./know-how/build.sh 1.3.0 --init       # 1. iskelet
+vim know-how/releases/release_1.3.0/variables.env   # 2. doldur
+./know-how/build.sh 1.3.0 --dry-run    # 3. plan doğru mu
+./know-how/build.sh 1.3.0              # 4. üret
 ```
 
-### Kaynak seçimi
+Akış bilerek bölünmüş: **karar** (hangi servis, hangi commit, hangi hedef)
+insana ait ve `variables.env`'de yazılı kalıyor; **derleme ve paketleme**
+makineye ait. `--dry-run` ikisinin arasında bir kapı.
 
-Kendi servislerimiz **kaynaktan derlenir**, kayıt defterinden çekilmez.
-`--backend` bir git referansı alır (commit sha, etiket, dal); o commit
-geçici bir worktree'ye çıkarılıp oradan derlenir. Böylece paket, çalışma
-ağacının o anki hâlinden bağımsız olarak istenen kodu taşır.
+### variables.env
 
-Çıkan imaj **sürüm numarasıyla** etiketlenir: müşteri `1.2.1` görür,
-arkasındaki commit `manifest.json`'da kalır. Sürümler arası tag şemasının
-kayması böyle engellenir.
+```bash
+TARGET=production                    # templates/targets.env'den çözülür
 
-Üçüncü parti imajlar (nginx, redis, certbot) upstream'den gelir; derleme
-makinesinde çekilirler. Hedef makinede internet gerekmez — paket hepsini
-taşır.
+BACKEND_SOURCE=build:backend@a1b2c3d # o commit'ten derle
+NGINX_SOURCE=skip                    # bu sürümde girmez, önceki etiket devralınır
+REDIS_SOURCE=skip
+CERTBOT_SOURCE=image:certbot/certbot:latest   # hazır imaj (üçüncü parti)
 
-### Mimari
+WITH_DATA=0
+```
 
-Paket **hedef makinenin** mimarisi için üretilir, derleme makinesinin değil.
-Varsayılan `linux/amd64` (üretim sunucusu); değiştirmek için
-`--platform linux/arm64` ya da `TTT_PLATFORM` ortam değişkeni.
+| Kaynak | Anlamı |
+|---|---|
+| `build:<dizin>` | çalışma ağacından derle — dizin temiz olmalı |
+| `build:<dizin>@<ref>` | o commit/etiket/daldan derle — ağacın hâli önemsiz |
+| `image:<ad:etiket>` | hazır imajı çek, sürüm etiketiyle yeniden etiketle |
+| `skip` | pakete girmez; `version.env`'de önceki sürümün etiketi kalır |
 
-Bu, sessiz bir tuzağı kapatıyor: Apple Silicon'da derlenen imaj arm64 olur,
-x86 sunucuda `docker load` sorunsuz geçer ama konteyner "exec format error"
-ile ölür ve sebebi log'da açık yazmaz. Betik yanlış mimarili imajı pakete
-koymayı reddediyor, `update.sh` de yanlış mimarili paketi uygulamayı.
+`--init` değişmeyen servisleri `skip` ile **önceden doldurur**: kaynak
+parmak izini önceki sürümle karşılaştırır (derlenen için git ağaç özeti,
+hazır imaj için upstream digest). Sen yalnızca hedefi ve istisnaları
+yazarsın.
 
-`docker tag` bu iş için yetmiyor: containerd imaj deposu bir etiketin
-birden fazla platformunu birlikte saklıyor ve `tag` hangisini aldığını
-söylemiyor. Üçüncü parti imajlar buildx'ten tek platformlu olarak
-isteniyor.
+### Hedef kataloğu
 
-Çıktı `know-how/releases/release_1.2.1/`. USB'ye olduğu gibi kopyalanır.
-Müşteri talimatı `know-how/dokumanlar/guncelleme-notlari/md/1.2.1.md`
-olarak ayrıca üretilir.
+Mimari ve kurulum dizini `templates/targets.env`'den gelir, `variables.env`'e
+yol yazılmaz. Bu Mac arm64, üretim sunucusu amd64: hedefi yanlış seçersen
+paket yüklenir ama konteyner `exec format error` ile ölür. Hedef katalogdan
+çözüldüğü için TARGET ile yol çelişemez.
 
-### Delta paketleme
+### Çıktı
 
-Her paket yalnızca bir öncekine göre **değişen** servisleri taşır. Tek
-satır değişince gigabaytlarca imajı USB'ye kopyalamak hem zaman kaybı hem
-gereksiz risk: dokunulmayan bir servisin imajını yeniden yüklemek onu
-yeniden başlatır.
+```
+release_1.3.0/
+├── release_1.3.0.tar.gz          ← USB'ye giden
+├── release_1.3.0.tar.gz.sha256   ← yanında gider
+├── containers/                   yalnız pakete giren servisler
+├── images/*.tar.gz + SHA256SUMS
+├── version.env                   imaj kilidi + parmak izleri
+├── update.sh · revert_1.2.0.sh · version_1.2.0.env
+├── MANIFEST.txt                  köken: hangi commit, hangi digest
+└── checksums.sha256
+```
 
-Karşılaştırma etiket adına değil **imaj kimliğine** bakar; etiket her
-sürümde değiştiği için ad karşılaştırması her şeyi "değişmiş" gösterirdi.
-
-Atlanan servisler `version.env`'de önceki sürümün etiketinde bırakılır.
-Aksi halde paket, içinde taşımadığı bir imajı işaret eder ve hedefte
-`--pull never` ile dağıtım patlar.
-
-Betik commit edilmemiş değişiklik varsa durur: paketin hangi koddan
-çıktığının belirsiz kalması, sahada "bu sürümde ne vardı" sorusunu
-cevaplanamaz hâle getirir.
+Müşteri talimatı `dokumanlar/guncelleme-notlari/md/1.3.0.md` olarak ayrıca
+üretilir.
 
 ## Paketi uygulamak
 
 Hedef makinede, USB'den kopyalanan dizinin içinden:
 
 ```bash
-cd release_1.2.1
+sha256sum -c release_1.3.0.tar.gz.sha256       # USB kopyası bozuk mu
+tar xzf release_1.3.0.tar.gz && cd release_1.3.0
 sudo ./update.sh /srv/tikitakatoe              # normal güncelleme
 sudo ./update.sh /srv/tikitakatoe --dry-run    # ne yapacağını yazar, dokunmaz
 sudo ./update.sh /srv/tikitakatoe --with-redis # çok süreçli çalışma
@@ -96,6 +101,11 @@ Geri dönmek için, paketin içindeki revert betiği:
 ```bash
 sudo ./revert_1.2.0.sh /srv/tikitakatoe
 ```
+
+`update.sh` sırayla: paket checksum → mimari → yedek → imaj SHA256SUMS →
+`docker load` → `.env` → `compose up --pull never` → sağlık → tüm
+servisler kararlı mı. Herhangi biri düşerse durur; sağlık düşerse geri
+döner.
 
 Geri dönüş imaj yüklemez — önceki sürümün imajları hedefte zaten duruyor,
 yalnızca kilit geri yazılır. O imajlar silinmişse betik uyarır ve durur.

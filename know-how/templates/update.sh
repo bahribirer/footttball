@@ -101,6 +101,16 @@ if [ -n "$EXPECTED_PLATFORM" ] && [ "$EXPECTED_PLATFORM" != "$HOST_PLATFORM" ]; 
 fi
 [ -n "$EXPECTED_PLATFORM" ] && echo "▶ Mimari: $EXPECTED_PLATFORM ✓"
 
+# İmaj tar'ları yüklenmeden önce kendi listesiyle doğrulanır. Paketin
+# checksums.sha256'sı zaten kontrol edildi, ama bu ikinci kapı ucuz ve
+# bozuk bir tar'ın docker load'a girmesini son anda engeller.
+if [ -f "$HERE/images/SHA256SUMS" ]; then
+  echo "▶ İmaj bütünlüğü"
+  ( cd "$HERE/images" && shasum -a 256 -c SHA256SUMS --quiet ) \
+    || { echo "✗ İmaj tar'ı bozuk — hiçbir şey yüklenmedi." >&2; exit 1; }
+  echo "  ✓ bütün"
+fi
+
 echo "▶ İmajlar yükleniyor"
 for archive in "$HERE"/images/*.tar.gz; do
   printf '  %-14s ' "$(basename "$archive" .tar.gz)"
