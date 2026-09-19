@@ -11,11 +11,42 @@ router = APIRouter()
 ADMIN_HTML = BASE_DIR / "static" / "admin" / "index.html"
 
 
-def _auth(x_admin_token: str | None = Header(default=None)) -> None:
+def _auth(
+    x_admin_token: str | None = Header(default=None),
+    authorization: str | None = Header(default=None),
+) -> None:
     if not admin_service.enabled():
-        raise HTTPException(status_code=503, detail="Yönetim paneli kapalı (ADMIN_TOKEN yok)")
-    if not admin_service.check_token(x_admin_token):
-        raise HTTPException(status_code=401, detail="Geçersiz yönetici anahtarı")
+        raise HTTPException(status_code=503, detail="Yönetim paneli kapalı (ADMIN_PASSWORD yok)")
+    token = x_admin_token
+    if not token and authorization and authorization.lower().startswith("bearer "):
+        token = authorization[7:].strip()
+    if not admin_service.check_token(token):
+        raise HTTPException(status_code=401, detail="Oturum geçersiz ya da süresi dolmuş")
+
+
+class LoginRequest(BaseModel):
+    username: str = Field(min_length=1, max_length=64)
+    password: str = Field(min_length=1, max_length=256)
+
+
+class LivesRequest(BaseModel):
+    lives: int | None = Field(default=None, ge=0, le=10)
+
+
+@router.post("/admin/login")
+async def admin_login(payload: LoginRequest) -> dict:
+    if not admin_service.enabled():
+        raise HTTPException(status_code=503, detail="Yönetim paneli kapalı (ADMIN_PASSWORD yok)")
+    token = admin_service.login(payload.username, payload.password)
+    if not token:
+        raise HTTPException(status_code=401, detail="Kullanıcı adı ya da parola yanlış")
+    return {"token": token, "user": payload.username.strip(),
+            "expires_in": 3600 * admin_service.settings.ADMIN_SESSION_HOURS}
+
+
+@router.get("/admin/me", dependencies=[Depends(_auth)])
+async def admin_me() -> dict:
+    return {"user": admin_service.settings.ADMIN_USER}
 
 
 class NotifyRequest(BaseModel):
@@ -48,6 +79,31 @@ async def rooms() -> dict:
 @router.get("/admin/leaderboard", dependencies=[Depends(_auth)])
 async def leaderboard(mode: str = "all") -> dict:
     return {"entries": score_service.leaderboard(mode, 100)}
+
+
+@router.get("/admin/players", dependencies=[Depends(_auth)])
+async def admin_players(q: str = "", page: int = 1, size: int = 50) -> dict:
+    size = max(1, min(200, size))
+    return admin_service.players_page(q, max(1, page), size)
+
+
+@router.get("/admin/players/{player_id}", dependencies=[Depends(_auth)])
+async def admin_player(player_id: str) -> dict:
+    detail = admin_service.player_detail(player_id)
+    if detail is None:
+        raise HTTPException(status_code=404, detail="Oyuncu bulunamadı")
+    return detail
+
+
+@router.post("/admin/players/{player_id}/lives", dependencies=[Depends(_auth)])
+async def admin_grant_lives(player_id: str, payload: LivesRequest | None = None) -> dict:
+    from app.services import lives_service
+    return lives_service.grant(player_id, payload.lives if payload else None)
+
+
+@router.get("/admin/system", dependencies=[Depends(_auth)])
+async def admin_system() -> dict:
+    return admin_service.system_info()
 
 
 @router.post("/admin/notify", dependencies=[Depends(_auth)])

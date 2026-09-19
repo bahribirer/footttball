@@ -14,8 +14,11 @@ class Settings:
     # Hata raporlarini surumle eslestirmek icin; CI dagitilan imajin
     # commit SHA'sini gecer.
     RELEASE: str = os.getenv("RELEASE", "dev")
-    # Yönetim paneli anahtarı; boşsa panel ve /api/v1/admin/* kapalı.
-    ADMIN_TOKEN: str = os.getenv("ADMIN_TOKEN", "")
+    # Yönetim paneli: kullanıcı adı + parola. Parola boşsa panel kapalı.
+    # (ADMIN_TOKEN eski ad; parola olarak kabul edilmeye devam eder.)
+    ADMIN_USER: str = os.getenv("ADMIN_USER", "admin")
+    ADMIN_PASSWORD: str = os.getenv("ADMIN_PASSWORD", "") or os.getenv("ADMIN_TOKEN", "")
+    ADMIN_SESSION_HOURS: int = int(os.getenv("ADMIN_SESSION_HOURS", "12"))
 
     # Veri
     DB_PATH: str = os.getenv("DB_PATH", str(BASE_DIR / "data" / "tikitakapi.db"))

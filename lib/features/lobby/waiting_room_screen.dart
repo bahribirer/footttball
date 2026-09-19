@@ -2,6 +2,8 @@ import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+
+import 'package:footttball/core/notices.dart';
 import 'package:flutter/services.dart';
 
 import 'package:footttball/core/session.dart';
@@ -135,6 +137,7 @@ class _WaitingRoomScreenState extends State<WaitingRoomScreen>
 
   @override
   Widget build(BuildContext context) {
+    Notices.instance.register(context);
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, _) {

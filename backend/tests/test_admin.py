@@ -10,7 +10,8 @@ from app.services import admin_service
 
 @pytest.fixture
 def client(monkeypatch):
-    monkeypatch.setattr(settings, "ADMIN_TOKEN", "gizli")
+    monkeypatch.setattr(settings, "ADMIN_PASSWORD", "gizli")
+    monkeypatch.setattr(settings, "ADMIN_USER", "bahri")
     admin_service.clear_notice()
     with TestClient(app) as c:
         yield c
@@ -34,7 +35,7 @@ def test_anahtarsiz_ve_yanlis_anahtar_reddedilir(client):
 
 
 def test_anahtar_tanimli_degilse_panel_kapali(client, monkeypatch):
-    monkeypatch.setattr(settings, "ADMIN_TOKEN", "")
+    monkeypatch.setattr(settings, "ADMIN_PASSWORD", "")
     assert client.get("/api/v1/admin/overview", headers=H).status_code == 503
     # Sayfa yine servis edilir ama veri çekemez.
     assert client.get("/admin").status_code == 200
@@ -100,3 +101,44 @@ def test_panel_dosyasi_imaja_giriyor():
     assert "COPY static/admin" in dockerfile
     ignore = (Path(__file__).resolve().parent.parent / ".dockerignore").read_text()
     assert "static/admin" not in ignore
+
+
+def test_kullanici_adi_parola_ile_oturum(client):
+    assert client.post("/api/v1/admin/login", json={"username": "bahri", "password": "yanlis"}).status_code == 401
+    assert client.post("/api/v1/admin/login", json={"username": "baska", "password": "gizli"}).status_code == 401
+    r = client.post("/api/v1/admin/login", json={"username": "Bahri", "password": "gizli"})
+    assert r.status_code == 200
+    token = r.json()["token"]
+    ok = client.get("/api/v1/admin/me", headers={"Authorization": f"Bearer {token}"})
+    assert ok.status_code == 200 and ok.json()["user"] == "bahri"
+    # Kurcalanmış belirteç reddedilir.
+    bad = token[:-4] + "0000"
+    assert client.get("/api/v1/admin/me", headers={"Authorization": f"Bearer {bad}"}).status_code == 401
+
+
+def test_suresi_dolan_oturum_reddedilir(client, monkeypatch):
+    token = client.post("/api/v1/admin/login", json={"username": "bahri", "password": "gizli"}).json()["token"]
+    import time as _t
+    real = _t.time
+    monkeypatch.setattr(admin_service.time, "time", lambda: real() + 13 * 3600)
+    assert client.get("/api/v1/admin/me", headers={"Authorization": f"Bearer {token}"}).status_code == 401
+
+
+def test_oyuncu_listesi_arama_ve_can_verme(client):
+    from app.services import lives_service, score_service
+    score_service.record_match("tiki_taka_toe",
+                               [{"slot": 0, "player_id": "cihaz-admin-1", "name": "Ayşe"},
+                                {"slot": 1, "player_id": "cihaz-admin-2", "name": "Bora"}], winner_slot=0)
+    for _ in range(10):
+        lives_service.consume("cihaz-admin-1")
+    page = client.get("/api/v1/admin/players", headers=H, params={"q": "ayşe"}).json()
+    assert page["total"] == 1 and page["items"][0]["player_id"] == "cihaz-admin-1"
+    assert page["items"][0]["lives"]["lives"] == 0 and page["items"][0]["points"] == 10
+
+    detail = client.get("/api/v1/admin/players/cihaz-admin-1", headers=H).json()
+    assert detail["summary"]["total"] == 10 and detail["events"][0]["kind"] == "win"
+    assert client.get("/api/v1/admin/players/yok", headers=H).status_code == 404
+
+    r = client.post("/api/v1/admin/players/cihaz-admin-1/lives", headers=H, json={})
+    assert r.json()["lives"] == 10
+    assert client.get("/api/v1/admin/system", headers=H).json()["lives"]["max"] == 10

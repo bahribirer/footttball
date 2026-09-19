@@ -16,6 +16,11 @@ class Notices {
 
   int? _lastBoardId;
   OverlayEntry? _entry;
+  BuildContext? _fallback;
+
+  /// Kök navigator anahtarı takılı değilse (testler, gömülü kullanım)
+  /// ekranlar kendi bağlamını verir; overlay oradan bulunur.
+  void register(BuildContext context) => _fallback = context;
 
   /// Pano duyurusu: daha önce gösterilmediyse gösterir.
   void showBoard(Map<String, dynamic>? notice) {
@@ -30,7 +35,11 @@ class Notices {
   }
 
   void show({required String title, required String message}) {
-    final overlay = navigatorKey.currentState?.overlay;
+    var overlay = navigatorKey.currentState?.overlay;
+    final fb = _fallback;
+    if (overlay == null && fb != null && fb.mounted) {
+      overlay = Overlay.maybeOf(fb, rootOverlay: true);
+    }
     if (overlay == null || message.isEmpty) return;
     _entry?.remove();
     late final OverlayEntry entry;

@@ -10,6 +10,8 @@
 
 import 'dart:convert';
 
+import 'package:http/http.dart' as http;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
@@ -403,5 +405,52 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('lb_tab_tiki_taka_toe')));
     await pumpFor(tester, const Duration(seconds: 2));
     expect(find.text('Skor tablosu yüklenemedi'), findsNothing);
+  });
+
+  // Yönetici duyurusu: bekleme odasındaki oyuncuya bant olarak iner.
+  // Parola dart-define ile verilir (ADMIN_PASSWORD); yoksa test atlanır —
+  // CI üretime karşı koşuyor ve orada parola yok.
+  testWidgets('Yönetici duyurusu bekleme odasında bant olarak görünür',
+      (tester) async {
+    const password = String.fromEnvironment('ADMIN_PASSWORD');
+    if (password.isEmpty) {
+      markTestSkipped('ADMIN_PASSWORD verilmedi');
+      return;
+    }
+    await openMenu(tester);
+    final code = await createRoom(tester, GameMode.playerGuess);
+    await tester.ensureVisible(find.byKey(const ValueKey('btn_play')));
+    await tester.tap(find.byKey(const ValueKey('btn_play')));
+    await pumpUntil(tester, find.byType(WaitingRoomScreen),
+        label: 'bekleme odası');
+    await pumpFor(tester, const Duration(seconds: 2));
+
+    final login = await http.post(
+      Uri.parse('${AppConfig.apiBase}/api/v1/admin/login'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'username': 'admin', 'password': password}),
+    );
+    expect(login.statusCode, 200, reason: 'yönetici girişi');
+    final token = (jsonDecode(login.body) as Map)['token'] as String;
+
+    final sent = await http.post(
+      Uri.parse('${AppConfig.apiBase}/api/v1/admin/notify'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+      body: jsonEncode({
+        'title': 'Test duyurusu',
+        'message': 'Merhaba $code',
+        'target': code,
+      }),
+    );
+    expect(sent.statusCode, 200);
+    expect((jsonDecode(sent.body) as Map)['delivered'], 1,
+        reason: 'odadaki tek oyuncuya ulaşmalı');
+
+    await pumpUntil(tester, find.text('Merhaba $code'),
+        timeout: const Duration(seconds: 8), label: 'duyuru bandı');
+    expect(find.text('Test duyurusu'), findsOneWidget);
   });
 }
