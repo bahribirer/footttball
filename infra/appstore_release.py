@@ -35,7 +35,7 @@ API = "https://api.appstoreconnect.apple.com/v1"
 APP_ID = os.getenv("APPSTORE_APP_ID", "6759257459")
 ROOT = Path(__file__).resolve().parent.parent
 STORE = ROOT / "store"
-LOCALE = "tr-TR"
+LOCALE = "tr"   # App Store Connect Türkçe yerel kodu (tr-TR geçersiz)
 SCREENSHOT_DISPLAY = "APP_IPHONE_67"   # 6.7"/6.9" (1290×2796, 1320×2868)
 
 _token_cache: tuple[str, float] | None = None
