@@ -3,6 +3,31 @@
 Biçim: [keepachangelog](https://keepachangelog.com/tr/1.1.0/).
 Sürümleme: [semver](https://semver.org/lang/tr/).
 
+## [1.5.0] - 2026-09-19
+
+### Eklendi
+- Can sistemi: cihaz başına saatte 10 maç (bekleme ve yeniden bağlanma
+  can yakmaz; rövanş yeni maç sayılır). Menüde ♥ sayacı, `GET /api/v1/lives`
+- Yönetim paneli v2: kullanıcı adı + parola ile giriş (12 saatlik oturum),
+  sayfalar (Genel Bakış, Odalar, Oyuncular, Skor Tablosu, Duyurular,
+  Sistem), oyuncu arama/detay ve can yenileme
+- Fotoğraf katmanı `player_photos` (Wikidata P18): efsaneler ve fotoğrafsız
+  güncel oyuncular
+- Veri denetimi: `scripts/audit_data.py` + eşikli testler
+
+### Değişti
+- Tüm kulüplerin logosu var (625/625): Wikimedia adres düzeltmesi, Wikidata
+  ve Wikipedia arma kaynakları, elle doğrulanmış istisnalar
+- Ülke → bayrak çözümü düzeltildi (Georgia, Mali, Luxembourg, Kosovo,
+  Galler, Curaçao...), 60+ tarihî devlet eşlendi; istemci kataloğu 260 ülke
+- Tanıtım, isim ve Tiki Taka Toe ekranları yeni görsel dile geçti; menü üst
+  çubuğu sadeleşti
+- Bağımlılıklar güncellendi (FastAPI 0.141, pydantic 2.13, websockets 17,
+  flutter_lints 6, GitHub Actions)
+
+### Düzeltildi
+- Motor başlatma hatası katılan oyuncunun bağlantısını düşürmüyor
+
 ## [1.4.0] - 2026-09-19
 
 ### Eklendi

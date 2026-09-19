@@ -9,6 +9,7 @@ Ayrıntı: [changelog.md](changelog.md)
 
 | Sürüm | Tarih | Özet |
 |---|---|---|
+| 1.5.0 | 2026-09-19 | Can sistemi, yönetim paneli v2, logo/bayrak/fotoğraf bütünlüğü |
 | 1.4.0 | 2026-09-19 | Ses efektleri, yönetim paneli, yeni görsel dil, dayanıklılık |
 | 1.3.0 | 2026-09-19 | Kariyer Yolu, bot rakip, skor tablosu, efsane oyuncular, günün tahtası düzeltmeleri |
 | 1.2.0 | 2026-09-10 | Günün tahtası, hızlı eşleşme, yeniden başlatmayı atlatma, Redis |
