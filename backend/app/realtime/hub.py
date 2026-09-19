@@ -9,6 +9,7 @@ import time
 from fastapi import WebSocket
 
 from app.core.config import settings
+from app.services import lives_service
 from app.realtime import bot as bot_module, persistence, store as room_store
 from app.realtime.modes.base import BaseMode
 from app.realtime.modes.category_race import CategoryRaceMode
@@ -26,6 +27,14 @@ MODE_ENGINES: dict[str, type[BaseMode]] = {
     GameMode.CAREER_PATH: CareerPathMode,
     GameMode.CATEGORY_RACE: CategoryRaceMode,
 }
+
+
+class NoLives(Exception):
+    """Cihazın bu saatlik pencerede canı kalmadı."""
+
+    def __init__(self, resets_in: int) -> None:
+        super().__init__("no lives")
+        self.resets_in = resets_in
 
 
 class RoomFull(Exception):
@@ -133,7 +142,7 @@ class RoomHub:
         ilk hamle onda kalsın. Motor iki oyuncu görünce başlar; botun
         varlığını bilmez.
         """
-        from app.services import bot_service
+        from app.services import bot_service, lives_service
         async with self._lock:
             socket = bot_module.BotSocket()
             player = Player(socket=socket, name=bot_service.pick_name(difficulty), slot=1)  # type: ignore[arg-type]
@@ -189,6 +198,12 @@ class RoomHub:
             active = [player for player in room.players if player.connected]
             if len(active) >= settings.MAX_PLAYERS_PER_ROOM:
                 raise RoomFull(code)
+
+            # Yeni giriş: can kontrolü (yeniden bağlanma yukarıda döndü).
+            try:
+                lives_service.check(player_id)
+            except lives_service.NoLives as exc:
+                raise NoLives(exc.resets_in) from None
 
             # Tolerans süresi dolmuş kopuk kayıtlar slotu bırakır.
             room.players = active

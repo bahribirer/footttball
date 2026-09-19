@@ -4,7 +4,7 @@ from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, Field
 
 from app.realtime.protocol import GameMode
-from app.services import daily_service, score_service
+from app.services import daily_service, lives_service, score_service
 
 router = APIRouter()
 
@@ -44,3 +44,9 @@ async def post_daily_score(payload: DailyScoreRequest) -> dict:
         raise HTTPException(status_code=400, detail="Bu tarih için puan girilemez")
     accepted = score_service.record_daily(payload.player_id, payload.name, payload.date, payload.score)
     return {"accepted": accepted, **score_service.summary(payload.player_id)}
+
+
+@router.get("/lives")
+async def get_lives(player_id: str = Query(min_length=8, max_length=64)) -> dict:
+    """Cihazın kalan canı ve yenilenme zamanı."""
+    return lives_service.status(player_id)

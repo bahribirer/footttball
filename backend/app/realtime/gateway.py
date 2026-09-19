@@ -7,8 +7,9 @@ import logging
 from fastapi import APIRouter, Query, WebSocket, WebSocketDisconnect
 
 from app.core.config import settings
-from app.realtime.hub import ModeMismatch, RoomFull, RoomNotFound, hub
+from app.realtime.hub import ModeMismatch, NoLives, RoomFull, RoomNotFound, hub
 from app.realtime.protocol import ClientMessage, ErrorCode, ServerMessage, error
+from app.services import lives_service
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -18,6 +19,7 @@ CLOSE_ROOM_FULL = 4001
 CLOSE_ROOM_NOT_FOUND = 4004
 CLOSE_MODE_MISMATCH = 4005
 CLOSE_IDLE = 4008
+CLOSE_NO_LIVES = 4011
 
 # Tek bir istemci mesajı için üst sınır (bayt). Oyun mesajları birkaç yüz
 # baytı geçmez.
@@ -54,6 +56,14 @@ async def websocket_v2(
             error(ErrorCode.MODE_MISMATCH, f"Bu oda '{exc.expected}' modunda oynanıyor.")))
         await websocket.close(code=CLOSE_MODE_MISMATCH)
         return
+    except NoLives as exc:
+        minutes = max(1, (exc.resets_in + 59) // 60)
+        await websocket.send_text(json.dumps({
+            **error(ErrorCode.NO_LIVES, f"Canın kalmadı. {minutes} dk sonra 10 can yenilenir."),
+            "resets_in": exc.resets_in,
+        }))
+        await websocket.close(code=CLOSE_NO_LIVES)
+        return
 
     logger.info(
         "Oda %s: %s (slot %s) %s",
@@ -88,6 +98,8 @@ async def websocket_v2(
                 await room.engine.resend_state(player)
         elif room.is_full and room.engine is None:
             engine = hub.build_engine(room)
+            # Maç başlıyor: her insan oyuncudan 1 can (bekleme can yakmaz).
+            await asyncio.to_thread(lives_service.consume_for_room, room.players)
             try:
                 await engine.start()
             except Exception:
@@ -240,4 +252,6 @@ async def _handle_rematch(room, player) -> None:
         participant.score = 0
 
     engine = hub.build_engine(room)
+    # Rövanş yeni maç: yine can düşer.
+    await asyncio.to_thread(lives_service.consume_for_room, room.players)
     await engine.start()

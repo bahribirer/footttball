@@ -38,6 +38,7 @@ class ErrorCode(StrEnum):
     GAME_NOT_RUNNING = "game_not_running"
     MODE_DISABLED = "mode_disabled"      # sunucudan kapatılmış mod
     MODE_UNKNOWN = "mode_unknown"        # istemci sunucunun tanımadığı bir mod istedi
+    NO_LIVES = "no_lives"                # saatlik can hakkı bitti
 
 
 class GameMode(StrEnum):

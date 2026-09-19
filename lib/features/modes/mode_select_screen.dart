@@ -1,5 +1,8 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
+import 'package:footttball/core/lives.dart';
 import 'package:footttball/core/notices.dart';
 import 'package:footttball/core/session.dart';
 import 'package:footttball/core/sound.dart';
@@ -34,7 +37,15 @@ class _ModeSelectScreenState extends State<ModeSelectScreen>
     )..forward();
     _loadEnabledModes();
     _loadNotice();
+    Lives.instance.refresh();
+    // Can sayacı: dakikada bir tazelenir (pencere dolunca 10'a döner).
+    _livesTimer = Timer.periodic(
+      const Duration(minutes: 1),
+      (_) => Lives.instance.refresh(),
+    );
   }
+
+  Timer? _livesTimer;
 
   /// Menüye gelen oyuncu sokete bağlı değil; panodaki duyuruyu buradan alır.
   Future<void> _loadNotice() async {
@@ -59,6 +70,7 @@ class _ModeSelectScreenState extends State<ModeSelectScreen>
 
   @override
   void dispose() {
+    _livesTimer?.cancel();
     _controller.dispose();
     super.dispose();
   }
@@ -75,7 +87,9 @@ class _ModeSelectScreenState extends State<ModeSelectScreen>
     );
   }
 
-  void _openQuickMatch() {
+  Future<void> _openQuickMatch() async {
+    if (!await Lives.instance.ensure(context)) return;
+    if (!mounted) return;
     showModalBottomSheet<void>(
       context: context,
       backgroundColor: Colors.transparent,
@@ -90,7 +104,9 @@ class _ModeSelectScreenState extends State<ModeSelectScreen>
     );
   }
 
-  void _openMode(GameMode mode) {
+  Future<void> _openMode(GameMode mode) async {
+    if (!await Lives.instance.ensure(context)) return;
+    if (!mounted) return;
     Session.instance.selectedMode = mode;
     Navigator.of(context).push(
       MaterialPageRoute(builder: (_) => const StartPage()),
@@ -99,6 +115,7 @@ class _ModeSelectScreenState extends State<ModeSelectScreen>
 
   @override
   Widget build(BuildContext context) {
+    Notices.instance.register(context);
     final enabled = _enabledIds;
     final modes = enabled == null
         ? GameMode.values
@@ -117,26 +134,17 @@ class _ModeSelectScreenState extends State<ModeSelectScreen>
                   padding: const EdgeInsets.symmetric(horizontal: 18),
                   child: Row(
                     children: [
-                      Flexible(
-                        child: _TopChip(
-                          key: const ValueKey('btn_leaderboard'),
-                          icon: Icons.emoji_events_outlined,
-                          label: 'SIRALAMA',
-                          accent: AppTheme.gold,
-                          onTap: _openLeaderboard,
-                        ),
+                      _TopChip(
+                        key: const ValueKey('btn_leaderboard'),
+                        icon: Icons.emoji_events_outlined,
+                        label: 'SIRALAMA',
+                        accent: AppTheme.gold,
+                        onTap: _openLeaderboard,
                       ),
                       const SizedBox(width: 8),
-                      _SoundChip(),
-                      const SizedBox(width: 8),
+                      const _LivesChip(),
                       const Spacer(),
-                      Flexible(
-                        child: _TopChip(
-                          icon: Icons.person_outline_rounded,
-                          label: Session.instance.displayName.toUpperCase(),
-                          accent: AppTheme.pitch,
-                        ),
-                      ),
+                      _SoundChip(),
                     ],
                   ),
                 ),
@@ -504,6 +512,59 @@ class _TopChip extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// Kalan can: ♥ 7/10. Dokununca yenilenme süresi.
+class _LivesChip extends StatelessWidget {
+  const _LivesChip();
+
+  @override
+  Widget build(BuildContext context) {
+    return ValueListenableBuilder<LivesStatus?>(
+      valueListenable: Lives.instance.status,
+      builder: (context, s, _) {
+        if (s == null) return const SizedBox.shrink();
+        final empty = s.lives == 0;
+        return GestureDetector(
+          key: const ValueKey('chip_lives'),
+          onTap: () => ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(empty
+                ? 'Canın bitti — ${s.resetsInText} sonra ${s.max} can yenilenir.'
+                : '${s.lives}/${s.max} can · ${s.resetsInText} sonra yenilenir.'),
+          )),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+            decoration: BoxDecoration(
+              color: AppTheme.surface,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: empty
+                    ? AppTheme.danger.withOpacity(0.6)
+                    : AppTheme.borderStrong,
+              ),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.favorite_rounded,
+                    color: empty ? AppTheme.danger : const Color(0xFFFF6B4A),
+                    size: 15),
+                const SizedBox(width: 5),
+                Text(
+                  '${s.lives}',
+                  style: const TextStyle(
+                    color: AppTheme.text,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 }

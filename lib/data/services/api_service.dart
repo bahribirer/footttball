@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 import 'package:footttball/core/config/app_config.dart';
+import 'package:footttball/core/lives.dart';
 import 'package:footttball/core/session.dart';
 import 'package:footttball/data/models/game_mode.dart';
 import 'package:footttball/data/models/team_model.dart';
@@ -300,6 +301,17 @@ class ApiService {
     try {
       final json = await _getJson(_uri('/api/v1/notice'));
       return json['notice'] as Map<String, dynamic>?;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Cihazın kalan canı; ağ hatasında null (sunucu kapıyı zaten tutar).
+  static Future<LivesStatus?> lives(String playerId) async {
+    try {
+      final json =
+          await _getJson(_uri('/api/v1/lives', {'player_id': playerId}));
+      return LivesStatus.fromJson(json);
     } catch (_) {
       return null;
     }
