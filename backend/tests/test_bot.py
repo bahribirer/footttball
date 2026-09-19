@@ -211,10 +211,11 @@ async def test_career_bot_cozumu_okumaz(fast_bot, monkeypatch):
     engine = hub.build_engine(room)
     await engine.start()
     await _settle(1.0)
-    # İlk bakışta yalnız açık kulüp; ipucu kullanırsa bir sonraki de açılır
-    # ama hiçbir zaman tüm yol görünmez.
+    # İlk bakışta yalnız açık kulüp; her ipucu bir kulüp daha açar. k'inci
+    # bakışta en fazla 1 + k kulüp görünebilir (her bakış arasında en çok
+    # bir ipucu). Daha fazlası çözümü okuduğu anlamına gelir.
     assert calls and calls[0] == ["Gizli1"], "bot yalniz acik olan ilk kulubu gormeli"
-    assert all(len(c) < 3 for c in calls), "bot cozumun tamamini gormemeli"
+    assert all(len(c) <= 1 + k for k, c in enumerate(calls)), "bot ipucusuz kulup gormemeli"
 
 
 # --- Kategori Yarışı ----------------------------------------------------
