@@ -2,6 +2,8 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import 'package:footttball/core/sound.dart';
+
 import 'package:footttball/data/models/game_mode.dart';
 import 'package:footttball/data/models/room_models.dart';
 import 'package:footttball/data/services/country_catalog.dart';
@@ -72,7 +74,10 @@ class _ClockGameScaffoldState extends State<ClockGameScaffold> {
     _subscription = _socket.events.listen(_onEvent);
     _localTicker = Timer.periodic(
       const Duration(milliseconds: 200),
-      (_) => setState(() => _localClockOffset += 0.2),
+      (_) {
+        setState(() => _localClockOffset += 0.2);
+        _tickIfLastSeconds();
+      },
     );
   }
 
@@ -88,6 +93,19 @@ class _ClockGameScaffoldState extends State<ClockGameScaffold> {
 
   bool get _isMyTurn => _state.currentTurn == _socket.mySlot;
 
+  int _lastTickSecond = -1;
+
+  /// Kendi saatimin son 5 saniyesinde saniyede bir tik.
+  void _tickIfLastSeconds() {
+    if (!_isMyTurn || _gameOver) return;
+    final left = _displayClock(_socket.mySlot);
+    final whole = left.ceil();
+    if (left <= 5 && whole > 0 && whole != _lastTickSecond) {
+      _lastTickSecond = whole;
+      Sound.instance.play(Sfx.tick);
+    }
+  }
+
   double _displayClock(int slot) {
     final base = _state.clockOf(slot);
     if (_gameOver || slot != _state.currentTurn) return base;
@@ -100,8 +118,15 @@ class _ClockGameScaffoldState extends State<ClockGameScaffold> {
     switch (event.type) {
       case 'start':
       case 'state':
+        final next = ClockGameState.fromJson(event.payload);
+        // Sıra bana geçti: kısa bir uyarı.
+        if (next.currentTurn == _socket.mySlot &&
+            _state.currentTurn != _socket.mySlot &&
+            !_gameOver) {
+          Sound.instance.play(Sfx.turn);
+        }
         setState(() {
-          _state = ClockGameState.fromJson(event.payload);
+          _state = next;
           _localClockOffset = 0;
         });
         break;
@@ -129,6 +154,7 @@ class _ClockGameScaffoldState extends State<ClockGameScaffold> {
 
     switch (event.event) {
       case 'accepted':
+        Sound.instance.play(Sfx.correct);
         if (slot != _socket.mySlot) {
           _flash('$answer ✓', Colors.greenAccent);
         } else {
@@ -139,6 +165,7 @@ class _ClockGameScaffoldState extends State<ClockGameScaffold> {
 
       case 'rejected':
         if (slot == _socket.mySlot) {
+          Sound.instance.play(Sfx.wrong);
           _flash(
               _rejectionText(event.value<String>('reason')), Colors.redAccent);
         }
@@ -167,6 +194,7 @@ class _ClockGameScaffoldState extends State<ClockGameScaffold> {
 
     final winner = event.value<int>('winner');
     final iWon = winner == _socket.mySlot;
+    Sound.instance.play(iWon ? Sfx.win : Sfx.lose);
 
     GameDialogs.showInfo(
       context,

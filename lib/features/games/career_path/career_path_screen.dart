@@ -2,6 +2,8 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import 'package:footttball/core/sound.dart';
+
 import 'package:footttball/data/models/game_mode.dart';
 import 'package:footttball/data/models/room_models.dart';
 import 'package:footttball/data/services/country_catalog.dart';
@@ -65,6 +67,7 @@ class _CareerPathScreenState extends State<CareerPathScreen> {
       case 'start':
       case 'state':
         final next = CareerState.fromJson(event.payload);
+        _playPhaseSounds(next);
         // Yeni tur başladıysa vurguyu ve alanı temizle.
         if (next.round != _state.round) {
           _answerController.clear();
@@ -87,11 +90,23 @@ class _CareerPathScreenState extends State<CareerPathScreen> {
     }
   }
 
+  void _playPhaseSounds(CareerState next) {
+    if (next.phase != _state.phase && next.phase == 'answering') {
+      Sound.instance.play(Sfx.start);
+    } else if (next.phase == 'answering' &&
+        next.countdown != _state.countdown &&
+        next.countdown > 0 &&
+        next.countdown <= 5) {
+      Sound.instance.play(Sfx.tick);
+    }
+  }
+
   void _onGameEvent(SocketEvent event) {
     final slot = event.value<int>('slot');
     switch (event.event) {
       case 'correct_answer':
         final answer = event.value<String>('answer') ?? '';
+        Sound.instance.play(slot == _socket.mySlot ? Sfx.correct : Sfx.wrong);
         _showFlash(
           slot == _socket.mySlot
               ? 'Doğru! $answer 🎉'
@@ -102,6 +117,7 @@ class _CareerPathScreenState extends State<CareerPathScreen> {
         break;
       case 'wrong_answer':
         if (slot == _socket.mySlot) {
+          Sound.instance.play(Sfx.wrong);
           final left = event.value<int>('attempts_left') ?? 0;
           _showFlash('Yanlış — kalan deneme: $left', Colors.redAccent);
           _answerController.clear();
@@ -111,6 +127,7 @@ class _CareerPathScreenState extends State<CareerPathScreen> {
         _highlight(event.value<int>('index'));
         break;
       case 'clue_used':
+        Sound.instance.play(Sfx.clue);
         _highlight(event.value<int>('index'));
         final left = event.value<int>('clues_left') ?? 0;
         _showFlash('İpucu açıldı — kalan hakkın: $left', Colors.cyanAccent);
@@ -135,6 +152,7 @@ class _CareerPathScreenState extends State<CareerPathScreen> {
     _gameOver = true;
     final winner = event.value<int>('winner');
     final iWon = winner == _socket.mySlot;
+    Sound.instance.play(iWon ? Sfx.win : Sfx.lose);
     GameDialogs.showInfo(
       context,
       title: winner == null ? 'BERABERE' : (iWon ? 'KAZANDIN' : 'KAYBETTİN'),

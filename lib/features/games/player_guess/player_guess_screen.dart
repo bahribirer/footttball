@@ -2,6 +2,8 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import 'package:footttball/core/sound.dart';
+
 import 'package:footttball/data/models/game_mode.dart';
 import 'package:footttball/data/models/room_models.dart';
 import 'package:footttball/data/services/api_service.dart';
@@ -62,7 +64,9 @@ class _PlayerGuessScreenState extends State<PlayerGuessScreen> {
       // Yeniden bağlanan oyuncu durumu `start` ile de alabilir.
       case 'start':
       case 'state':
-        setState(() => _state = DuelState.fromJson(event.payload));
+        final next = DuelState.fromJson(event.payload);
+        _playPhaseSounds(next);
+        setState(() => _state = next);
         // Pencere olaydan değil durumdan sürülür: yeniden bağlanan
         // oyuncu da bekleyen teklifi görür, tur bitince kendiliğinden kapanır.
         _syncPassDialog();
@@ -85,12 +89,26 @@ class _PlayerGuessScreenState extends State<PlayerGuessScreen> {
     }
   }
 
+  /// Aşama geçişleri ve son saniyeler için sesler.
+  void _playPhaseSounds(DuelState next) {
+    if (next.phase != _state.phase) {
+      if (next.phase == 'answering') Sound.instance.play(Sfx.start);
+      if (next.phase == 'picking') Sound.instance.play(Sfx.turn);
+    } else if (next.phase == 'answering' &&
+        next.countdown != _state.countdown &&
+        next.countdown > 0 &&
+        next.countdown <= 5) {
+      Sound.instance.play(Sfx.tick);
+    }
+  }
+
   void _onGameEvent(SocketEvent event) {
     final slot = event.value<int>('slot');
     final answer = event.value<String>('answer') ?? '';
 
     switch (event.event) {
       case 'correct_answer':
+        Sound.instance.play(slot == _socket.mySlot ? Sfx.correct : Sfx.wrong);
         _showFlash(
           slot == _socket.mySlot
               ? 'Doğru! $answer 🎉'
@@ -102,6 +120,7 @@ class _PlayerGuessScreenState extends State<PlayerGuessScreen> {
 
       case 'wrong_answer':
         if (slot == _socket.mySlot) {
+          Sound.instance.play(Sfx.wrong);
           final left = event.value<int>('attempts_left') ?? 0;
           _showFlash('Yanlış! Kalan hakkın: $left', Colors.redAccent);
           _answerController.clear();
@@ -144,6 +163,7 @@ class _PlayerGuessScreenState extends State<PlayerGuessScreen> {
     final winner = event.value<int>('winner');
     final myScore = _state.scoreOf(_socket.mySlot);
     final rivalScore = _state.scoreOf(_socket.opponentSlot);
+    Sound.instance.play(winner == _socket.mySlot ? Sfx.win : Sfx.lose);
 
     GameDialogs.showInfo(
       context,

@@ -2,6 +2,8 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+
+import 'package:footttball/core/sound.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -145,6 +147,7 @@ class _DailyChallengeScreenState extends State<DailyChallengeScreen> {
     if (!mounted) return;
 
     final correct = detail.correct;
+    Sound.instance.play(correct ? Sfx.correct : Sfx.wrong);
     setState(() {
       _results[index] = correct;
       if (correct) {
@@ -156,7 +159,10 @@ class _DailyChallengeScreenState extends State<DailyChallengeScreen> {
       _checking = false;
     });
     await _saveProgress();
-    if (_finished) await _submitScore(board);
+    if (_finished) {
+      Sound.instance.play(_score >= 5 ? Sfx.win : Sfx.lose);
+      await _submitScore(board);
+    }
   }
 
   /// Tahta bitince puanı skor tablosuna yazar. Sunucu aynı gün ikinci

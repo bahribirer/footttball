@@ -41,6 +41,7 @@ dependencies:
   # Günlük meydan okumanın ilerlemesi uygulama kapanınca
   # sıfırlanmamalı; yoksa "tek deneme" kuralı anlamsız olur.
   shared_preferences: ^2.3.3
+  audioplayers: ^6.1.0
   flutter_launcher_icons: ^0.13.1
 
 flutter_launcher_icons:
@@ -69,6 +70,7 @@ dev_dependencies:
 flutter:
   uses-material-design: true
   assets:
+    - assets/sounds/
     - images/arka1.png
     - images/arka2.PNG
     - images/create.PNG

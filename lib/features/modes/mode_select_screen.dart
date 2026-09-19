@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 
+import 'package:footttball/core/notices.dart';
 import 'package:footttball/core/session.dart';
+import 'package:footttball/core/sound.dart';
+import 'package:footttball/core/theme/app_theme.dart';
 import 'package:footttball/data/models/game_mode.dart';
 import 'package:footttball/data/services/api_service.dart';
 import 'package:footttball/features/daily/daily_challenge_screen.dart';
@@ -30,6 +33,14 @@ class _ModeSelectScreenState extends State<ModeSelectScreen>
       duration: const Duration(milliseconds: 700),
     )..forward();
     _loadEnabledModes();
+    _loadNotice();
+  }
+
+  /// Menüye gelen oyuncu sokete bağlı değil; panodaki duyuruyu buradan alır.
+  Future<void> _loadNotice() async {
+    final notice = await ApiService.notice();
+    if (!mounted) return;
+    Notices.instance.showBoard(notice);
   }
 
   /// Sunucudan açık modları çeker.
@@ -100,96 +111,59 @@ class _ModeSelectScreenState extends State<ModeSelectScreen>
           SafeArea(
             child: Column(
               children: [
-                const SizedBox(height: 12),
-                // Oyuncu adı rozeti — arka plandaki logonun üstünde kalır.
+                const SizedBox(height: 8),
+                // Üst çubuk: sıralama, ses, oyuncu adı.
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  padding: const EdgeInsets.symmetric(horizontal: 18),
                   child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      // Skor tablosu kısayolu.
-                      GestureDetector(
-                        key: const ValueKey('btn_leaderboard'),
-                        onTap: _openLeaderboard,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 12, vertical: 7),
-                          decoration: BoxDecoration(
-                            color: Colors.black.withOpacity(0.35),
-                            borderRadius: BorderRadius.circular(20),
-                            border: Border.all(
-                                color:
-                                    const Color(0xFFFFD200).withOpacity(0.45)),
-                          ),
-                          child: const Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(Icons.emoji_events_rounded,
-                                  color: Color(0xFFFFD200), size: 17),
-                              SizedBox(width: 6),
-                              Text(
-                                'SIRALAMA',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.bold,
-                                  letterSpacing: 1.2,
-                                ),
-                              ),
-                            ],
-                          ),
+                      Flexible(
+                        child: _TopChip(
+                          key: const ValueKey('btn_leaderboard'),
+                          icon: Icons.emoji_events_outlined,
+                          label: 'SIRALAMA',
+                          accent: AppTheme.gold,
+                          onTap: _openLeaderboard,
                         ),
                       ),
+                      const SizedBox(width: 8),
+                      _SoundChip(),
+                      const SizedBox(width: 8),
+                      const Spacer(),
                       Flexible(
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 14, vertical: 7),
-                          decoration: BoxDecoration(
-                            color: Colors.black.withOpacity(0.35),
-                            borderRadius: BorderRadius.circular(20),
-                            border: Border.all(
-                                color: Colors.cyanAccent.withOpacity(0.35)),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Icon(Icons.person,
-                                  color: Colors.cyanAccent, size: 17),
-                              const SizedBox(width: 7),
-                              Flexible(
-                                child: Text(
-                                  Session.instance.displayName.toUpperCase(),
-                                  overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.bold,
-                                    letterSpacing: 1.2,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
+                        child: _TopChip(
+                          icon: Icons.person_outline_rounded,
+                          label: Session.instance.displayName.toUpperCase(),
+                          accent: AppTheme.pitch,
                         ),
                       ),
                     ],
                   ),
                 ),
-                const SizedBox(height: 26),
-                const NeonTitle('OYUN MODU SEÇ', fontSize: 26),
-                const SizedBox(height: 5),
-                Text(
-                  'Rakibinle aynı modda buluşun',
-                  style: TextStyle(
-                    color: Colors.white.withOpacity(0.55),
-                    fontSize: 12.5,
-                    fontStyle: FontStyle.italic,
+                const SizedBox(height: 28),
+                const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 18),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('TIKI TAKA TOE', style: AppTheme.eyebrow),
+                      SizedBox(height: 6),
+                      Text('OYUN MODU SEÇ',
+                          style: TextStyle(
+                            color: AppTheme.text,
+                            fontSize: 26,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 0.4,
+                            height: 1.1,
+                          )),
+                      SizedBox(height: 4),
+                      Text('Rakibinle aynı modda buluşun',
+                          style: AppTheme.body),
+                    ],
                   ),
                 ),
-                const SizedBox(height: 14),
+                const SizedBox(height: 18),
                 // Rakip gerektirmeyen iki giriş: kuyruk ve günlük tahta.
-                // Oda kodu paylaşmak tek yol olduğu sürece oyuna girmek
-                // arkadaşının o an müsait olmasına bağlıydı.
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 18),
                   child: Row(
@@ -199,7 +173,7 @@ class _ModeSelectScreenState extends State<ModeSelectScreen>
                           icon: Icons.bolt_rounded,
                           label: 'HIZLI EŞLEŞ',
                           hint: 'Rastgele rakip',
-                          colors: const [Color(0xFFFF512F), Color(0xFFDD2476)],
+                          colors: const [Color(0xFFFF6B4A), Color(0xFFFF6B4A)],
                           onTap: _openQuickMatch,
                         ),
                       ),
@@ -209,14 +183,14 @@ class _ModeSelectScreenState extends State<ModeSelectScreen>
                           icon: Icons.calendar_today_rounded,
                           label: 'GÜNÜN TAHTASI',
                           hint: 'Tek başına',
-                          colors: const [Color(0xFF11998E), Color(0xFF38EF7D)],
+                          colors: const [AppTheme.pitch, AppTheme.pitch],
                           onTap: _openDaily,
                         ),
                       ),
                     ],
                   ),
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 18),
                 Expanded(
                   child: ListView.separated(
                     padding: const EdgeInsets.fromLTRB(18, 4, 18, 28),
@@ -285,26 +259,15 @@ class _ModeCard extends StatelessWidget {
         duration: const Duration(milliseconds: 250),
         curve: Curves.easeOut,
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(20),
-          gradient: LinearGradient(
-            colors: [
-              mode.colors.first.withOpacity(expanded ? 0.85 : 0.55),
-              mode.colors.last.withOpacity(expanded ? 0.85 : 0.55),
-            ],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
+          color: expanded ? AppTheme.surfaceHigh : AppTheme.surface,
+          borderRadius: BorderRadius.circular(AppTheme.radiusLg),
           border: Border.all(
-            color: Colors.white.withOpacity(expanded ? 0.5 : 0.18),
-            width: 1.5,
+            color: expanded
+                ? mode.colors.first.withOpacity(0.7)
+                : AppTheme.borderStrong,
+            width: 1,
           ),
-          boxShadow: [
-            BoxShadow(
-              color: mode.colors.first.withOpacity(expanded ? 0.45 : 0.25),
-              blurRadius: expanded ? 24 : 14,
-              offset: const Offset(0, 8),
-            ),
-          ],
+          boxShadow: AppTheme.shadow,
         ),
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -313,14 +276,13 @@ class _ModeCard extends StatelessWidget {
             Row(
               children: [
                 Container(
-                  width: 52,
-                  height: 52,
+                  width: 48,
+                  height: 48,
                   decoration: BoxDecoration(
-                    color: Colors.black.withOpacity(0.28),
-                    borderRadius: BorderRadius.circular(15),
-                    border: Border.all(color: Colors.white.withOpacity(0.25)),
+                    color: mode.colors.first.withOpacity(0.14),
+                    borderRadius: BorderRadius.circular(AppTheme.radius),
                   ),
-                  child: Icon(mode.icon, color: Colors.white, size: 28),
+                  child: Icon(mode.icon, color: mode.colors.first, size: 26),
                 ),
                 const SizedBox(width: 14),
                 Expanded(
@@ -330,19 +292,19 @@ class _ModeCard extends StatelessWidget {
                       Text(
                         mode.title,
                         style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 19,
-                          fontWeight: FontWeight.w900,
-                          letterSpacing: 0.8,
+                          color: AppTheme.text,
+                          fontSize: 17,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: 0.2,
                         ),
                       ),
                       const SizedBox(height: 3),
                       Text(
                         mode.tagline,
-                        style: TextStyle(
-                          color: Colors.white.withOpacity(0.75),
+                        style: const TextStyle(
+                          color: AppTheme.textMuted,
                           fontSize: 12.5,
-                          fontWeight: FontWeight.w600,
+                          fontWeight: FontWeight.w500,
                         ),
                       ),
                     ],
@@ -351,9 +313,9 @@ class _ModeCard extends StatelessWidget {
                 AnimatedRotation(
                   turns: expanded ? 0.5 : 0,
                   duration: const Duration(milliseconds: 250),
-                  child: Icon(
+                  child: const Icon(
                     Icons.keyboard_arrow_down_rounded,
-                    color: Colors.white.withOpacity(0.8),
+                    color: AppTheme.textMuted,
                   ),
                 ),
               ],
@@ -368,14 +330,7 @@ class _ModeCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const SizedBox(height: 14),
-                  Text(
-                    mode.description,
-                    style: TextStyle(
-                      color: Colors.white.withOpacity(0.9),
-                      fontSize: 13.5,
-                      height: 1.45,
-                    ),
-                  ),
+                  Text(mode.description, style: AppTheme.body),
                   const SizedBox(height: 14),
                   SizedBox(
                     width: double.infinity,
@@ -385,29 +340,23 @@ class _ModeCard extends StatelessWidget {
                       child: Container(
                         padding: const EdgeInsets.symmetric(vertical: 13),
                         decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(15),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.25),
-                              blurRadius: 10,
-                              offset: const Offset(0, 4),
-                            ),
-                          ],
+                          color: mode.colors.first,
+                          borderRadius:
+                              BorderRadius.circular(AppTheme.radiusSm),
                         ),
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Icon(Icons.play_arrow_rounded,
-                                color: mode.colors.last, size: 22),
+                                color: _onAccent(mode.colors.first), size: 20),
                             const SizedBox(width: 6),
                             Text(
                               'BU MODU OYNA',
                               style: TextStyle(
-                                color: mode.colors.last,
-                                fontSize: 14,
-                                fontWeight: FontWeight.w900,
-                                letterSpacing: 1.2,
+                                color: _onAccent(mode.colors.first),
+                                fontSize: 13,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: 1.4,
                               ),
                             ),
                           ],
@@ -424,6 +373,10 @@ class _ModeCard extends StatelessWidget {
     );
   }
 }
+
+/// Açık vurgu üstünde koyu, koyu vurgu üstünde beyaz yazı.
+Color _onAccent(Color c) =>
+    c.computeLuminance() > 0.35 ? AppTheme.bg : Colors.white;
 
 /// Mod listesinin üstündeki kısayol kartı.
 class _QuickTile extends StatelessWidget {
@@ -443,37 +396,147 @@ class _QuickTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final accent = colors.first;
     return Material(
-      color: Colors.transparent,
+      color: AppTheme.surface,
+      borderRadius: BorderRadius.circular(AppTheme.radiusLg),
       child: InkWell(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(AppTheme.radiusLg),
         onTap: onTap,
         child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
+          padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16),
-            gradient: LinearGradient(colors: colors),
+            borderRadius: BorderRadius.circular(AppTheme.radiusLg),
+            border: Border.all(color: AppTheme.borderStrong),
           ),
-          child: Column(
+          child: Row(
             children: [
-              Icon(icon, color: Colors.white, size: 22),
-              const SizedBox(height: 6),
-              Text(
-                label,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: 0.8,
+              Container(
+                width: 38,
+                height: 38,
+                decoration: BoxDecoration(
+                  color: accent.withOpacity(0.16),
+                  borderRadius: BorderRadius.circular(AppTheme.radiusSm),
                 ),
+                child: Icon(icon, color: accent, size: 20),
               ),
-              const SizedBox(height: 2),
-              Text(
-                hint,
-                style: const TextStyle(color: Colors.white70, fontSize: 10),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        label,
+                        maxLines: 1,
+                        style: const TextStyle(
+                          color: AppTheme.text,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: 0.8,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      hint,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                          color: AppTheme.textMuted, fontSize: 11.5),
+                    ),
+                  ],
+                ),
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Üst çubuktaki küçük yuvarlak etiket (sıralama, oyuncu adı).
+class _TopChip extends StatelessWidget {
+  const _TopChip({
+    super.key,
+    required this.icon,
+    required this.label,
+    required this.accent,
+    this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final Color accent;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: AppTheme.surface,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: AppTheme.borderStrong),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, color: accent, size: 16),
+            const SizedBox(width: 6),
+            Flexible(
+              child: Text(
+                label,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: AppTheme.text,
+                  fontSize: 11.5,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 1,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Ses aç/kapa. Tercih cihazda saklanır.
+class _SoundChip extends StatefulWidget {
+  @override
+  State<_SoundChip> createState() => _SoundChipState();
+}
+
+class _SoundChipState extends State<_SoundChip> {
+  @override
+  Widget build(BuildContext context) {
+    final on = Sound.instance.enabled;
+    return GestureDetector(
+      key: const ValueKey('btn_sound'),
+      onTap: () async {
+        await Sound.instance.setEnabled(!on);
+        if (!on) Sound.instance.play(Sfx.tap);
+        if (mounted) setState(() {});
+      },
+      child: Container(
+        width: 36,
+        height: 36,
+        decoration: BoxDecoration(
+          color: AppTheme.surface,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: AppTheme.borderStrong),
+        ),
+        child: Icon(
+          on ? Icons.volume_up_rounded : Icons.volume_off_rounded,
+          color: on ? AppTheme.text : AppTheme.textFaint,
+          size: 18,
         ),
       ),
     );
