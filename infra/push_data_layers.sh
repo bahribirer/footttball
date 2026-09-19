@@ -34,9 +34,11 @@ with open(out, "w", encoding="utf-8") as fh:
         # Yalnızca katman tabloları; ana `players` tablosu aktarılmaz.
         # Düz alt dize araması indeks tanımlarını da yakalar
         # ("CREATE INDEX idx_club_history_name ON club_history(...)").
-        if "club_history" in line:
+        if any(t in line for t in ("club_history", "player_photos", '"clubs"', "TABLE clubs")):
             fh.write(line + "\n")
 print(f"  club_history : {con.execute('SELECT COUNT(*) FROM club_history').fetchone()[0]} kayıt")
+print(f"  player_photos: {con.execute('SELECT COUNT(*) FROM player_photos').fetchone()[0]} kayıt")
+print(f"  clubs        : {con.execute('SELECT COUNT(*) FROM clubs').fetchone()[0]} kayıt")
 print("  squad_updates: aktarılmıyor (sunucudaki cron üretiyor)")
 PY
 echo "  $(wc -l < "$DUMP" | tr -d ' ') satır"
@@ -88,29 +90,28 @@ con = sqlite3.connect(db)
 # kesilirse veritabanı yarım kalıyor ve sunucu var olmayan tabloyu
 # sorguladığı için canlıda hata veriyordu.
 sql = open(dump, encoding="utf-8").read()
-for table in ("club_history",):
+TABLES = ("club_history", "player_photos", "clubs")
+for table in TABLES:
     sql = sql.replace(f'"{table}"', f'"{table}__new"')
     sql = sql.replace(f"TABLE {table} ", f"TABLE {table}__new ")
     sql = sql.replace(f"ON {table}(", f"ON {table}__new(")
 # İndeks adları da benzersiz olmalı.
 sql = sql.replace("CREATE INDEX idx_", "CREATE INDEX new_idx_")
 
-con.executescript("DROP TABLE IF EXISTS club_history__new;"
-                  )
+con.executescript("".join(f"DROP TABLE IF EXISTS {t}__new;" for t in TABLES))
 con.executescript(sql)
 
 counts = {}
-for table in ("club_history",):
+for table in TABLES:
     counts[table] = con.execute(f"SELECT COUNT(*) FROM {table}__new").fetchone()[0]
     if counts[table] == 0:
         raise SystemExit(f"{table} bos geldi, degisiklik uygulanmadi")
 
 # Her sey yerinde: takas tek islemde.
 con.executescript(
-    "BEGIN;"
-    "DROP TABLE IF EXISTS club_history;"
-    "ALTER TABLE club_history__new RENAME TO club_history;"
-    "COMMIT;")
+    "BEGIN;" + "".join(
+        f"DROP TABLE IF EXISTS {t}; ALTER TABLE {t}__new RENAME TO {t};" for t in TABLES
+    ) + "COMMIT;")
 con.commit()
 for table, n in counts.items():
     print(f"  {table}: {n} kayit")
@@ -153,5 +154,26 @@ rm -f /tmp/ttt_nations.tsv
 echo "▶ Backend yeniden başlatılıyor (katman önbelleği tazelensin)"
 docker compose restart backend >/dev/null
 REMOTE
+
+# Logolar sunucuda ilk istekte indiriliyor; oyuncu beklemesin diye tüm
+# kulüpler için önden istenir (önbellek volume'da kalır).
+echo "▶ Logo önbelleği ısıtılıyor"
+python3 - "$LOCAL_DB" <<'WARM'
+import sqlite3, sys, urllib.parse, urllib.request, concurrent.futures
+con = sqlite3.connect(sys.argv[1])
+clubs = {r[0] for r in con.execute("SELECT DISTINCT current_club_name FROM players WHERE last_season >= 2022")} \
+      | {r[0] for r in con.execute("SELECT DISTINCT club_name FROM club_history")}
+clubs = sorted(c for c in clubs if c)
+def warm(c):
+    url = "https://tikitakatoe.com/api/v1/logo_image/" + urllib.parse.quote(c)
+    try:
+        with urllib.request.urlopen(urllib.request.Request(url, headers={"User-Agent": "TikiTaka/1.0"}), timeout=30) as r:
+            return r.status == 200
+    except Exception:
+        return False
+with concurrent.futures.ThreadPoolExecutor(6) as ex:
+    ok = sum(ex.map(warm, clubs))
+print(f"  {ok}/{len(clubs)} logo hazır")
+WARM
 
 echo "✓ Veri katmanları sunucuda"

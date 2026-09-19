@@ -240,6 +240,20 @@ def _club_weights() -> dict[str, float]:
     return out
 
 
+def photo_for(name_normalized: str | None, current: str | None = None) -> str | None:
+    """Fotoğraf: ana tablodaki geçerliyse o, yoksa Wikidata katmanı.
+
+    `player_photos` (scripts/fetch_player_photos.py) efsaneler ve ana
+    tabloda fotoğrafı olmayan güncel oyuncular için Commons adresi tutar.
+    """
+    if current and "default" not in current:
+        return current
+    if not name_normalized or not _has_table("player_photos"):
+        return current or None
+    row = fetch_one("SELECT image_url FROM player_photos WHERE name_normalized = ?", (name_normalized,))
+    return (row["image_url"] if row and row["image_url"] else None) or current or None
+
+
 def search_legends(key: str, limit: int = LEGEND_SLOTS) -> list[dict]:
     """`players`'ta olmayan ama tarihçede bulunan (efsane) oyuncular.
 
@@ -285,8 +299,8 @@ def search_legends(key: str, limit: int = LEGEND_SLOTS) -> list[dict]:
     ranked.sort(key=lambda t: t[:4])
     return [
         {"name": g["name"], "country": g["country"], "club": g["last_club"],
-         "image_url": None, "position": None, "legend": True, "fame": g["fame"]}
-        for *_, g in ranked[:limit]
+         "image_url": photo_for(norm), "position": None, "legend": True, "fame": g["fame"]}
+        for _, _, _, norm, g in ranked[:limit]
     ]
 
 
@@ -338,7 +352,7 @@ def search_players(name: str, base_url: str) -> list[dict]:
             "clubs": club_history(row["name"]),
             "flag_url": flag_url(row["country_of_citizenship"]),
             "logo_url": f"{base_url}/api/v1/logo_image/{club}" if club else None,
-            "image_url": row["image_url"],
+            "image_url": photo_for(normalize(row["name"]), row["image_url"]),
             "position": row["position"],
         })
 
@@ -398,7 +412,7 @@ def find_player(player_name: str) -> dict | None:
     if row:
         return {
             "name": row["name"],
-            "image_url": row["image_url"],
+            "image_url": photo_for(normalize(row["name"]), row["image_url"]),
             "club": row["current_club_name"],
             "country": row["country_of_citizenship"],
         }
@@ -417,7 +431,7 @@ def find_player(player_name: str) -> dict | None:
         return None
     return {
         "name": hist["player_name"],
-        "image_url": None,
+        "image_url": photo_for(normalize(hist["player_name"])),
         "club": hist["club_name"],
         "country": hist["country"],
     }

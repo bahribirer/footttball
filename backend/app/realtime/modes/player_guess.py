@@ -200,7 +200,10 @@ class PlayerGuessMode(BaseMode):
                LIMIT 1""",
             (nation, club),
         )
-        return {"name": row["name"], "image_url": row["image_url"]} if row else None
+        if not row:
+            return None
+        return {"name": row["name"],
+                "image_url": player_service.photo_for(player_service.normalize(row["name"]), row["image_url"])}
 
     async def _finish_match(self) -> None:
         self.phase = "finished"

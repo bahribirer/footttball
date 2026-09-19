@@ -52,10 +52,47 @@ def _write_atomic(filepath: str, content: bytes) -> str:
     return filepath
 
 
+_WIKI_THUMB = re.compile(
+    r"^https?://upload\.wikimedia\.org/wikipedia/(?P<repo>commons|en)/thumb/[0-9a-f]/[0-9a-f]{2}/(?P<file>[^/]+)/\d+px-"
+)
+
+
+def _wikimedia_thumb(url: str, width: int = 256) -> str | None:
+    """Eski biçim küçük resim adresini geçerli olana çevirir.
+
+    Wikimedia 2025 sonunda küçük resimleri thumb.wikimedia.org'a taşıdı ve
+    standart dışı genişlikleri (256px) 400 ile reddetmeye başladı; DB'deki
+    adresler o eski biçimdeydi. Dosya adı adresten çıkarılır, imageinfo API
+    güncel adresi verir.
+    """
+    m = _WIKI_THUMB.match(url)
+    if not m:
+        return None
+    repo, file = m.group("repo"), m.group("file")
+    api = "https://commons.wikimedia.org/w/api.php" if repo == "commons" else "https://en.wikipedia.org/w/api.php"
+    try:
+        response = requests.get(
+            api,
+            params={"action": "query", "titles": f"File:{file}", "prop": "imageinfo",
+                    "iiprop": "url", "iiurlwidth": width, "format": "json"},
+            headers={"User-Agent": settings.BROWSER_UA},
+            timeout=settings.HTTP_TIMEOUT,
+        )
+        pages = response.json().get("query", {}).get("pages", {})
+        for page in pages.values():
+            info = (page.get("imageinfo") or [{}])[0]
+            return info.get("thumburl") or info.get("url")
+    except (requests.RequestException, ValueError):
+        return None
+    return None
+
+
 def _download(url: str, club_name: str) -> str | None:
     if not url:
         return None
     filepath = os.path.join(settings.LOGO_DIR, f"{sanitize_filename(club_name)}.png")
+    if "upload.wikimedia.org" in url:
+        url = _wikimedia_thumb(url) or url
     try:
         response = requests.get(
             url,

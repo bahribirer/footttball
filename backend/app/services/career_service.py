@@ -20,6 +20,7 @@ from __future__ import annotations
 import random
 import re
 
+from app.services import player_service
 from app.db.database import fetch_all, fetch_one
 from app.services.player_service import normalize
 
@@ -131,7 +132,7 @@ def pick_player(exclude: set[str] | None = None) -> dict | None:
             "name": cand["name"],
             "nationality": cand["nationality"],
             "position": cand.get("position"),
-            "image_url": cand.get("image_url"),
+            "image_url": player_service.photo_for(cand["key"], cand.get("image_url")),
             "path": path,
         }
     return None
