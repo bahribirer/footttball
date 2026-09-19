@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'dart:ui';
 import 'package:flutter/material.dart';
+
+import 'package:footttball/core/sound.dart';
 import 'package:footttball/data/models/team_model.dart';
 import 'package:footttball/data/models/room_models.dart';
 import 'package:footttball/data/services/api_service.dart';
@@ -157,6 +159,7 @@ class _TikiTakaToeScreenState extends State<TikiTakaToeScreen>
           setState(() {
             _start--;
           });
+          if (_start <= 5) Sound.instance.play(Sfx.tick);
           // Broadcast timer value to opponent for display sync
           _broadcastTimer(_start);
         }
@@ -318,17 +321,20 @@ class _TikiTakaToeScreenState extends State<TikiTakaToeScreen>
       // Check for Draw
       if (isBoardFull()) {
         _timer.cancel();
-        isRoundOverDialogOpen = true;
         _currentRoundWasDraw = true;
-        _suppressNextRoundTrigger = false;
-        GameDialogs.showInfo(context,
-            title: "BERABERE", message: "Oyun berabere bitti!", onDismiss: () {
-          isRoundOverDialogOpen = false;
-          if (_suppressNextRoundTrigger) {
-            _suppressNextRoundTrigger = false;
-            return;
-          }
-          _onNextRoundClicked();
+        _afterLastMove(() {
+          isRoundOverDialogOpen = true;
+          _suppressNextRoundTrigger = false;
+          GameDialogs.showInfo(context,
+              title: "BERABERE",
+              message: "Oyun berabere bitti!", onDismiss: () {
+            isRoundOverDialogOpen = false;
+            if (_suppressNextRoundTrigger) {
+              _suppressNextRoundTrigger = false;
+              return;
+            }
+            _onNextRoundClicked();
+          });
         });
         return;
       }
@@ -437,7 +443,25 @@ class _TikiTakaToeScreenState extends State<TikiTakaToeScreen>
 
       String roundWinnerName = iWon ? myName : opponentName;
       _currentRoundWasDraw = false;
+      Sound.instance.play(iWon ? Sfx.win : Sfx.lose);
+      _afterLastMove(() => _showRoundResult(roundWinnerName));
+    }
+  }
 
+  /// Son hamle tahtada bir an görünsün, pencere hemen üstüne binmesin.
+  /// Bu arada yeni tur başlarsa (rakip tetiklediyse) pencere hiç açılmaz.
+  void _afterLastMove(VoidCallback show) {
+    final roundAtWin = currentRound;
+    Future<void>.delayed(const Duration(milliseconds: 1800), () {
+      if (!mounted || currentRound != roundAtWin || isRoundOverDialogOpen) {
+        return;
+      }
+      show();
+    });
+  }
+
+  void _showRoundResult(String roundWinnerName) {
+    {
       // Check for Series Win (First to X)
       bool seriesOver = false;
 
@@ -749,6 +773,7 @@ class _TikiTakaToeScreenState extends State<TikiTakaToeScreen>
 
                             if ((squares[index] == "" || canSteal) &&
                                 _socket.playerTurn) {
+                              Sound.instance.play(Sfx.tap);
                               setState(() {
                                 isInputActive = true;
                               });
@@ -768,6 +793,7 @@ class _TikiTakaToeScreenState extends State<TikiTakaToeScreen>
                               _socket.relay({'type': 'deselectCell'});
 
                               if (result == true) {
+                                Sound.instance.play(Sfx.correct);
                                 // Correct guess — send the move
                                 _socket.relay({
                                   'index': index,
@@ -775,6 +801,7 @@ class _TikiTakaToeScreenState extends State<TikiTakaToeScreen>
                                   'playerName': GameDialogs.lastPickedPlayer,
                                 });
                               } else if (result == false) {
+                                Sound.instance.play(Sfx.wrong);
                                 // Wrong guess — send turn switch
                                 _socket.relay(
                                     {'index': -1, 'symbol': currentPlayer});

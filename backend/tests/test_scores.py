@@ -20,10 +20,10 @@ def _humans(a="A", b="B"):
 def test_insana_karsi_galibiyet_beraberlik_ve_maglubiyet_puanlari():
     score_service.record_match("tiki_taka_toe", _humans(), winner_slot=0)
     score_service.record_match("tiki_taka_toe", _humans(), winner_slot=None)
-    board = {r["player_id"]: r for r in score_service.leaderboard()}
-    assert board["A"]["points"] == score_service.WIN + score_service.DRAW
-    assert board["B"]["points"] == score_service.LOSS + score_service.DRAW
-    assert board["A"]["rank"] == 1 and board["A"]["wins"] == 1
+    board = {r["name_key"]: r for r in score_service.leaderboard()}
+    assert board["ayşe"]["points"] == score_service.WIN + score_service.DRAW
+    assert board["bora"]["points"] == score_service.LOSS + score_service.DRAW
+    assert board["ayşe"]["rank"] == 1 and board["ayşe"]["wins"] == 1
 
 
 def test_bota_karsi_yalniz_kazanan_puan_alir_ve_zorluk_belirler():
@@ -55,9 +55,9 @@ def test_mod_filtresi_ve_siralama():
     score_service.record_match("tiki_taka_toe", _humans(), winner_slot=1)
     score_service.record_match("category_race", _humans(), winner_slot=0)
     score_service.record_match("category_race", _humans(), winner_slot=0)
-    assert [r["player_id"] for r in score_service.leaderboard("tiki_taka_toe")] == ["B", "A"]
-    assert score_service.leaderboard("category_race")[0]["player_id"] == "A"
-    assert score_service.leaderboard()[0]["player_id"] == "A"
+    assert [r["name_key"] for r in score_service.leaderboard("tiki_taka_toe")] == ["bora", "ayşe"]
+    assert score_service.leaderboard("category_race")[0]["name_key"] == "ayşe"
+    assert score_service.leaderboard()[0]["name_key"] == "ayşe"
     assert score_service.leaderboard("daily") == []
 
 
@@ -97,5 +97,42 @@ def test_mac_bitince_motor_puani_yazar():
     ]
     engine = _DummyMode(room)
     asyncio.run(engine.finish(winner_slot=1, reason="test"))
-    board = {r["player_id"]: r for r in score_service.leaderboard()}
-    assert board["B"]["points"] == score_service.WIN and board["A"]["points"] == score_service.LOSS
+    board = {r["name_key"]: r for r in score_service.leaderboard()}
+    assert board["bora"]["points"] == score_service.WIN and board["ayşe"]["points"] == score_service.LOSS
+
+
+def test_ayni_ad_farkli_cihazlardan_tek_satir():
+    """Hesap yok; aynı ad iki cihazdan gelirse tabloda tek görünür."""
+    score_service.record_match("tiki_taka_toe",
+                               [{"slot": 0, "player_id": "tel", "name": "Bahri"},
+                                {"slot": 1, "player_id": "B", "name": "Bora"}], winner_slot=0)
+    score_service.record_match("tiki_taka_toe",
+                               [{"slot": 0, "player_id": "sim", "name": " bahri"},
+                                {"slot": 1, "player_id": "B", "name": "Bora"}], winner_slot=0)
+    board = score_service.leaderboard()
+    names = [r["name_key"] for r in board]
+    assert names.count("bahri") == 1
+    assert board[0]["points"] == 2 * score_service.WIN and board[0]["wins"] == 2
+    # Özet de birleşik: telefondan bakan simülatördeki puanı da görür.
+    assert score_service.summary("tel")["total"] == 2 * score_service.WIN
+    assert score_service.summary("sim")["rank"] == 1
+
+
+def test_eski_scores_db_name_key_ile_gocer(tmp_path, monkeypatch):
+    import sqlite3
+    path = tmp_path / "old.db"
+    con = sqlite3.connect(path)
+    con.executescript("""
+        CREATE TABLE players_meta (player_id TEXT PRIMARY KEY, name TEXT NOT NULL,
+                                   created_at REAL NOT NULL, updated_at REAL NOT NULL);
+        CREATE TABLE score_events (id INTEGER PRIMARY KEY AUTOINCREMENT, player_id TEXT NOT NULL,
+            mode TEXT NOT NULL, kind TEXT NOT NULL, points INTEGER NOT NULL,
+            vs_bot INTEGER NOT NULL DEFAULT 0, opponent_id TEXT, ref TEXT, created_at REAL NOT NULL);
+        INSERT INTO players_meta VALUES ('x', 'Ayşe', 1, 1);
+        INSERT INTO score_events (player_id, mode, kind, points, created_at) VALUES ('x', 'daily', 'daily', 5, 1);
+    """)
+    con.commit(); con.close()
+    monkeypatch.setattr(score_service, "db_path", lambda: str(path))
+    monkeypatch.setattr(score_service, "_initialised", False)
+    board = score_service.leaderboard()
+    assert board[0]["name_key"] == "ayşe" and board[0]["points"] == 5

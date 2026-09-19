@@ -295,6 +295,16 @@ class ApiService {
     }
   }
 
+  /// Yönetici panosu: süresi dolmamış duyuru varsa döner.
+  static Future<Map<String, dynamic>?> notice() async {
+    try {
+      final json = await _getJson(_uri('/api/v1/notice'));
+      return json['notice'] as Map<String, dynamic>?;
+    } catch (_) {
+      return null;
+    }
+  }
+
   // --- Skor tablosu ---------------------------------------------------------
 
   /// Genel ya da mod bazlı sıralama; `me` istek sahibinin özeti.
@@ -405,7 +415,7 @@ class ApiException implements Exception {
 class LeaderboardEntry {
   const LeaderboardEntry({
     required this.rank,
-    required this.playerId,
+    required this.nameKey,
     required this.name,
     required this.points,
     required this.wins,
@@ -416,7 +426,7 @@ class LeaderboardEntry {
   factory LeaderboardEntry.fromJson(Map<String, dynamic> json) =>
       LeaderboardEntry(
         rank: json['rank'] as int? ?? 0,
-        playerId: json['player_id'] as String? ?? '',
+        nameKey: json['name_key'] as String? ?? '',
         name: json['name'] as String? ?? 'Oyuncu',
         points: json['points'] as int? ?? 0,
         wins: json['wins'] as int? ?? 0,
@@ -425,7 +435,9 @@ class LeaderboardEntry {
       );
 
   final int rank;
-  final String playerId;
+
+  /// Sunucunun ada göre topladığı anahtar (küçük harf); "ben" eşlemesi bununla.
+  final String nameKey;
   final String name;
   final int points;
   final int wins;

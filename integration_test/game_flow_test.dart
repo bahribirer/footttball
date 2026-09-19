@@ -289,8 +289,19 @@ void main() {
     await pumpUntil(tester, find.byType(PlayerGuessScreen),
         timeout: const Duration(seconds: 25), label: 'Oyuncu Tahmin ekranı');
 
-    await pumpUntil(tester, find.text('HAZIR OL'),
-        timeout: const Duration(seconds: 12), label: 'hazırlık geri sayımı');
+    // Hazırlık geri sayımı 3 sn; ekran açılırken kaçırılabilir. Ya geri
+    // sayım ya da hemen ardından gelen seçim aşaması görünmeli.
+    await pumpUntil(
+      tester,
+      find.byWidgetPredicate((widget) =>
+          widget is Text &&
+          (widget.data == 'HAZIR OL' ||
+              widget.data == 'MİLLİ TAKIMINI SEÇ' ||
+              widget.data == 'KULÜBÜNÜ SEÇ' ||
+              widget.data == 'RAKİBİN SEÇİYOR')),
+      timeout: const Duration(seconds: 12),
+      label: 'hazırlık ya da seçim aşaması',
+    );
 
     await pumpUntil(
       tester,

@@ -22,7 +22,7 @@ from app.services import player_service, pool_service
 logger = logging.getLogger(__name__)
 
 PICK_SECONDS = 12
-ROUND_BREAK_SECONDS = 4
+ROUND_BREAK_SECONDS = 3
 
 
 class PlayerGuessMode(BaseMode):
@@ -92,9 +92,11 @@ class PlayerGuessMode(BaseMode):
             await self._play_round()
             if self.finished:
                 return
+            # Son turda da çözüm ekranı görünsün; maç sonu penceresi
+            # hemen üstüne binmesin.
+            await asyncio.sleep(ROUND_BREAK_SECONDS)
             if self._best_score() >= self.total_rounds:
                 break
-            await asyncio.sleep(ROUND_BREAK_SECONDS)
 
         await self._finish_match()
 

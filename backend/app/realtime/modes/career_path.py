@@ -28,7 +28,7 @@ logger = logging.getLogger(__name__)
 CLUES_PER_MATCH = 3
 REVEAL_INTERVAL = 10          # saniye; herkese bir kulüp daha
 ANSWER_SECONDS = 60
-ROUND_BREAK_SECONDS = 5
+ROUND_BREAK_SECONDS = 4
 OPEN_COUNTDOWN = 3
 MAX_ATTEMPTS_PER_ROUND = 5    # spam önlemi; ipucu yerine deneme yağmuru olmasın
 
@@ -78,9 +78,10 @@ class CareerPathMode(BaseMode):
             if not ok:
                 # Havuz tükendiyse maçı mevcut skorla bitir.
                 break
+            # Son turda da çözüm görünsün, maç sonu penceresi sonra gelsin.
+            await asyncio.sleep(ROUND_BREAK_SECONDS)
             if self._best_score() >= self.total_rounds:
                 break
-            await asyncio.sleep(ROUND_BREAK_SECONDS)
         await self._finish_match()
 
     def _best_score(self) -> int:

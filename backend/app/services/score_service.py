@@ -35,6 +35,7 @@ SCHEMA = """
 CREATE TABLE IF NOT EXISTS players_meta (
     player_id  TEXT PRIMARY KEY,
     name       TEXT NOT NULL,
+    name_key   TEXT NOT NULL DEFAULT '',   -- küçük harf, kırpılmış ad
     created_at REAL NOT NULL,
     updated_at REAL NOT NULL
 );
@@ -72,19 +73,43 @@ def connection() -> Iterator[sqlite3.Connection]:
         if not _initialised:
             con.execute("PRAGMA journal_mode=WAL")
             con.executescript(SCHEMA)
+            _migrate(con)
             _initialised = True
         yield con
     finally:
         con.close()
 
 
+def name_key(name: str) -> str:
+    """Aynı ad farklı cihazlardan gelse de tabloda tek satır olsun.
+
+    Hesap yok; kimlik cihaza bağlı. Kullanıcı telefonunu değiştirince ya da
+    simülatörden girince aynı ad üç dört kez alt alta görünüyordu. Tablo
+    ada göre toplar: "Bahri", "bahri " ve "BAHRİ" aynı kişi sayılır.
+    """
+    return " ".join((name or "Oyuncu").casefold().split())[:32]
+
+
+def _migrate(con: sqlite3.Connection) -> None:
+    cols = {r["name"] for r in con.execute("PRAGMA table_info(players_meta)")}
+    if "name_key" not in cols:
+        con.execute("ALTER TABLE players_meta ADD COLUMN name_key TEXT NOT NULL DEFAULT ''")
+    con.execute("CREATE INDEX IF NOT EXISTS idx_meta_name_key ON players_meta(name_key)")
+    rows = con.execute("SELECT player_id, name FROM players_meta WHERE name_key = ''").fetchall()
+    for r in rows:
+        con.execute("UPDATE players_meta SET name_key = ? WHERE player_id = ?",
+                    (name_key(r["name"]), r["player_id"]))
+
+
 def _upsert_player(con: sqlite3.Connection, player_id: str, name: str) -> None:
     now = time.time()
+    shown = (name or "Oyuncu").strip()[:32] or "Oyuncu"
     con.execute(
-        """INSERT INTO players_meta (player_id, name, created_at, updated_at)
-           VALUES (?, ?, ?, ?)
-           ON CONFLICT(player_id) DO UPDATE SET name = excluded.name, updated_at = excluded.updated_at""",
-        (player_id, (name or "Oyuncu")[:32], now, now),
+        """INSERT INTO players_meta (player_id, name, name_key, created_at, updated_at)
+           VALUES (?, ?, ?, ?, ?)
+           ON CONFLICT(player_id) DO UPDATE SET name = excluded.name, name_key = excluded.name_key,
+                                              updated_at = excluded.updated_at""",
+        (player_id, shown, name_key(shown), now, now),
     )
 
 
@@ -139,27 +164,34 @@ def record_daily(player_id: str, name: str, date: str, score: int) -> bool:
 
 
 def leaderboard(mode: str | None = None, limit: int = 50) -> list[dict]:
-    """Toplam puana göre sıralı liste; `mode` verilirse yalnız o mod."""
+    """Toplam puana göre sıralı liste; `mode` verilirse yalnız o mod.
+
+    Satırlar ada göre toplanır (bkz. `name_key`); gösterilen ad en son
+    kullanılan yazım.
+    """
     where, params = "", []
     if mode and mode != "all":
         where, params = "WHERE e.mode = ?", [mode]
     with connection() as con:
         rows = con.execute(
-            f"""SELECT m.player_id, m.name,
+            f"""SELECT m.name_key,
+                       (SELECT name FROM players_meta m2 WHERE m2.name_key = m.name_key
+                        ORDER BY updated_at DESC LIMIT 1) AS name,
                        SUM(e.points) AS points,
                        SUM(CASE WHEN e.kind = 'win' THEN 1 ELSE 0 END) AS wins,
                        COUNT(CASE WHEN e.kind IN ('win','draw','loss') THEN 1 END) AS matches,
-                       MAX(CASE WHEN e.mode = 'daily' THEN e.points ELSE 0 END) AS best_daily
+                       MAX(CASE WHEN e.mode = 'daily' THEN e.points ELSE 0 END) AS best_daily,
+                       MIN(m.created_at) AS first_seen
                 FROM score_events e JOIN players_meta m ON m.player_id = e.player_id
                 {where}
-                GROUP BY m.player_id
+                GROUP BY m.name_key
                 HAVING points > 0
-                ORDER BY points DESC, wins DESC, m.updated_at ASC
+                ORDER BY points DESC, wins DESC, first_seen ASC
                 LIMIT ?""",
             (*params, limit),
         ).fetchall()
     return [
-        {"rank": i + 1, "player_id": r["player_id"], "name": r["name"],
+        {"rank": i + 1, "name_key": r["name_key"], "name": r["name"],
          "points": int(r["points"]), "wins": int(r["wins"]), "matches": int(r["matches"]),
          "best_daily": int(r["best_daily"])}
         for i, r in enumerate(rows)
@@ -167,27 +199,73 @@ def leaderboard(mode: str | None = None, limit: int = 50) -> list[dict]:
 
 
 def summary(player_id: str) -> dict:
-    """Bir oyuncunun genel sırası ve mod başına puanları."""
+    """Bir oyuncunun (adıyla toplanmış) genel sırası ve mod başına puanları."""
     with connection() as con:
+        me = con.execute("SELECT name, name_key FROM players_meta WHERE player_id = ?",
+                         (player_id,)).fetchone()
+        if not me:
+            return {"player_id": player_id, "name": None, "name_key": None,
+                    "total": 0, "rank": None, "per_mode": {}}
+        key = me["name_key"]
         per_mode = {
             r["mode"]: int(r["points"])
             for r in con.execute(
-                "SELECT mode, SUM(points) AS points FROM score_events WHERE player_id = ? GROUP BY mode",
-                (player_id,),
+                """SELECT e.mode, SUM(e.points) AS points
+                   FROM score_events e JOIN players_meta m ON m.player_id = e.player_id
+                   WHERE m.name_key = ? GROUP BY e.mode""",
+                (key,),
             )
         }
         total = sum(per_mode.values())
         rank_row = con.execute(
             """SELECT COUNT(*) + 1 AS rank FROM (
-                   SELECT player_id, SUM(points) AS p FROM score_events GROUP BY player_id
+                   SELECT m.name_key, SUM(e.points) AS p
+                   FROM score_events e JOIN players_meta m ON m.player_id = e.player_id
+                   GROUP BY m.name_key
                ) WHERE p > ?""",
             (total,),
         ).fetchone()
-        name_row = con.execute("SELECT name FROM players_meta WHERE player_id = ?", (player_id,)).fetchone()
     return {
         "player_id": player_id,
-        "name": name_row["name"] if name_row else None,
+        "name": me["name"],
+        "name_key": key,
         "total": total,
         "rank": int(rank_row["rank"]) if total > 0 else None,
         "per_mode": per_mode,
+    }
+
+
+def admin_stats() -> dict:
+    """Panel için özet sayılar."""
+    day_ago = time.time() - 86400
+    with connection() as con:
+        players = con.execute("SELECT COUNT(DISTINCT name_key) AS n FROM players_meta").fetchone()["n"]
+        devices = con.execute("SELECT COUNT(*) AS n FROM players_meta").fetchone()["n"]
+        matches = con.execute(
+            "SELECT COUNT(*) AS n FROM score_events WHERE kind IN ('win','draw','loss')").fetchone()["n"]
+        matches_24h = con.execute(
+            "SELECT COUNT(*) AS n FROM score_events WHERE kind IN ('win','draw','loss') AND created_at > ?",
+            (day_ago,)).fetchone()["n"]
+        vs_bot_24h = con.execute(
+            "SELECT COUNT(*) AS n FROM score_events WHERE vs_bot = 1 AND created_at > ?",
+            (day_ago,)).fetchone()["n"]
+        daily_24h = con.execute(
+            "SELECT COUNT(*) AS n FROM score_events WHERE mode = 'daily' AND created_at > ?",
+            (day_ago,)).fetchone()["n"]
+        by_mode = {r["mode"]: int(r["n"]) for r in con.execute(
+            "SELECT mode, COUNT(*) AS n FROM score_events GROUP BY mode")}
+        recent = [dict(r) for r in con.execute(
+            """SELECT m.name, e.mode, e.kind, e.points, e.vs_bot, e.created_at
+               FROM score_events e JOIN players_meta m ON m.player_id = e.player_id
+               ORDER BY e.id DESC LIMIT 25""")]
+        players_recent = [dict(r) for r in con.execute(
+            """SELECT m.name, m.name_key, m.player_id, m.updated_at, m.created_at,
+                      COALESCE((SELECT SUM(points) FROM score_events e WHERE e.player_id = m.player_id), 0) AS points
+               FROM players_meta m ORDER BY m.updated_at DESC LIMIT 100""")]
+    return {
+        "players": int(players), "devices": int(devices),
+        "match_events": int(matches), "match_events_24h": int(matches_24h),
+        "vs_bot_24h": int(vs_bot_24h), "daily_24h": int(daily_24h),
+        "events_by_mode": by_mode, "recent_events": recent,
+        "players_recent": players_recent,
     }

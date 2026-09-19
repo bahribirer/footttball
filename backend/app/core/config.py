@@ -14,6 +14,8 @@ class Settings:
     # Hata raporlarini surumle eslestirmek icin; CI dagitilan imajin
     # commit SHA'sini gecer.
     RELEASE: str = os.getenv("RELEASE", "dev")
+    # Yönetim paneli anahtarı; boşsa panel ve /api/v1/admin/* kapalı.
+    ADMIN_TOKEN: str = os.getenv("ADMIN_TOKEN", "")
 
     # Veri
     DB_PATH: str = os.getenv("DB_PATH", str(BASE_DIR / "data" / "tikitakapi.db"))
@@ -44,7 +46,7 @@ class Settings:
     TTT_TURN_SECONDS: int = 30
 
     # Oyuncu Tahmin
-    PG_PICK_COUNTDOWN: int = 5      # seçim ekranı geri sayımı
+    PG_PICK_COUNTDOWN: int = 3      # seçim ekranı geri sayımı
     PG_ANSWER_COUNTDOWN: int = 3    # cevap öncesi geri sayım
     PG_ANSWER_SECONDS: int = 30     # cevap süresi
     PG_MAX_ATTEMPTS: int = 3        # oyuncu başına deneme hakkı

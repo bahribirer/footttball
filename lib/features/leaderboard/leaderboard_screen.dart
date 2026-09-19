@@ -75,6 +75,10 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
 
   _Tab get _tab => _tabs.firstWhere((t) => t.id == _mode);
 
+  /// Sunucudaki `name_key` ile aynı kural: küçük harf, fazla boşluk yok.
+  static String _nameKey(String name) =>
+      name.toLowerCase().trim().split(RegExp(r'\s+')).join(' ');
+
   @override
   Widget build(BuildContext context) {
     final me = _board?.me;
@@ -141,7 +145,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
         text: 'Henüz puan yok — ilk sen ol!',
       );
     }
-    final myId = Session.instance.playerId;
+    final myKey = _nameKey(Session.instance.displayName);
     return RefreshIndicator(
       color: Colors.cyanAccent,
       backgroundColor: const Color(0xFF14142A),
@@ -153,7 +157,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
         itemBuilder: (_, i) => _Row(
           entry: entries[i],
           tab: _tab,
-          isMe: entries[i].playerId == myId,
+          isMe: entries[i].nameKey == myKey,
         ),
       ),
     );
