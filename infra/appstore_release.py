@@ -113,6 +113,30 @@ def ensure_version(version: str) -> dict:
     return created["data"]
 
 
+def other_localization_ids(version_id: str) -> list[str]:
+    """Sürümde tr dışındaki yerelleştirmeler (örn. birincil dil en-US).
+
+    Apple her yerelleştirme için ekran görüntüsü ve açıklama ister; boş
+    kalan biri gönderimi engeller. Aynı içerik onlara da yazılır.
+    """
+    data = call("GET", f"/appStoreVersions/{version_id}/appStoreVersionLocalizations")
+    out = []
+    for l in data.get("data", []):
+        if l["attributes"].get("locale") != LOCALE:
+            print(f"  ek yerelleştirme: {l['attributes'].get('locale')}")
+            out.append(l["id"])
+    return out
+
+
+def fill_localization(loc_id: str) -> None:
+    u = urls()
+    attrs = {"description": read("description.txt"), "keywords": read("keywords.txt")[:100],
+             "promotionalText": read("promotional_text.txt")[:170], "supportUrl": u["SUPPORT_URL"],
+             "marketingUrl": u.get("MARKETING_URL", "")}
+    call("PATCH", f"/appStoreVersionLocalizations/{loc_id}", json={"data": {
+        "type": "appStoreVersionLocalizations", "id": loc_id, "attributes": attrs}})
+
+
 def set_version_texts(version_id: str) -> str:
     data = call("GET", f"/appStoreVersions/{version_id}/appStoreVersionLocalizations")
     loc = next((l for l in data.get("data", []) if l["attributes"].get("locale") == LOCALE), None)
@@ -223,9 +247,11 @@ def set_age_rating(version_id: str) -> None:
         "matureOrSuggestiveThemes", "medicalOrTreatmentInformation", "profanityOrCrudeHumor",
         "sexualContentGraphicAndNudity", "sexualContentOrNudity", "violenceCartoonOrFantasy",
         "violenceRealistic", "violenceRealisticProlongedGraphicOrSadistic")}
+    attrs["gunsOrOtherWeapons"] = "NONE"
     attrs.update({"gambling": False, "unrestrictedWebAccess": False, "lootBox": False,
                   "advertising": False, "userGeneratedContent": False, "messaging": False,
-                  "ageAssurance": False})
+                  "messagingAndChat": False, "healthOrWellnessTopics": False,
+                  "parentalControls": False, "ageAssurance": False})
     try:
         call("PATCH", f"/ageRatingDeclarations/{did}", json={"data": {
             "type": "ageRatingDeclarations", "id": did, "attributes": attrs}})
@@ -233,7 +259,11 @@ def set_age_rating(version_id: str) -> None:
     except SystemExit as exc:
         # Alan adları sürümden sürüme değişiyor; bilinmeyenleri at, tekrar dene.
         import re as _re
-        bad = set(_re.findall(r"attributes/(\w+)", str(exc)))
+        text = str(exc)
+        bad = set()
+        for block in text.split('"id"')[1:]:
+            if "INVALID" in block or "not a valid" in block or "unknown" in block.lower():
+                bad |= set(_re.findall(r"attributes/(\w+)", block))
         attrs2 = {k: v for k, v in attrs.items() if k not in bad}
         try:
             call("PATCH", f"/ageRatingDeclarations/{did}", json={"data": {
@@ -378,9 +408,14 @@ def main() -> int:
     set_app_info()
     print("▶ Sürüm metinleri")
     loc_id = set_version_texts(vid)
+    others = other_localization_ids(vid)
+    for oid in others:
+        fill_localization(oid)
     if not args.skip_screenshots:
         print("▶ Ekran görüntüleri")
         upload_screenshots(loc_id)
+        for oid in others:
+            upload_screenshots(oid)
     print("▶ İçerik hakları")
     set_content_rights()
     print("▶ Yaş derecesi")
