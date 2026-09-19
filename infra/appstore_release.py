@@ -290,7 +290,13 @@ def set_data_usages() -> None:
     Toplanan: cihaza özel rastgele kimlik (DEVICE_ID), takma ad ve skorlar
     (OTHER_USER_CONTENT). Amaç: uygulama işlevi. Takip yok, reklam yok.
     """
-    existing = call("GET", f"/apps/{APP_ID}/dataUsages?limit=200", ok_404=True).get("data", [])
+    existing_resp = call("GET", f"/apps/{APP_ID}/dataUsages?limit=200", ok_404=True)
+    if not existing_resp:
+        print("  App Privacy için açık API yok → App Store Connect › App Privacy'de elle:")
+        print("    Toplanan veri: Device ID (Identifiers) ve Other User Content — ikisi de")
+        print("    'App Functionality', 'Not linked to the user', takip yok.")
+        return
+    existing = existing_resp.get("data", [])
     wanted = [("DEVICE_ID", "APP_FUNCTIONALITY", "DATA_NOT_LINKED_TO_YOU"),
               ("OTHER_USER_CONTENT", "APP_FUNCTIONALITY", "DATA_NOT_LINKED_TO_YOU")]
     have = set()
@@ -478,7 +484,14 @@ def main() -> int:
     attach_build(vid, args.build)
     if args.submit:
         print("▶ Gönderim")
-        submit(vid)
+        try:
+            submit(vid)
+        except SystemExit as exc:
+            text = str(exc)
+            print(text[:3000])
+            print("\n✗ Gönderim engellendi. Kalan zorunluluklar App Store Connect'te elle tamamlanmalı,")
+            print("  sonra bu iş akışı yeniden çalıştırılır (ya da ASC'de 'Submit for Review').")
+            return 1
     else:
         print("▶ Gönderim atlandı (--submit yok)")
     return 0
