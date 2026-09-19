@@ -184,17 +184,28 @@ def set_app_info() -> None:
         return
     u = urls()
     locs = call("GET", f"/appInfos/{info['id']}/appInfoLocalizations")
-    loc = next((l for l in locs.get("data", []) if l["attributes"].get("locale") == LOCALE), None)
     attrs = {"name": read("name.txt")[:30], "subtitle": read("subtitle.txt")[:30],
              "privacyPolicyUrl": u["PRIVACY_URL"]}
-    if loc:
+    seen = False
+    for loc in locs.get("data", []):
+        # Her yerelleştirmede gizlilik adresi zorunlu; ad/alt başlık boşsa doldur.
+        cur = loc["attributes"]
+        patch = {"privacyPolicyUrl": u["PRIVACY_URL"]}
+        if cur.get("locale") == LOCALE:
+            patch.update({"name": attrs["name"], "subtitle": attrs["subtitle"]}); seen = True
+        else:
+            if not cur.get("name"):
+                patch["name"] = attrs["name"]
+            if not cur.get("subtitle"):
+                patch["subtitle"] = attrs["subtitle"]
         call("PATCH", f"/appInfoLocalizations/{loc['id']}", json={"data": {
-            "type": "appInfoLocalizations", "id": loc["id"], "attributes": attrs}})
-    else:
+            "type": "appInfoLocalizations", "id": loc["id"], "attributes": patch}})
+        print(f"  uygulama bilgisi ({cur.get('locale')}) yazıldı")
+    if not seen:
         call("POST", "/appInfoLocalizations", json={"data": {
             "type": "appInfoLocalizations", "attributes": {"locale": LOCALE, **attrs},
             "relationships": {"appInfo": {"data": {"type": "appInfos", "id": info["id"]}}}}})
-    print(f"  uygulama adı/alt başlık/gizlilik ({LOCALE}) yazıldı")
+        print(f"  uygulama bilgisi ({LOCALE}) oluşturuldu")
 
     # Kategori: yalnız boşsa yaz (kilitli sürümde PATCH reddedilebilir).
     rel = {}
@@ -273,6 +284,44 @@ def set_age_rating(version_id: str) -> None:
             print(f"  yaş derecesi yazılamadı: {str(exc2)[:3000]}")
 
 
+def set_data_usages() -> None:
+    """App Privacy etiketleri: cihaz kimliği ve oyun içeriği, kişiyle bağlı değil.
+
+    Toplanan: cihaza özel rastgele kimlik (DEVICE_ID), takma ad ve skorlar
+    (OTHER_USER_CONTENT). Amaç: uygulama işlevi. Takip yok, reklam yok.
+    """
+    existing = call("GET", f"/apps/{APP_ID}/dataUsages?limit=200", ok_404=True).get("data", [])
+    wanted = [("DEVICE_ID", "APP_FUNCTIONALITY", "DATA_NOT_LINKED_TO_YOU"),
+              ("OTHER_USER_CONTENT", "APP_FUNCTIONALITY", "DATA_NOT_LINKED_TO_YOU")]
+    have = set()
+    for du in existing:
+        rel = du.get("relationships", {})
+        have.add((rel.get("category", {}).get("data", {}).get("id"),
+                  rel.get("purpose", {}).get("data", {}).get("id"),
+                  rel.get("dataProtection", {}).get("data", {}).get("id")))
+    for cat, purpose, prot in wanted:
+        if (cat, purpose, prot) in have:
+            continue
+        call("POST", "/appDataUsages", json={"data": {
+            "type": "appDataUsages",
+            "relationships": {
+                "app": {"data": {"type": "apps", "id": APP_ID}},
+                "category": {"data": {"type": "appDataUsageCategories", "id": cat}},
+                "purpose": {"data": {"type": "appDataUsagePurposes", "id": purpose}},
+                "dataProtection": {"data": {"type": "appDataUsageDataProtections", "id": prot}},
+            }}})
+        print(f"  veri kullanımı eklendi: {cat} / {purpose} / {prot}")
+    state = call("GET", f"/apps/{APP_ID}/dataUsagePublishState", ok_404=True).get("data")
+    if state and not state["attributes"].get("published"):
+        call("PATCH", f"/appDataUsagesPublishState/{state['id']}", json={"data": {
+            "type": "appDataUsagesPublishState", "id": state["id"], "attributes": {"published": True}}})
+        print("  gizlilik etiketleri yayımlandı")
+    elif state:
+        print("  gizlilik etiketleri zaten yayımlı")
+    else:
+        print("  yayım durumu okunamadı")
+
+
 def set_review_details(version_id: str) -> None:
     first = os.getenv("REVIEW_FIRST_NAME") or "Bahri"
     last = os.getenv("REVIEW_LAST_NAME") or "Birer"
@@ -288,17 +337,18 @@ def set_review_details(version_id: str) -> None:
                       "contactPhone": phone, "contactEmail": email})
     else:
         print("  inceleme iletişim bilgisi ortamda yok (REVIEW_*); mevcut değer korunur")
+    if "contactPhone" not in attrs:
+        attrs.update({"contactFirstName": first, "contactLastName": last, "contactEmail": email})
+        if phone:
+            attrs["contactPhone"] = phone
     if existing.get("data"):
         call("PATCH", f"/appStoreReviewDetails/{existing['data']['id']}", json={"data": {
             "type": "appStoreReviewDetails", "id": existing["data"]["id"], "attributes": attrs}})
     else:
-        if "contactPhone" not in attrs:
-            print("  inceleme detayı yok ve iletişim bilgisi verilmedi → App Store Connect'te elle girilmeli")
-            return
         call("POST", "/appStoreReviewDetails", json={"data": {
             "type": "appStoreReviewDetails", "attributes": attrs,
             "relationships": {"appStoreVersion": {"data": {"type": "appStoreVersions", "id": version_id}}}}})
-    print("  inceleme notu/iletişim yazıldı")
+    print("  inceleme notu/iletişim yazıldı" + ("" if phone else " (telefon yok: REVIEW_PHONE gizli değişkeni gerekir)"))
 
 
 # --- ekran görüntüleri ----------------------------------------------------
@@ -420,6 +470,8 @@ def main() -> int:
     set_content_rights()
     print("▶ Yaş derecesi")
     set_age_rating(vid)
+    print("▶ Gizlilik etiketleri")
+    set_data_usages()
     print("▶ İnceleme bilgisi")
     set_review_details(vid)
     print("▶ Derleme")
