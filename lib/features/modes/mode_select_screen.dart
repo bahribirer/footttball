@@ -149,14 +149,28 @@ class _ModeSelectScreenState extends State<ModeSelectScreen>
                   ),
                 ),
                 const SizedBox(height: 28),
-                const Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 18),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 18),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('TIKI TAKA TOE', style: AppTheme.eyebrow),
-                      SizedBox(height: 6),
-                      Text('OYUN MODU SEÇ',
+                      Row(
+                        children: [
+                          const Icon(Icons.person_outline_rounded,
+                              color: AppTheme.pitch, size: 14),
+                          const SizedBox(width: 6),
+                          Flexible(
+                            child: Text(
+                              Session.instance.displayName.toUpperCase(),
+                              overflow: TextOverflow.ellipsis,
+                              style: AppTheme.eyebrow
+                                  .copyWith(color: AppTheme.pitch),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                      const Text('OYUN MODU SEÇ',
                           style: TextStyle(
                             color: AppTheme.text,
                             fontSize: 26,
@@ -164,8 +178,8 @@ class _ModeSelectScreenState extends State<ModeSelectScreen>
                             letterSpacing: 0.4,
                             height: 1.1,
                           )),
-                      SizedBox(height: 4),
-                      Text('Rakibinle aynı modda buluşun',
+                      const SizedBox(height: 4),
+                      const Text('Rakibinle aynı modda buluşun',
                           style: AppTheme.body),
                     ],
                   ),
