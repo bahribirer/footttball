@@ -1,0 +1,58 @@
+# App Store sürümünü hazırlar ve (istenirse) incelemeye gönderir.
+#
+# TestFlight işi derlemeyi yükler; bu iş o derlemeyi mağaza sürümüne
+# bağlar, store/ altındaki metin ve ekran görüntülerini yükler, yaş
+# derecesini ve inceleme notunu yazar. Elle tetiklenir.
+name: App Store release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Mağaza sürümü (örn. 1.5.0)"
+        required: true
+        type: string
+      build:
+        description: "TestFlight derleme numarası (örn. 14)"
+        required: true
+        type: string
+      submit:
+        description: "İncelemeye gönder"
+        required: true
+        type: boolean
+        default: false
+
+concurrency:
+  group: appstore-release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Sürümü hazırla
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Bağımlılıklar
+        run: pip install --quiet 'pyjwt[crypto]' requests
+
+      - name: App Store Connect
+        env:
+          APPSTORE_KEY_ID: ${{ secrets.APPSTORE_KEY_ID }}
+          APPSTORE_ISSUER_ID: ${{ secrets.APPSTORE_ISSUER_ID }}
+          APPSTORE_PRIVATE_KEY: ${{ secrets.APPSTORE_PRIVATE_KEY }}
+          REVIEW_FIRST_NAME: ${{ secrets.REVIEW_FIRST_NAME }}
+          REVIEW_LAST_NAME: ${{ secrets.REVIEW_LAST_NAME }}
+          REVIEW_PHONE: ${{ secrets.REVIEW_PHONE }}
+          REVIEW_EMAIL: ${{ secrets.REVIEW_EMAIL }}
+        run: |
+          python infra/appstore_release.py \
+            --version "${{ inputs.version }}" \
+            --build "${{ inputs.build }}" \
+            ${{ inputs.submit && '--submit' || '' }}

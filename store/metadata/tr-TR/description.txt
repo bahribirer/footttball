@@ -1,0 +1,21 @@
+Tiki Taka Toe, futbol bilgisini arkadaşınla ya da bota karşı yarıştırdığın hızlı bir bilgi oyunu. Dört farklı mod, 160 binden fazla futbolcu ve her gün yenilenen bir bulmaca.
+
+OYUN MODLARI
+• Tiki Taka Toe — 3×3 tahtada kulüp × millet kesişimine uyan futbolcuyu yaz, üç taşı ilk sen tamamla.
+• Oyuncu Tahmin — Biri milli takımı, diğeri kulübü seçer; eşleşen futbolcuyu ilk bilen turu alır.
+• Kariyer Yolu — Bir futbolcunun kulüp yolu adım adım açılır; kim olduğunu ilk bilen kazanır. Maç boyunca üç ipucu hakkın var.
+• Kategori Yarışı — Verilen kategoriye uyan futbolcuları sırayla yaz; saat yalnız sırası gelen için işler.
+
+RAKİP BEKLEMEDEN OYNA
+Arkadaşınla oda kur ya da hızlı eşleşme kuyruğuna gir. Kimse yoksa üç zorluk seviyesinde bota karşı oyna — bot hile yapmaz, senin gibi tahmin eder.
+
+GÜNÜN TAHTASI
+Her gün herkese aynı 3×3 tahta. Sonucunu emoji ızgarası olarak arkadaşlarına gönder.
+
+SKOR TABLOSU
+Kazandığın her maç puan getirir. Genel ve mod bazlı sıralamada yerini gör.
+
+GENİŞ VERİTABANI
+Güncel yıldızlardan efsanelere kadar 160 binden fazla futbolcu, 600'den fazla kulüp logosu, tüm ülke bayrakları. Soyadla yazman yeterli.
+
+Hesap açman gerekmez. Bir takma ad seç ve oyna.

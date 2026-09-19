@@ -1,0 +1,6 @@
+• Can sistemi: cihaz başına saatte 10 maç
+• Kariyer Yolu modu ve bota karşı oyun
+• Skor tablosu ve günün tahtası puanları
+• Ses efektleri ve yenilenen görsel dil
+• Tüm kulüp logoları, ülke bayrakları ve efsane oyuncu fotoğrafları
+• Daha dayanıklı sunucu; küçük hata düzeltmeleri
