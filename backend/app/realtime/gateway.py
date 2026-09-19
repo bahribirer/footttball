@@ -88,7 +88,15 @@ async def websocket_v2(
                 await room.engine.resend_state(player)
         elif room.is_full and room.engine is None:
             engine = hub.build_engine(room)
-            await engine.start()
+            try:
+                await engine.start()
+            except Exception:
+                # Motor açılamadıysa (veri eksik, beklenmedik hata) ikinci
+                # oyuncunun bağlantısı yine de yaşasın; oda hata bildirir.
+                # Eskiden istisna dış döngüye taşıyor, katılan oyuncu daha
+                # ilk mesajını yollayamadan "koptu" sayılıyordu.
+                logger.exception("Oda %s: motor başlatılamadı", code)
+                await room.broadcast(error("internal_error", "Oyun başlatılamadı, tekrar deneyin."))
 
         left_for_good = await _message_loop(room, player)
 

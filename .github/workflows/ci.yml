@@ -51,7 +51,8 @@ jobs:
               name TEXT, name_normalized TEXT, country_of_citizenship TEXT,
               current_club_name TEXT, image_url TEXT, last_season INTEGER,
               market_value_in_eur TEXT, highest_market_value_in_eur TEXT,
-              position TEXT, sub_position TEXT, current_club_domestic_competition_id TEXT)""")
+              position TEXT, sub_position TEXT, current_club_domestic_competition_id TEXT,
+              date_of_birth TEXT, player_id INTEGER)""")
           con.commit()
           PY
 
