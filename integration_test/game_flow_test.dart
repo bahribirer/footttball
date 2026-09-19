@@ -201,11 +201,11 @@ void main() {
     expect(find.text('KARİYER YOLU'), findsWidgets);
     expect(find.text('?'), findsWidgets, reason: 'gizli kulüp durakları');
 
-    // İpucu kullan: bir kulüp daha açılmalı, hak düşmeli.
+    // İpucu kullan: bir kulüp daha açılmalı, hak düşmeli. Yavaş CI
+    // koşucusunda cevap 2 sn'yi aşabiliyor; görünene kadar beklenir.
     await tester.tap(find.textContaining('İPUCU'));
-    await pumpFor(tester, const Duration(seconds: 2));
-    expect(find.textContaining('2 kaldı'), findsOneWidget,
-        reason: 'ipucu hakkı 3 -> 2');
+    await pumpUntil(tester, find.textContaining('2 kaldı'),
+        timeout: const Duration(seconds: 12), label: 'ipucu hakkı 3 -> 2');
 
     // Yanlış bir tahmin: deneme hakkı düşer, tur sürer.
     await tester.enterText(find.byType(TextField).first, 'David Silva');
