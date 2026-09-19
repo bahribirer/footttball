@@ -17,6 +17,8 @@ set -euo pipefail
 
 HOST="${TTT_HOST:-ubuntu@63.187.180.209}"
 KEY="${TTT_KEY:-$HOME/.ssh/tikitakatoe.pem}"
+# Uzun sessizlikte bağlantı düşüp uzak betik yarım kalıyordu; canlı tut.
+SSH="ssh -i $KEY -o ServerAliveInterval=20 -o ServerAliveCountMax=15"
 LOCAL_DB="backend/data/tikitakapi.db"
 DUMP="/tmp/ttt_layers.sql"
 
@@ -63,14 +65,17 @@ with open(out, "w", encoding="utf-8") as fh:
 print("  " + str(count) + " esleme")
 NATDUMP
 gzip -f /tmp/ttt_nations.tsv
-scp -q -i "$KEY" /tmp/ttt_nations.tsv.gz "$HOST:/tmp/ttt_nations.tsv.gz"
+scp -q -i "$KEY" -o ServerAliveInterval=20 /tmp/ttt_nations.tsv.gz "$HOST:/tmp/ttt_nations.tsv.gz"
 
 echo "▶ Sunucuya kopyalanıyor"
 gzip -f "$DUMP"
-scp -q -i "$KEY" "$DUMP.gz" "$HOST:/tmp/ttt_layers.sql.gz"
+scp -q -i "$KEY" -o ServerAliveInterval=20 "$DUMP.gz" "$HOST:/tmp/ttt_layers.sql.gz"
 
-echo "▶ Sunucuda uygulanıyor"
-ssh -i "$KEY" "$HOST" bash -s <<'REMOTE'
+echo "▶ Sunucuda uygulanıyor (arka planda, log: /tmp/ttt_apply.log)"
+# Uzak betik dosyaya yazılır ve nohup ile koşar: ssh düşse de tamamlanır.
+$SSH "$HOST" "cat > /tmp/ttt_apply.sh" <<'REMOTE'
+set -euo pipefail
+trap 'echo APPLY_FAIL' ERR
 set -euo pipefail
 cd /srv/tikitakatoe
 DB="backend/data/tikitakapi.db"
@@ -153,7 +158,20 @@ rm -f /tmp/ttt_nations.tsv
 
 echo "▶ Backend yeniden başlatılıyor (katman önbelleği tazelensin)"
 docker compose restart backend >/dev/null
+echo APPLY_DONE
 REMOTE
+$SSH "$HOST" "nohup bash /tmp/ttt_apply.sh > /tmp/ttt_apply.log 2>&1 &"
+# Bitişi bekle (en çok 40 dk); log satırlarını akıt.
+seen=0
+for i in $(seq 1 240); do
+  sleep 10
+  log=$($SSH "$HOST" "cat /tmp/ttt_apply.log 2>/dev/null" || true)
+  total=$(printf "%s\n" "$log" | wc -l | tr -d ' ')
+  if [ "$total" -gt "$seen" ]; then printf "%s\n" "$log" | tail -n +$((seen+1)); seen=$total; fi
+  if printf "%s" "$log" | grep -q "APPLY_DONE"; then break; fi
+  if printf "%s" "$log" | grep -q "APPLY_FAIL"; then echo "✗ uzak uygulama başarısız" >&2; exit 1; fi
+done
+printf "%s" "$log" | grep -q "APPLY_DONE" || { echo "✗ zaman aşımı" >&2; exit 1; }
 
 # Logolar sunucuda ilk istekte indiriliyor; oyuncu beklemesin diye tüm
 # kulüpler için önden istenir (önbellek volume'da kalır).
