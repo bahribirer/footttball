@@ -1,4 +1,5 @@
 /// Sunucudan gelen oda ve oyun durumu modelleri.
+library;
 
 class RoomPlayer {
   final int slot;

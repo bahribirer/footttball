@@ -3,6 +3,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 
 import 'package:footttball/core/sound.dart';
+import 'package:footttball/core/theme/app_theme.dart';
 import 'package:footttball/data/models/team_model.dart';
 import 'package:footttball/data/models/room_models.dart';
 import 'package:footttball/data/services/api_service.dart';
@@ -1145,24 +1146,10 @@ class _TikiTakaToeScreenState extends State<TikiTakaToeScreen>
               child: Container(
                 padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      Colors.deepPurple.withOpacity(0.7),
-                      Colors.purple.withOpacity(0.5),
-                    ],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  borderRadius: BorderRadius.circular(18),
-                  border: Border.all(
-                      color: Colors.white.withOpacity(0.3), width: 1.5),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.deepPurple.withOpacity(0.4),
-                      blurRadius: 12,
-                      offset: Offset(0, 4),
-                    ),
-                  ],
+                  color: AppTheme.surface,
+                  borderRadius: BorderRadius.circular(AppTheme.radiusLg),
+                  border: Border.all(color: AppTheme.borderStrong),
+                  boxShadow: AppTheme.shadow,
                 ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -1183,7 +1170,7 @@ class _TikiTakaToeScreenState extends State<TikiTakaToeScreen>
                               SizedBox(width: 4),
                               Text(
                                 myName.length > 7
-                                    ? myName.substring(0, 7) + ".."
+                                    ? "${myName.substring(0, 7)}.."
                                     : myName,
                                 style: TextStyle(
                                   color: _socket.playerTurn
@@ -1282,7 +1269,7 @@ class _TikiTakaToeScreenState extends State<TikiTakaToeScreen>
                               Flexible(
                                 child: Text(
                                   opponentName.length > 7
-                                      ? opponentName.substring(0, 7) + ".."
+                                      ? "${opponentName.substring(0, 7)}.."
                                       : opponentName,
                                   overflow: TextOverflow.ellipsis,
                                   style: TextStyle(
@@ -1355,24 +1342,11 @@ class _TikiTakaToeScreenState extends State<TikiTakaToeScreen>
                   height: 60,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    gradient: LinearGradient(
-                      colors: _start <= 10
-                          ? [Colors.red.shade800, Colors.redAccent]
-                          : [Color(0xFF6A11CB), Color(0xFF2575FC)],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: _start <= 10
-                            ? Colors.redAccent.withOpacity(0.6)
-                            : Colors.blueAccent.withOpacity(0.5),
-                        blurRadius: 15,
-                        offset: Offset(0, 5),
-                      ),
-                    ],
+                    color: AppTheme.surface,
                     border: Border.all(
-                      color: Colors.white.withOpacity(0.4),
+                      color: _start <= 10
+                          ? AppTheme.danger
+                          : AppTheme.borderStrong,
                       width: 2,
                     ),
                   ),
@@ -1429,7 +1403,7 @@ class _TikiTakaToeScreenState extends State<TikiTakaToeScreen>
                     child: _GameActionButton(
                       label: 'RÖVANŞ',
                       icon: Icons.refresh_rounded,
-                      colors: const [Color(0xFF6A11CB), Color(0xFF2575FC)],
+                      colors: const [Color(0xFF3B82F6), Color(0xFF3B82F6)],
                       faded: _replayRequestSent,
                       onTap: () {
                         if (_replayRequestSent) return;
@@ -1452,7 +1426,10 @@ class _TikiTakaToeScreenState extends State<TikiTakaToeScreen>
                     child: _GameActionButton(
                       label: 'ODADAN ÇIK',
                       icon: Icons.logout_rounded,
-                      colors: const [Color(0xFFB3261E), Color(0xFFE04A3A)],
+                      colors: const [
+                        AppTheme.surfaceHigh,
+                        AppTheme.surfaceHigh
+                      ],
                       onTap: _confirmExit,
                     ),
                   ),
@@ -1636,21 +1613,9 @@ class _GameActionButton extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 13),
           decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: colors,
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-            borderRadius: BorderRadius.circular(18),
-            border:
-                Border.all(color: Colors.white.withOpacity(0.18), width: 1.4),
-            boxShadow: [
-              BoxShadow(
-                color: colors.last.withOpacity(0.4),
-                blurRadius: 14,
-                offset: const Offset(0, 5),
-              ),
-            ],
+            color: colors.first,
+            borderRadius: BorderRadius.circular(AppTheme.radius),
+            border: Border.all(color: AppTheme.borderStrong),
           ),
           child: FittedBox(
             fit: BoxFit.scaleDown,
