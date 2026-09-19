@@ -192,8 +192,28 @@ def set_app_info() -> None:
             print(f"  kategori yazılamadı (mevcut korunur): {str(exc)[:160]}")
 
 
+def set_content_rights() -> None:
+    """Üçüncü taraf içerik beyanı (kulüp armaları, Wikimedia fotoğrafları)."""
+    call("PATCH", f"/apps/{APP_ID}", json={"data": {
+        "type": "apps", "id": APP_ID,
+        "attributes": {"contentRightsDeclaration": "USES_THIRD_PARTY_CONTENT"}}})
+    print("  içerik hakları beyanı: üçüncü taraf içerik (hakları var)")
+
+
+def _current_app_info() -> dict | None:
+    infos = call("GET", f"/apps/{APP_ID}/appInfos")
+    return next((i for i in infos.get("data", [])
+                 if i["attributes"].get("appStoreState") not in ("READY_FOR_SALE", "READY_FOR_DISTRIBUTION", "REPLACED_WITH_NEW_INFO", "REMOVED_FROM_SALE")), None) or (infos.get("data") or [None])[0]
+
+
 def set_age_rating(version_id: str) -> None:
-    decl = call("GET", f"/appStoreVersions/{version_id}/ageRatingDeclaration", ok_404=True)
+    # Yaş derecesi beyanı appInfo'ya bağlı (eski sürüm API'de appStoreVersion'daydı).
+    decl = {}
+    info = _current_app_info()
+    if info:
+        decl = call("GET", f"/appInfos/{info['id']}/ageRatingDeclaration", ok_404=True)
+    if not decl.get("data"):
+        decl = call("GET", f"/appStoreVersions/{version_id}/ageRatingDeclaration", ok_404=True)
     if not decl.get("data"):
         print("  yaş derecesi beyanı bulunamadı, atlandı")
         return
@@ -203,19 +223,31 @@ def set_age_rating(version_id: str) -> None:
         "matureOrSuggestiveThemes", "medicalOrTreatmentInformation", "profanityOrCrudeHumor",
         "sexualContentGraphicAndNudity", "sexualContentOrNudity", "violenceCartoonOrFantasy",
         "violenceRealistic", "violenceRealisticProlongedGraphicOrSadistic")}
-    attrs.update({"gambling": False, "unrestrictedWebAccess": False, "seventeenPlus": False})
+    attrs.update({"gambling": False, "unrestrictedWebAccess": False, "lootBox": False,
+                  "advertising": False, "userGeneratedContent": False, "messaging": False,
+                  "ageAssurance": False})
     try:
         call("PATCH", f"/ageRatingDeclarations/{did}", json={"data": {
             "type": "ageRatingDeclarations", "id": did, "attributes": attrs}})
         print("  yaş derecesi: 4+ (hepsi NONE)")
     except SystemExit as exc:
-        # Yeni alan adları gelmişse eskiyi düşür ve tekrar dene.
-        print(f"  yaş derecesi yazılamadı: {str(exc)[:200]}")
+        # Alan adları sürümden sürüme değişiyor; bilinmeyenleri at, tekrar dene.
+        import re as _re
+        bad = set(_re.findall(r"attributes/(\w+)", str(exc)))
+        attrs2 = {k: v for k, v in attrs.items() if k not in bad}
+        try:
+            call("PATCH", f"/ageRatingDeclarations/{did}", json={"data": {
+                "type": "ageRatingDeclarations", "id": did, "attributes": attrs2}})
+            print(f"  yaş derecesi: 4+ ({len(bad)} bilinmeyen alan atlandı: {sorted(bad)})")
+        except SystemExit as exc2:
+            print(f"  yaş derecesi yazılamadı: {str(exc2)[:300]}")
 
 
 def set_review_details(version_id: str) -> None:
-    first, last = os.getenv("REVIEW_FIRST_NAME"), os.getenv("REVIEW_LAST_NAME")
-    phone, email = os.getenv("REVIEW_PHONE"), os.getenv("REVIEW_EMAIL")
+    first = os.getenv("REVIEW_FIRST_NAME") or "Bahri"
+    last = os.getenv("REVIEW_LAST_NAME") or "Birer"
+    email = os.getenv("REVIEW_EMAIL") or "bahribirerr@gmail.com"
+    phone = os.getenv("REVIEW_PHONE")
     notes = ("Oyun hesap istemez; açılışta bir takma ad girmek yeterlidir. "
              "Rakip için 'BOTA KARŞI OYNA' seçilebilir (oda kurma ekranı) ya da iki cihazla oda kodu paylaşılır. "
              "Günün Tahtası tek başına oynanır.")
@@ -332,6 +364,8 @@ def main() -> int:
     if not args.skip_screenshots:
         print("▶ Ekran görüntüleri")
         upload_screenshots(loc_id)
+    print("▶ İçerik hakları")
+    set_content_rights()
     print("▶ Yaş derecesi")
     set_age_rating(vid)
     print("▶ İnceleme bilgisi")
