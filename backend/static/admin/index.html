@@ -1,0 +1,284 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tiki Taka Toe · Yönetim</title>
+<style>
+  :root{
+    --bg:#0b1020;--raised:#0f172a;--surface:#141c33;--high:#1b2540;
+    --border:rgba(255,255,255,.08);--border2:rgba(255,255,255,.16);
+    --text:#f3f5f9;--muted:#9aa3b8;--faint:#5f6b85;
+    --pitch:#22c55e;--gold:#f5b301;--danger:#ef4444;--info:#38bdf8;--coral:#ff6b4a;--violet:#a855f7;--blue:#3b82f6;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  header{display:flex;align-items:center;gap:14px;padding:14px 20px;border-bottom:1px solid var(--border);background:var(--raised);position:sticky;top:0;z-index:5}
+  header h1{font-size:15px;letter-spacing:2px;margin:0;font-weight:800}
+  header .env{font-size:11px;color:var(--muted);letter-spacing:1.5px}
+  header .spacer{flex:1}
+  .dot{width:8px;height:8px;border-radius:50%;background:var(--faint);display:inline-block;margin-right:6px}
+  .dot.ok{background:var(--pitch);box-shadow:0 0 0 3px rgba(34,197,94,.18)}
+  .dot.bad{background:var(--danger)}
+  main{padding:20px;max-width:1280px;margin:0 auto;display:grid;gap:18px}
+  .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
+  .card{background:var(--surface);border:1px solid var(--border2);border-radius:14px;padding:14px 16px}
+  .card .k{font-size:11px;letter-spacing:1.8px;color:var(--muted);font-weight:700}
+  .card .v{font-size:26px;font-weight:800;margin-top:4px;line-height:1.1}
+  .card .s{font-size:12px;color:var(--muted);margin-top:4px}
+  .grid2{display:grid;grid-template-columns:2fr 1fr;gap:18px}
+  @media (max-width:900px){.grid2{grid-template-columns:1fr}}
+  section{background:var(--surface);border:1px solid var(--border2);border-radius:14px;overflow:hidden}
+  section h2{margin:0;padding:12px 16px;font-size:12px;letter-spacing:2px;font-weight:800;color:var(--muted);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px}
+  section h2 .count{background:var(--high);color:var(--text);border-radius:10px;padding:1px 8px;font-size:11px}
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th,td{padding:9px 14px;text-align:left;border-bottom:1px solid var(--border);vertical-align:top}
+  th{font-size:11px;letter-spacing:1.4px;color:var(--muted);font-weight:700}
+  tr:last-child td{border-bottom:none}
+  tbody tr:hover{background:rgba(255,255,255,.02)}
+  .mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12.5px}
+  .pill{display:inline-block;padding:2px 8px;border-radius:9px;font-size:11px;font-weight:700;letter-spacing:.6px;border:1px solid var(--border2);color:var(--muted)}
+  .pill.tiki_taka_toe{color:var(--blue);border-color:rgba(59,130,246,.4)}
+  .pill.player_guess{color:var(--coral);border-color:rgba(255,107,74,.4)}
+  .pill.career_path{color:var(--pitch);border-color:rgba(34,197,94,.4)}
+  .pill.category_race{color:var(--violet);border-color:rgba(168,85,247,.4)}
+  .pill.daily{color:var(--pitch)}
+  .pill.bot{color:var(--gold);border-color:rgba(245,179,1,.4)}
+  .pill.on{color:var(--pitch)} .pill.off{color:var(--danger)}
+  .player{display:flex;align-items:center;gap:6px;margin:2px 0}
+  .player .st{width:7px;height:7px;border-radius:50%;background:var(--danger)} .player .st.on{background:var(--pitch)}
+  .empty{padding:26px;text-align:center;color:var(--faint)}
+  button{background:var(--high);color:var(--text);border:1px solid var(--border2);border-radius:10px;padding:8px 12px;font-weight:700;letter-spacing:.6px;cursor:pointer;font-size:12px}
+  button:hover{border-color:rgba(255,255,255,.3)}
+  button.primary{background:var(--pitch);color:#0b1020;border-color:transparent}
+  button.danger{color:var(--danger);border-color:rgba(239,68,68,.4)}
+  button.sm{padding:4px 9px;font-size:11px}
+  input,textarea,select{width:100%;background:var(--raised);color:var(--text);border:1px solid var(--border2);border-radius:10px;padding:9px 11px;font:inherit}
+  textarea{min-height:76px;resize:vertical}
+  label{display:block;font-size:11px;letter-spacing:1.4px;color:var(--muted);font-weight:700;margin:10px 0 5px}
+  form{padding:14px 16px}
+  .row{display:flex;gap:10px} .row>*{flex:1}
+  .notice{margin:14px 16px 0;padding:10px 12px;border-radius:10px;background:rgba(245,179,1,.1);border:1px solid rgba(245,179,1,.35);font-size:13px}
+  .notice b{color:var(--gold)}
+  .muted{color:var(--muted)} .faint{color:var(--faint)} .small{font-size:12px}
+  #login{max-width:420px;margin:80px auto;padding:24px}
+  #toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:var(--high);border:1px solid var(--border2);padding:10px 16px;border-radius:12px;display:none;font-weight:600}
+  .tabs{display:flex;gap:6px;padding:10px 16px;border-bottom:1px solid var(--border);flex-wrap:wrap}
+  .tabs button.active{background:var(--gold);color:#0b1020;border-color:transparent}
+</style>
+</head>
+<body>
+<header>
+  <span id="status" class="dot"></span>
+  <h1>TIKI TAKA TOE · YÖNETİM</h1>
+  <span class="env" id="env"></span>
+  <span class="spacer"></span>
+  <span class="small muted" id="clock"></span>
+  <button id="logout" class="sm" style="display:none">ÇIKIŞ</button>
+</header>
+
+<div id="login" class="card">
+  <div class="k">YÖNETİCİ ANAHTARI</div>
+  <p class="muted small">Sunucudaki <span class="mono">ADMIN_TOKEN</span> değeri. Tarayıcıda saklanır.</p>
+  <input id="token" type="password" placeholder="anahtar" autocomplete="off">
+  <div style="margin-top:12px"><button class="primary" id="enter">GİRİŞ</button></div>
+  <p id="loginErr" class="small" style="color:var(--danger);display:none"></p>
+</div>
+
+<main id="app" style="display:none">
+  <div class="cards" id="cards"></div>
+
+  <div class="grid2">
+    <section>
+      <h2>CANLI ODALAR <span class="count" id="roomCount">0</span></h2>
+      <div id="rooms"></div>
+    </section>
+
+    <div style="display:grid;gap:18px;align-content:start">
+      <section>
+        <h2>DUYURU</h2>
+        <div id="curNotice"></div>
+        <form id="notifyForm">
+          <label>BAŞLIK</label>
+          <input id="nTitle" maxlength="60" value="Duyuru">
+          <label>MESAJ</label>
+          <textarea id="nMsg" maxlength="400" placeholder="Örn. 10 dk sonra kısa bir bakım olacak."></textarea>
+          <div class="row">
+            <div><label>HEDEF</label><select id="nTarget"><option value="all">Herkes</option></select></div>
+            <div><label>PANODA KALSIN</label>
+              <select id="nTtl"><option value="900">15 dk</option><option value="3600" selected>1 saat</option><option value="21600">6 saat</option><option value="86400">1 gün</option></select></div>
+          </div>
+          <div style="margin-top:12px;display:flex;gap:8px">
+            <button type="submit" class="primary">GÖNDER</button>
+            <button type="button" id="clearNotice">PANOYU TEMİZLE</button>
+          </div>
+        </form>
+      </section>
+
+      <section>
+        <h2>KUYRUK</h2>
+        <div id="queue" class="empty">—</div>
+      </section>
+    </div>
+  </div>
+
+  <section>
+    <h2>OYUNCULAR <span class="count" id="playerCount">0</span> <span class="faint small" style="font-weight:400;letter-spacing:0">son görülen sırasıyla · ad ile toplanmış puan</span></h2>
+    <div id="players"></div>
+  </section>
+
+  <div class="grid2">
+    <section>
+      <h2>SKOR TABLOSU</h2>
+      <div class="tabs" id="lbTabs"></div>
+      <div id="leaderboard"></div>
+    </section>
+    <section>
+      <h2>SON OLAYLAR</h2>
+      <div id="events"></div>
+    </section>
+  </div>
+</main>
+<div id="toast"></div>
+
+<script>
+const API = '/api/v1';
+const MODES = {tiki_taka_toe:'Tiki Taka Toe', player_guess:'Oyuncu Tahmin', career_path:'Kariyer Yolu', category_race:'Kategori Yarışı', daily:'Günün Tahtası', all:'Genel'};
+let token = localStorage.getItem('ttt_admin_token') || '';
+let lbMode = 'all';
+let timer = null;
+
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const ago = (ts) => { if(!ts) return '—'; const d = Math.max(0, Date.now()/1000 - ts); if (d<60) return Math.round(d)+' sn'; if (d<3600) return Math.round(d/60)+' dk'; if (d<86400) return Math.round(d/3600)+' sa'; return Math.round(d/86400)+' g'; };
+const dur = (s) => { s=Math.round(s); if(s<60) return s+' sn'; if(s<3600) return Math.floor(s/60)+' dk '+(s%60)+' sn'; return Math.floor(s/3600)+' sa '+Math.floor((s%3600)/60)+' dk'; };
+const when = (ts) => new Date(ts*1000).toLocaleTimeString('tr-TR',{hour:'2-digit',minute:'2-digit'});
+const toast = (m, bad) => { const t=$('toast'); t.textContent=m; t.style.borderColor = bad?'var(--danger)':'var(--pitch)'; t.style.display='block'; clearTimeout(t._h); t._h=setTimeout(()=>t.style.display='none', 2600); };
+
+async function api(path, opts={}) {
+  const r = await fetch(API + path, {...opts, headers: {'Content-Type':'application/json','X-Admin-Token': token, ...(opts.headers||{})}});
+  if (r.status === 401 || r.status === 503) { const e = await r.json().catch(()=>({detail:r.statusText})); throw Object.assign(new Error(e.detail||'yetki'), {auth:true}); }
+  if (!r.ok) { const e = await r.json().catch(()=>({detail:r.statusText})); throw new Error(e.detail || r.statusText); }
+  return r.json();
+}
+
+function pill(mode){ return `<span class="pill ${esc(mode)}">${esc(MODES[mode]||mode)}</span>`; }
+
+function renderCards(o){
+  const c = o.counts, s = o.scores, sv = o.server;
+  $('env').textContent = `${sv.environment} · ${sv.release} · ${dur(sv.uptime_seconds)} ayakta`;
+  $('cards').innerHTML = [
+    ['ÇEVRİMİÇİ', c.players_online, 'odalarda bağlı insan'],
+    ['CANLI ODA', c.rooms, `${c.rooms_playing} oynanıyor · ${c.rooms_with_bot} botlu`],
+    ['KUYRUK', c.queue_total, 'eşleşme bekleyen'],
+    ['OYUNCU', s.players, `${s.devices} cihaz`],
+    ['MAÇ / 24 SA', s.match_events_24h, `${s.vs_bot_24h} bota karşı · toplam ${s.match_events}`],
+    ['GÜNÜN TAHTASI / 24 SA', s.daily_24h, 'gönderilen sonuç'],
+  ].map(([k,v,sub]) => `<div class="card"><div class="k">${k}</div><div class="v">${v}</div><div class="s">${sub}</div></div>`).join('');
+}
+
+function renderRooms(rooms){
+  $('roomCount').textContent = rooms.length;
+  const sel = $('nTarget'); const cur = sel.value;
+  sel.innerHTML = '<option value="all">Herkes</option>' + rooms.map(r=>`<option value="${esc(r.code)}">Oda ${esc(r.code)}</option>`).join('');
+  if ([...sel.options].some(o=>o.value===cur)) sel.value = cur;
+  if (!rooms.length) { $('rooms').innerHTML = '<div class="empty">Açık oda yok</div>'; return; }
+  $('rooms').innerHTML = `<table><thead><tr><th>KOD</th><th>MOD</th><th>OYUNCULAR</th><th>DURUM</th><th>YAŞ</th><th></th></tr></thead><tbody>` +
+    rooms.map(r => {
+      const eng = r.engine;
+      let st = '<span class="faint">bekliyor</span>';
+      if (eng) st = eng.finished ? '<span class="muted">bitti</span>' : `${esc(eng.phase||'oyunda')}${eng.round?` · tur ${eng.round}${eng.total_rounds?'/'+eng.total_rounds:''}`:''}`;
+      const players = r.players.map(p => `<div class="player"><span class="st ${p.connected?'on':''}"></span>${esc(p.name)} ${p.is_bot?'<span class="pill bot">BOT</span>':''}<span class="faint small">· ${p.score} p</span></div>`).join('') || '<span class="faint">—</span>';
+      return `<tr><td class="mono">${esc(r.code)}</td><td>${pill(r.mode)}</td><td>${players}</td><td>${st}</td><td class="muted">${dur(r.age_seconds)}</td>
+        <td style="white-space:nowrap"><button class="sm" onclick="notifyRoom('${esc(r.code)}')">DUYUR</button> <button class="sm danger" onclick="closeRoom('${esc(r.code)}')">KAPAT</button></td></tr>`;
+    }).join('') + '</tbody></table>';
+}
+
+function renderQueue(q){
+  const keys = Object.keys(q||{});
+  $('queue').className = keys.length ? '' : 'empty';
+  $('queue').innerHTML = keys.length ? `<table><tbody>${keys.map(k=>`<tr><td>${pill(k)}</td><td style="text-align:right;font-weight:800">${q[k]}</td></tr>`).join('')}</tbody></table>` : 'Kuyrukta kimse yok';
+}
+
+function renderNotice(o){
+  const n = o.notice;
+  $('curNotice').innerHTML = n ? `<div class="notice"><b>${esc(n.title)}</b> — ${esc(n.message)}<div class="faint small">panoda kalır · bitiş ${when(n.expires_at)}</div></div>` : '';
+  const h = o.notice_history || [];
+  if (h.length) $('curNotice').innerHTML += `<div class="small muted" style="padding:10px 16px 0">Son: ${h.slice(0,3).map(x=>`${when(x.at)} ${esc(x.title)} → ${x.target==='all'?'herkes':x.target} (${x.delivered})`).join(' · ')}</div>`;
+}
+
+function renderPlayers(list){
+  $('playerCount').textContent = list.length;
+  if (!list.length) { $('players').innerHTML = '<div class="empty">Henüz oyuncu yok</div>'; return; }
+  $('players').innerHTML = `<table><thead><tr><th>AD</th><th>PUAN</th><th>SON GÖRÜLME</th><th>İLK GÖRÜLME</th><th>CİHAZ</th></tr></thead><tbody>` +
+    list.map(p => `<tr><td><b>${esc(p.name)}</b></td><td>${p.points}</td><td class="muted">${ago(p.updated_at)} önce</td><td class="muted">${ago(p.created_at)} önce</td><td class="mono faint">${esc(p.player_id).slice(0,10)}…</td></tr>`).join('') + '</tbody></table>';
+}
+
+function renderEvents(list){
+  if (!list.length) { $('events').innerHTML = '<div class="empty">—</div>'; return; }
+  const kind = {win:'galibiyet', draw:'beraberlik', loss:'mağlubiyet', daily:'günün tahtası'};
+  $('events').innerHTML = `<table><tbody>${list.map(e=>`<tr><td class="muted small">${when(e.created_at)}</td><td><b>${esc(e.name)}</b></td><td>${pill(e.mode)}</td><td class="small">${kind[e.kind]||e.kind}${e.vs_bot?' <span class="pill bot">BOT</span>':''}</td><td style="text-align:right;font-weight:800">+${e.points}</td></tr>`).join('')}</tbody></table>`;
+}
+
+async function loadLeaderboard(){
+  const order = ['all','tiki_taka_toe','player_guess','career_path','category_race','daily'];
+  $('lbTabs').innerHTML = order.map(k=>`<button class="sm ${k===lbMode?'active':''}" onclick="setLb('${k}')">${esc(MODES[k])}</button>`).join('');
+  try {
+    const d = await api(`/admin/leaderboard?mode=${lbMode}`);
+    $('leaderboard').innerHTML = d.entries.length ? `<table><thead><tr><th>#</th><th>AD</th><th>PUAN</th><th>G</th><th>MAÇ</th></tr></thead><tbody>${d.entries.slice(0,30).map(e=>`<tr><td class="muted">${e.rank}</td><td><b>${esc(e.name)}</b></td><td style="font-weight:800">${e.points}</td><td>${e.wins}</td><td>${e.matches}</td></tr>`).join('')}</tbody></table>` : '<div class="empty">Puan yok</div>';
+  } catch(e) { $('leaderboard').innerHTML = `<div class="empty">${esc(e.message)}</div>`; }
+}
+window.setLb = (m) => { lbMode = m; loadLeaderboard(); };
+
+async function refresh(){
+  try {
+    const o = await api('/admin/overview');
+    $('status').className = 'dot ok';
+    renderCards(o); renderRooms(await (async()=> (await api('/admin/rooms')).rooms)()); renderQueue(o.counts.queue); renderNotice(o);
+    renderPlayers(o.scores.players_recent || []); renderEvents(o.scores.recent_events || []);
+    $('clock').textContent = 'güncellendi ' + new Date().toLocaleTimeString('tr-TR');
+  } catch (e) {
+    $('status').className = 'dot bad';
+    if (e.auth) { logout(e.message); return; }
+    toast('Yenileme hatası: ' + e.message, true);
+  }
+}
+
+window.notifyRoom = (code) => { $('nTarget').value = code; $('nMsg').focus(); };
+window.closeRoom = async (code) => {
+  if (!confirm(`Oda ${code} kapatılsın mı? Oyuncular menüye düşer.`)) return;
+  try { await api(`/admin/rooms/${code}/close`, {method:'POST', body: JSON.stringify({})}); toast(`Oda ${code} kapatıldı`); refresh(); }
+  catch(e){ toast(e.message, true); }
+};
+
+$('notifyForm').addEventListener('submit', async (ev) => {
+  ev.preventDefault();
+  const body = {title: $('nTitle').value.trim() || 'Duyuru', message: $('nMsg').value.trim(), target: $('nTarget').value, ttl_seconds: +$('nTtl').value};
+  if (!body.message) { toast('Mesaj boş', true); return; }
+  try { const r = await api('/admin/notify', {method:'POST', body: JSON.stringify(body)}); toast(`Gönderildi · ${r.delivered} alıcı`); $('nMsg').value=''; refresh(); }
+  catch(e){ toast(e.message, true); }
+});
+$('clearNotice').addEventListener('click', async () => { try { await api('/admin/notice/clear', {method:'POST', body:'{}'}); toast('Pano temizlendi'); refresh(); } catch(e){ toast(e.message,true);} });
+
+function logout(msg){
+  clearInterval(timer); timer=null;
+  $('app').style.display='none'; $('login').style.display='block'; $('logout').style.display='none';
+  if (msg) { $('loginErr').textContent = msg; $('loginErr').style.display='block'; }
+}
+async function enter(){
+  token = $('token').value.trim();
+  try { await api('/admin/overview'); }
+  catch(e){ $('loginErr').textContent = e.message; $('loginErr').style.display='block'; return; }
+  localStorage.setItem('ttt_admin_token', token);
+  $('login').style.display='none'; $('app').style.display='grid'; $('logout').style.display='inline-block'; $('loginErr').style.display='none';
+  refresh(); loadLeaderboard();
+  timer = setInterval(refresh, 5000);
+}
+$('enter').addEventListener('click', enter);
+$('token').addEventListener('keydown', e => { if (e.key==='Enter') enter(); });
+$('logout').addEventListener('click', () => { localStorage.removeItem('ttt_admin_token'); token=''; logout(); });
+
+if (token) { $('token').value = token; enter(); }
+</script>
+</body>
+</html>

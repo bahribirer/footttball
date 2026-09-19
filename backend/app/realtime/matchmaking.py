@@ -84,6 +84,20 @@ class Matchmaker:
             if queue and entry in queue:
                 queue.remove(entry)
 
+    async def broadcast(self, payload: dict) -> int:
+        """Kuyrukta bekleyen herkese mesaj (yönetici duyurusu). Alıcı sayısı."""
+        import json as _json
+        sent = 0
+        async with self._lock:
+            waiting = [w for q in self._queues.values() for w in q if w.matched_code is None]
+        for w in waiting:
+            try:
+                await w.socket.send_text(_json.dumps(payload, ensure_ascii=False))
+                sent += 1
+            except Exception:  # noqa: BLE001
+                pass
+        return sent
+
     async def waiting_count(self, mode: str | None = None) -> dict[str, int]:
         async with self._lock:
             if mode:

@@ -5,6 +5,7 @@ import 'package:web_socket_channel/web_socket_channel.dart';
 import 'package:web_socket_channel/status.dart' as ws_status;
 
 import 'package:footttball/core/config/app_config.dart';
+import 'package:footttball/core/notices.dart';
 import 'package:footttball/core/session.dart';
 import 'package:footttball/data/models/game_mode.dart';
 import 'package:footttball/data/models/room_models.dart';
@@ -292,6 +293,12 @@ class GameSocket {
         break;
 
       case 'event':
+        if (message['event'] == 'admin_notice') {
+          Notices.instance.show(
+            title: message['title'] as String? ?? 'Duyuru',
+            message: message['message'] as String? ?? '',
+          );
+        }
         _handleEvent(message);
         break;
 

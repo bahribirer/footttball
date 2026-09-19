@@ -75,6 +75,14 @@ app.include_router(queue_gateway.router)
 app.include_router(legacy.router)
 
 
+@app.get("/admin", include_in_schema=False)
+async def admin_panel():
+    """Yönetim paneli (tek dosya). Veri uçları anahtar ister; sayfa açık."""
+    from fastapi.responses import FileResponse
+    from app.api.v1.admin import ADMIN_HTML
+    return FileResponse(ADMIN_HTML, media_type="text/html")
+
+
 @app.get("/ping", tags=["health"])
 async def ping() -> dict:
     return {"status": "ok", "message": "Backend is reachable"}

@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 
 import 'package:footttball/core/config/app_config.dart';
+import 'package:footttball/core/notices.dart';
 import 'package:footttball/core/session.dart';
 import 'package:footttball/data/services/api_service.dart';
 import 'package:footttball/data/models/game_mode.dart';
@@ -90,6 +91,12 @@ class _QuickMatchSheetState extends State<QuickMatchSheet> {
     }
 
     switch (message['event']) {
+      case 'admin_notice':
+        Notices.instance.show(
+          title: message['title'] as String? ?? 'Duyuru',
+          message: message['message'] as String? ?? '',
+        );
+        break;
       case 'queued':
         setState(() => _status = 'Sıraya girdin, rakip bekleniyor...');
         break;

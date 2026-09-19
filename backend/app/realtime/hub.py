@@ -388,6 +388,10 @@ class RoomHub:
     def get(self, code: str) -> Room | None:
         return self._rooms.get(code)
 
+    def all_rooms(self) -> list[Room]:
+        """Yönetim paneli için anlık oda listesi (kopya)."""
+        return list(self._rooms.values())
+
     def room_status(self, code: str) -> dict:
         room = self._rooms.get(code)
         if room is None:

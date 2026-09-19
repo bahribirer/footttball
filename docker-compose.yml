@@ -30,6 +30,8 @@ services:
       # Bozulan bir modu yeni uygulama sürümü beklemeden kapatmak için:
       # virgülle ayrılmış mod kimlikleri, örn. "last_letter,category_race"
       MODES_DISABLED: ${MODES_DISABLED:-}
+      # Yönetim paneli anahtarı (/admin). Boşsa panel kapalı.
+      ADMIN_TOKEN: ${ADMIN_TOKEN:-}
       # Verilirse oda durumu Redis'te paylaşılır ve birden fazla
       # backend süreci çalıştırılabilir. Boşsa tek süreç + disk
       # anlık görüntüsü ile çalışılır.
