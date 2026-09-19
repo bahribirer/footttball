@@ -98,6 +98,9 @@ Eski `/ws/{room_id}` uç noktası mağazadaki eski sürümler için korunmuştur
 
 ## Ortam değişkenleri
 
+`ADMIN_TOKEN` — yönetim paneli (`/admin`) anahtarı; boşsa panel ve
+`/api/v1/admin/*` kapalıdır.
+
 | Değişken               | Varsayılan                  |
 |------------------------|-----------------------------|
 | `ENVIRONMENT`          | `development`               |

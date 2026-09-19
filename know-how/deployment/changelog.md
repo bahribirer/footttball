@@ -3,6 +3,29 @@
 Biçim: [keepachangelog](https://keepachangelog.com/tr/1.1.0/).
 Sürümleme: [semver](https://semver.org/lang/tr/).
 
+## [1.4.0] - 2026-09-19
+
+### Eklendi
+- Ses efektleri (dokunma, doğru/yanlış, son saniyeler, ipucu, tur başı,
+  maç sonu); menüden aç/kapa
+- Yönetim paneli `/admin`: canlı odalar, bağlı oyuncular, kuyruk, skor ve
+  günlük sayılar, oyunculara duyuru (anlık + pano), oda kapatma.
+  `ADMIN_TOKEN` ortam değişkeni gerekir
+- Oyuncu tarafında duyuru bandı (`admin_notice`, `GET /api/v1/notice`)
+
+### Değişti
+- Görsel dil yenilendi: neon parlama ve gradyanlar yerine lacivert zemin,
+  düz kartlar, çim yeşili vurgu; mod renkleri tek tonlu
+- Son turda çözüm ekranı görünür, maç sonu penceresi sonra gelir (tüm
+  modlar); Oyuncu Tahmin hazırlık geri sayımı 5 → 3 sn
+- Skor tablosu satırları ada göre toplanır (aynı ad farklı cihazlardan
+  tek satır)
+
+### Düzeltildi
+- Tek bir bozuk istemci mesajı oyuncuyu "koptu" saydırıyordu; artık
+  loglanır, bağlantı sürer. 16 KB üstü mesajlar reddedilir
+- Bot beyni hataları odayı etkilemez
+
 ## [1.3.0] - 2026-09-19
 
 ### Eklendi
