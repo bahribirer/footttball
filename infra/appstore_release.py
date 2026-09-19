@@ -237,10 +237,11 @@ def set_copyright(version_id: str) -> None:
 
 def set_pricing() -> None:
     """Ücretsiz fiyat planı (tüm ülkeler, taban ülke ABD)."""
-    current = call("GET", f"/apps/{APP_ID}/appPriceSchedule", ok_404=True)
+    current = call("GET", f"/apps/{APP_ID}/appPriceSchedule/manualPrices?limit=5", ok_404=True)
     if current.get("data"):
-        print("  fiyat planı zaten var")
+        print(f"  fiyat planı zaten var ({len(current['data'])} fiyat)")
         return
+    print("  fiyat planı boş, ücretsiz plan kuruluyor")
     points = call("GET", f"/apps/{APP_ID}/appPricePoints?filter[territory]=USA&limit=200")
     free = next((p for p in points.get("data", []) if float(p["attributes"].get("customerPrice", "1")) == 0.0), None)
     if not free:
