@@ -39,7 +39,7 @@ jobs:
     # çalıştırmadan reddediliyor.
     environment: production
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           # Sürüm notu son etiketten bu yana gelen commit'lerden üretiliyor;
           # sığ klon bunu göremez.
