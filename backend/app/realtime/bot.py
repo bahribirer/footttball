@@ -42,7 +42,16 @@ class BotSocket:
         except json.JSONDecodeError:
             return
         # Beyin işlerini ayrı görevde yapar; gönderen tarafı bekletmemeli.
-        asyncio.create_task(self.brain.on_message(message))
+        # Hata beyinde kalır: bot düşünürken patlasa da oda ve oyuncu yaşar.
+        asyncio.create_task(self._safe(message))
+
+    async def _safe(self, message: dict) -> None:
+        try:
+            await self.brain.on_message(message)
+        except asyncio.CancelledError:
+            raise
+        except Exception:
+            logger.exception("Bot beyni mesajı işleyemedi: %s", message.get("type"))
 
     async def close(self, code: int = 1000) -> None:
         if self.brain is not None:

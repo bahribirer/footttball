@@ -19,6 +19,10 @@ CLOSE_ROOM_NOT_FOUND = 4004
 CLOSE_MODE_MISMATCH = 4005
 CLOSE_IDLE = 4008
 
+# Tek bir istemci mesajı için üst sınır (bayt). Oyun mesajları birkaç yüz
+# baytı geçmez.
+MAX_MESSAGE_BYTES = 16 * 1024
+
 
 @router.websocket("/ws/v2/{code}")
 async def websocket_v2(
@@ -138,6 +142,12 @@ async def _message_loop(room, player) -> bool:
                 pass
             return False
 
+        # Aşırı büyük mesaj: ayrıştırmaya bile girmeden reddedilir. Bir
+        # istemci (ya da bilerek) megabaytlık JSON yollarsa bellek şişmesin.
+        if len(raw) > MAX_MESSAGE_BYTES:
+            await player.send(error(ErrorCode.INVALID_MESSAGE, "Mesaj çok büyük."))
+            continue
+
         try:
             message = json.loads(raw)
             if not isinstance(message, dict):
@@ -148,30 +158,55 @@ async def _message_loop(room, player) -> bool:
 
         message_type = message.get("type")
 
-        if message_type == ClientMessage.PING:
-            await player.send({"type": ServerMessage.PONG})
-
-        elif message_type == ClientMessage.LEAVE:
+        # Tek bir bozuk mesaj oyuncunun döngüsünü öldürmesin: motor hatası
+        # loglanır, oyuncuya hata gider, bağlantı sürer. Eskiden burada
+        # yükselen istisna dış döngüye taşıyor ve oyuncu "koptu" sayılıyordu.
+        try:
+            await _dispatch(room, player, message_type, message)
+        except WebSocketDisconnect:
+            raise
+        except _Leave:
             return True
+        except Exception:
+            logger.exception("Oda %s: %s mesajı işlenemedi (%s)",
+                             room.code, message_type, player.name)
+            try:
+                await player.send(error("internal_error", "İstek işlenemedi."))
+            except Exception:
+                pass
 
-        elif message_type == ClientMessage.RELAY:
-            if room.engine:
-                await room.engine.handle_relay(player, message.get("data", {}))
 
-        elif message_type == ClientMessage.ACTION:
-            if room.engine:
-                await room.engine.handle_action(player, message)
-            else:
-                await player.send(error(ErrorCode.GAME_NOT_RUNNING, "Oyun henüz başlamadı."))
+class _Leave(Exception):
+    """`leave` mesajı: döngüden bilerek çıkış sinyali."""
 
-        elif message_type == ClientMessage.REMATCH:
-            await _handle_rematch(room, player)
 
-        elif message_type == ClientMessage.READY:
-            await room.send_room_state()
+async def _dispatch(room, player, message_type, message: dict) -> None:
 
+    if message_type == ClientMessage.PING:
+        await player.send({"type": ServerMessage.PONG})
+
+    elif message_type == ClientMessage.LEAVE:
+        raise _Leave()
+
+    elif message_type == ClientMessage.RELAY:
+        data = message.get("data", {})
+        if room.engine and isinstance(data, dict):
+            await room.engine.handle_relay(player, data)
+
+    elif message_type == ClientMessage.ACTION:
+        if room.engine:
+            await room.engine.handle_action(player, message)
         else:
-            await player.send(error(ErrorCode.INVALID_MESSAGE, f"Bilinmeyen tip: {message_type}"))
+            await player.send(error(ErrorCode.GAME_NOT_RUNNING, "Oyun henüz başlamadı."))
+
+    elif message_type == ClientMessage.REMATCH:
+        await _handle_rematch(room, player)
+
+    elif message_type == ClientMessage.READY:
+        await room.send_room_state()
+
+    else:
+        await player.send(error(ErrorCode.INVALID_MESSAGE, f"Bilinmeyen tip: {message_type}"))
 
 
 async def _handle_rematch(room, player) -> None:
