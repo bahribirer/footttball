@@ -156,11 +156,29 @@ class _CreateRoomScreenState extends State<CreateRoomScreen>
     _enterWaitingRoom();
   }
 
+  /// Zorluk seçtirip odaya bot oturtur, sonra normal akışla oyuna girer.
+  ///
+  /// Bot odaya oturunca oyuncu bağlandığı an oda dolu görünür ve motor
+  /// hemen başlar; bekleme odası birkaç saniyeliğine görünüp geçer.
+  Future<void> _onBotPressed() async {
+    if (_roomCode == null) return;
+    if (_mode.needsLeague) {
+      Session.instance.leagueId = _catalog.leagueId(_selectedLeague);
+    }
+    final difficulty = await showModalBottomSheet<String>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (_) => const _DifficultySheet(),
+    );
+    if (difficulty == null || !mounted) return;
+    await _enterWaitingRoom(botDifficulty: difficulty);
+  }
+
   /// Seçimleri sunucudaki odaya işler, sonra bekleme odasına geçer.
   ///
   /// Oda kodu ekran açılırken rezerve edildiği için seçimler sunucuya ayrıca
   /// bildirilmeli; aksi halde oyun varsayılan ayarlarla başlıyordu.
-  Future<void> _enterWaitingRoom() async {
+  Future<void> _enterWaitingRoom({String? botDifficulty}) async {
     Session.instance
       ..roundCount = _rounds
       ..clockSeconds = _clockSeconds
@@ -177,6 +195,13 @@ class _CreateRoomScreenState extends State<CreateRoomScreen>
         clockSeconds: _mode.isClockBased ? _clockSeconds : null,
         categoryId: _mode.needsCategory ? _selectedCategoryId : null,
       );
+      // Ayarlar oturduktan SONRA bot eklenir; motor odayı dolu görünce
+      // kurulur ve o anki ayarları okur.
+      if (botDifficulty != null) {
+        final ok = await ApiService.addBot(
+            code: _roomCode!, difficulty: botDifficulty);
+        if (!ok) throw Exception('bot eklenemedi');
+      }
     } catch (_) {
       if (!mounted) return;
       setState(() => _applyingSettings = false);
@@ -244,6 +269,31 @@ class _CreateRoomScreenState extends State<CreateRoomScreen>
                           enabled: ready,
                           colors: _mode.colors,
                           onTap: _onPlayPressed,
+                        ),
+                        const SizedBox(height: 10),
+                        // Arkadaş beklemeden oynamak için: bot rakip.
+                        TextButton.icon(
+                          key: const ValueKey('btn_bot'),
+                          onPressed: ready ? _onBotPressed : null,
+                          icon: Icon(Icons.smart_toy_rounded,
+                              size: 18,
+                              color: ready ? Colors.white70 : Colors.white24),
+                          label: Text(
+                            'BOTA KARŞI OYNA',
+                            style: TextStyle(
+                              color: ready ? Colors.white70 : Colors.white24,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 12,
+                              letterSpacing: 1.1,
+                            ),
+                          ),
+                          style: TextButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 20, vertical: 12),
+                            backgroundColor: Colors.white10,
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(14)),
+                          ),
                         ),
                         if (_applyingSettings) ...[
                           const SizedBox(height: 16),
@@ -1025,6 +1075,79 @@ class _DifficultyChip extends StatelessWidget {
           fontSize: 9,
           fontWeight: FontWeight.w900,
           letterSpacing: 0.8,
+        ),
+      ),
+    );
+  }
+}
+
+/// Bot zorluğu: kolay/orta/zor.
+class _DifficultySheet extends StatelessWidget {
+  const _DifficultySheet();
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: NeonPanel(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const NeonTitle('BOT ZORLUĞU', fontSize: 20),
+            const SizedBox(height: 6),
+            const Text(
+              'Bot hile yapmaz; zorluk ne kadar sık ve ne kadar hızlı bildiğini belirler.',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Colors.white60, fontSize: 12.5),
+            ),
+            const SizedBox(height: 18),
+            for (final (id, label, hint, color) in const [
+              (
+                'easy',
+                'KOLAY',
+                'Yavaş düşünür, sık yanılır',
+                Color(0xFF38EF7D)
+              ),
+              ('medium', 'ORTA', 'Dengeli rakip', Color(0xFFFFC107)),
+              ('hard', 'ZOR', 'Hızlı ve isabetli', Color(0xFFFF512F)),
+            ])
+              Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    key: ValueKey('bot_$id'),
+                    onPressed: () => Navigator.of(context).pop(id),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: color.withValues(alpha: 0.18),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 18, vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                        side: BorderSide(color: color.withValues(alpha: 0.6)),
+                      ),
+                      elevation: 0,
+                    ),
+                    child: Row(
+                      children: [
+                        Text(label,
+                            style: TextStyle(
+                                color: color,
+                                fontWeight: FontWeight.w900,
+                                letterSpacing: 1.2)),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(hint,
+                              style: const TextStyle(
+                                  color: Colors.white70, fontSize: 12)),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+          ],
         ),
       ),
     );

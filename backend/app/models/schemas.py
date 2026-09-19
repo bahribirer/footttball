@@ -23,6 +23,9 @@ class CreateRoomRequest(BaseModel):
     round_count: int | None = Field(default=None, ge=1, le=9)
     clock_seconds: int | None = Field(default=None, ge=10, le=300)
     category_id: str | None = None
+    # Rakip olarak bot otursun; oyuncu arkadaş beklemek zorunda kalmasın.
+    vs_bot: bool = False
+    bot_difficulty: str = "medium"
 
 
 class CreateRoomResponse(BaseModel):

@@ -152,6 +152,21 @@ class ApiService {
     }
   }
 
+  /// Odaya bot oturtur; oyuncu bağlanınca oyun hemen başlar.
+  static Future<bool> addBot({
+    required String code,
+    required String difficulty,
+  }) async {
+    final response = await http
+        .post(
+          _uri('/api/v1/rooms/$code/bot'),
+          headers: const {'Content-Type': 'application/json'},
+          body: jsonEncode({'difficulty': difficulty}),
+        )
+        .timeout(AppConfig.requestTimeout);
+    return response.statusCode == 200;
+  }
+
   /// Odanın var olup olmadığını ve katılıma açık olup olmadığını sorar.
   static Future<RoomStatus> roomStatus(String code) async {
     final json = await _getJson(_uri('/api/v1/rooms/$code'));

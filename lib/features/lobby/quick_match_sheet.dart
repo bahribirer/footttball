@@ -6,6 +6,7 @@ import 'package:web_socket_channel/web_socket_channel.dart';
 
 import 'package:footttball/core/config/app_config.dart';
 import 'package:footttball/core/session.dart';
+import 'package:footttball/data/services/api_service.dart';
 import 'package:footttball/data/models/game_mode.dart';
 import 'package:footttball/features/lobby/waiting_room_screen.dart';
 import 'package:footttball/shared/widgets/app_background.dart';
@@ -33,6 +34,9 @@ class _QuickMatchSheetState extends State<QuickMatchSheet> {
   GameMode? _searching;
   String _status = '';
   int _waiting = 0;
+
+  /// Kuyrukta rakip çıkmadıysa bu modda bota karşı oynama teklifi.
+  GameMode? _offerBotFor;
 
   @override
   void dispose() {
@@ -116,8 +120,41 @@ class _QuickMatchSheetState extends State<QuickMatchSheet> {
         break;
 
       case 'queue_timeout':
-        _fail('Şu an müsait rakip yok. Oda kurup arkadaşını çağırabilirsin.');
+        final mode = _searching;
+        _fail('Şu an müsait rakip yok.');
+        if (mode != null && mounted) setState(() => _offerBotFor = mode);
         break;
+    }
+  }
+
+  /// Kuyrukta kimse yoksa: oda kur, bot oturt, oyuna gir.
+  Future<void> _playBot(GameMode mode) async {
+    setState(() {
+      _status = 'Bot hazırlanıyor...';
+      _offerBotFor = null;
+    });
+    try {
+      final ticket = await ApiService.createRoom(
+        mode: mode,
+        leagueId: mode.needsLeague ? 'RANDOM' : null,
+        roundCount: mode.needsRoundCount ? 3 : null,
+        clockSeconds: mode.isClockBased ? 50 : null,
+      );
+      final ok =
+          await ApiService.addBot(code: ticket.code, difficulty: 'medium');
+      if (!ok) throw Exception('bot');
+      if (!mounted) return;
+      Session.instance.selectedMode = mode;
+      Navigator.of(context).pop();
+      Navigator.of(context).push(MaterialPageRoute(
+        builder: (_) => WaitingRoomScreen(
+          roomCode: ticket.code,
+          mode: mode,
+          isHost: true,
+        ),
+      ));
+    } catch (_) {
+      _fail('Bot kurulamadı, bağlantını kontrol et.');
     }
   }
 
@@ -147,6 +184,27 @@ class _QuickMatchSheetState extends State<QuickMatchSheet> {
               textAlign: TextAlign.center,
               style: const TextStyle(color: Colors.white60, fontSize: 12.5),
             ),
+            if (_offerBotFor != null) ...[
+              const SizedBox(height: 12),
+              TextButton.icon(
+                key: const ValueKey('queue_play_bot'),
+                onPressed: () => _playBot(_offerBotFor!),
+                icon: const Icon(Icons.smart_toy_rounded,
+                    size: 18, color: Colors.amberAccent),
+                label: const Text('BOTA KARŞI OYNA',
+                    style: TextStyle(
+                        color: Colors.amberAccent,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 1.1)),
+                style: TextButton.styleFrom(
+                  backgroundColor: Colors.white10,
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14)),
+                ),
+              ),
+            ],
             if (_waiting > 1) ...[
               const SizedBox(height: 4),
               Text(

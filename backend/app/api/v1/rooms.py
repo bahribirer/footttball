@@ -34,6 +34,9 @@ async def create_room(payload: CreateRoomRequest) -> CreateRoomResponse:
 
     try:
         room = await hub.reserve(payload.mode, room_settings)
+        if payload.vs_bot:
+            difficulty = payload.bot_difficulty if payload.bot_difficulty in ("easy", "medium", "hard") else "medium"
+            await hub.add_bot(room, difficulty)
     except UnknownMode:
         # İstemci sunucudan yeni ya da kaldırılmış bir mod istiyor.
         raise HTTPException(status_code=409, detail="mode_unknown") from None
@@ -75,3 +78,26 @@ async def room_status(code: str) -> RoomStatusResponse:
         "mode": status.get("mode"),
         "players": status.get("players", 0),
     })
+
+
+@router.post("/rooms/{code}/bot", response_model=RoomStatusResponse)
+async def add_bot(code: str, payload: dict | None = None) -> RoomStatusResponse:
+    """Odaya bot oturtur.
+
+    Oyuncu ayarları seçtikten sonra "bota karşı" derse çağrılır. Bot
+    1. slotu alır; oyuncu WebSocket'e bağlanınca oda dolu görünür ve
+    motor hemen başlar — bekleme odası beklemez.
+    """
+    room = hub.get(code)
+    if room is None:
+        raise HTTPException(status_code=404, detail="room_not_found")
+    if room.has_bot:
+        return RoomStatusResponse(**hub.room_status(code))
+    active = [p for p in room.players if p.connected]
+    if len(active) >= settings.MAX_PLAYERS_PER_ROOM:
+        raise HTTPException(status_code=409, detail="room_full")
+    difficulty = (payload or {}).get("difficulty", "medium")
+    if difficulty not in ("easy", "medium", "hard"):
+        difficulty = "medium"
+    await hub.add_bot(room, difficulty)
+    return RoomStatusResponse(**hub.room_status(code))

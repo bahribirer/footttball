@@ -196,7 +196,8 @@ void main() {
     // düğmesi yalnızca cevap aşamasında çiziliyor.
     await pumpUntil(tester, find.textContaining('İPUCU'),
         timeout: const Duration(seconds: 15), label: 'ipucu düğmesi');
-    expect(find.text('KARİYER YOLU'), findsOneWidget);
+    // VS ekranı altta kalıyor ve mod adını o da gösteriyor.
+    expect(find.text('KARİYER YOLU'), findsWidgets);
     expect(find.text('?'), findsWidgets, reason: 'gizli kulüp durakları');
 
     // İpucu kullan: bir kulüp daha açılmalı, hak düşmeli.
@@ -339,5 +340,28 @@ void main() {
         reason: 'Seçilen seri uzunluğu sunucuya iletilmeli');
 
     await rival.sink.close();
+  });
+
+  testWidgets('Bota karşı: rakip beklemeden oyun başlar', (tester) async {
+    await openMenu(tester);
+    await createRoom(tester, GameMode.playerGuess);
+
+    // BOTA KARŞI OYNA → zorluk sayfası → ORTA
+    await tester.ensureVisible(find.byKey(const ValueKey('btn_bot')));
+    await tapUntil(tester, find.byKey(const ValueKey('btn_bot')),
+        find.byKey(const ValueKey('bot_medium')),
+        label: 'zorluk sayfası');
+    await tapUntil(tester, find.byKey(const ValueKey('bot_medium')),
+        find.byType(WaitingRoomScreen),
+        label: 'bekleme odası');
+
+    // Rakip soketi YOK; bot oturduğu için oyun kendiliğinden başlamalı.
+    await pumpUntil(tester, find.byType(PlayerGuessScreen),
+        timeout: const Duration(seconds: 25), label: 'Oyuncu Tahmin ekranı');
+
+    // Bot adı skor kartında görünmeli (rakip "Rakip" değil).
+    final socket = GameSocket.instance;
+    expect(socket.opponentName, isNot('Rakip'),
+        reason: 'bot odaya oturmuş ve adını bildirmiş olmalı');
   });
 }

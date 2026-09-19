@@ -558,8 +558,14 @@ class _RulesCard extends StatelessWidget {
             (Icons.favorite_rounded, 'Tur başına 3 deneme hakkın var'),
           ],
         GameMode.careerPath => [
-            (Icons.timeline_rounded, 'Kulüp yolu adım adım açılır, futbolcuyu bul'),
-            (Icons.lightbulb_rounded, 'Maç boyunca 3 ipucu hakkın var — sadece sana açar'),
+            (
+              Icons.timeline_rounded,
+              'Kulüp yolu adım adım açılır, futbolcuyu bul'
+            ),
+            (
+              Icons.lightbulb_rounded,
+              'Maç boyunca 3 ipucu hakkın var — sadece sana açar'
+            ),
             (Icons.bolt_rounded, 'İlk doğru bilen turu alır'),
           ],
         GameMode.categoryRace => [

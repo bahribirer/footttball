@@ -9,7 +9,7 @@ import time
 from fastapi import WebSocket
 
 from app.core.config import settings
-from app.realtime import persistence, store as room_store
+from app.realtime import bot as bot_module, persistence, store as room_store
 from app.realtime.modes.base import BaseMode
 from app.realtime.modes.category_race import CategoryRaceMode
 from app.realtime.modes.career_path import CareerPathMode
@@ -126,6 +126,25 @@ class RoomHub:
         await self._publish_room(room)
         return room
 
+    async def add_bot(self, room: Room, difficulty: str = "medium") -> Player:
+        """Odaya bot oturtur.
+
+        Bot 1. slotu alır ki insan kurucu (X) olsun ve Tiki Taka Toe'da
+        ilk hamle onda kalsın. Motor iki oyuncu görünce başlar; botun
+        varlığını bilmez.
+        """
+        from app.services import bot_service
+        async with self._lock:
+            socket = bot_module.BotSocket()
+            player = Player(socket=socket, name=bot_service.pick_name(difficulty), slot=1)  # type: ignore[arg-type]
+            player.is_bot = True
+            room.players.append(player)
+            room.had_players = True
+            room.settings["vs_bot"] = True
+            room.settings["bot_difficulty"] = difficulty
+            bot_module.attach_brain(room, player, difficulty)
+        return player
+
     async def join(
         self,
         code: str,
@@ -202,6 +221,14 @@ class RoomHub:
 
         if room.engine:
             await room.engine.on_player_left(player)
+
+        # İnsan gittiyse botun tek başına oturmasının anlamı yok; oda ve
+        # botun görevleri hemen kapanır.
+        if room.has_bot and room.is_empty:
+            for p in room.players:
+                if p.is_bot and hasattr(p.socket, "close"):
+                    await p.socket.close()
+            await self.drop_room(room.code)
 
     async def drop_room(self, code: str) -> None:
         async with self._lock:
@@ -285,6 +312,8 @@ class RoomHub:
                 engine = room.engine
                 if engine is not None and getattr(engine, "finished", False):
                     continue
+                if room.has_bot:
+                    continue   # botun beyni süreçle birlikte gider, diriltilemez
                 rooms.append({
                     "code": room.code,
                     "mode": str(room.mode),

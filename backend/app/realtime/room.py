@@ -30,6 +30,10 @@ class Player:
     # Bağlantı koptuğu an; tolerans süresi dolunca oyuncu odadan düşer.
     disconnected_at: float | None = None
 
+    # Sunucuda yaşayan bot; soketi BotSocket. Oda boşaldı mı sayılırken ve
+    # anlık görüntüde insan sayılmaz.
+    is_bot: bool = False
+
     @property
     def symbol(self) -> str:
         return "X" if self.slot == 0 else "O"
@@ -41,6 +45,7 @@ class Player:
             "symbol": self.symbol,
             "score": self.score,
             "connected": self.connected,
+            "is_bot": self.is_bot,
         }
 
     async def send(self, message: dict) -> bool:
@@ -82,7 +87,12 @@ class Room:
 
     @property
     def is_empty(self) -> bool:
-        return not any(player.connected for player in self.players)
+        # Bot tek başına odayı "dolu" tutamaz; insanlar gittiyse oda boş.
+        return not any(player.connected and not player.is_bot for player in self.players)
+
+    @property
+    def has_bot(self) -> bool:
+        return any(player.is_bot for player in self.players)
 
     def player_by_slot(self, slot: int) -> Player | None:
         return next((p for p in self.players if p.slot == slot), None)
