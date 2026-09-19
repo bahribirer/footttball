@@ -125,18 +125,29 @@ def set_version_texts(version_id: str) -> str:
         "supportUrl": u["SUPPORT_URL"],
         "marketingUrl": u.get("MARKETING_URL", ""),
     }
-    if loc:
-        call("PATCH", f"/appStoreVersionLocalizations/{loc['id']}", json={"data": {
-            "type": "appStoreVersionLocalizations", "id": loc["id"], "attributes": attrs}})
-        print(f"  {LOCALE} sürüm metinleri güncellendi")
-        return loc["id"]
-    created = call("POST", "/appStoreVersionLocalizations", json={"data": {
-        "type": "appStoreVersionLocalizations",
-        "attributes": {"locale": LOCALE, **attrs},
-        "relationships": {"appStoreVersion": {"data": {"type": "appStoreVersions", "id": version_id}}},
-    }})
-    print(f"  {LOCALE} sürüm metinleri oluşturuldu")
-    return created["data"]["id"]
+    def _write(attributes: dict) -> str:
+        if loc:
+            call("PATCH", f"/appStoreVersionLocalizations/{loc['id']}", json={"data": {
+                "type": "appStoreVersionLocalizations", "id": loc["id"], "attributes": attributes}})
+            return loc["id"]
+        created = call("POST", "/appStoreVersionLocalizations", json={"data": {
+            "type": "appStoreVersionLocalizations",
+            "attributes": {"locale": LOCALE, **attributes},
+            "relationships": {"appStoreVersion": {"data": {"type": "appStoreVersions", "id": version_id}}},
+        }})
+        return created["data"]["id"]
+
+    try:
+        lid = _write(attrs)
+    except SystemExit as exc:
+        # İlk sürümde "Yenilikler" alanı yok; Apple 409 döner. Onsuz yaz.
+        if "whatsNew" not in str(exc):
+            raise
+        attrs.pop("whatsNew", None)
+        lid = _write(attrs)
+        print("  (ilk sürüm: 'Yenilikler' alanı atlandı)")
+    print(f"  {LOCALE} sürüm metinleri yazıldı")
+    return lid
 
 
 def set_app_info() -> None:
