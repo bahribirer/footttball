@@ -3,6 +3,34 @@
 Biçim: [keepachangelog](https://keepachangelog.com/tr/1.1.0/).
 Sürümleme: [semver](https://semver.org/lang/tr/).
 
+## [1.3.0] - 2026-09-19
+
+### Eklendi
+- Kariyer Yolu modu: futbolcunun kulüp yolu kısmen açık gelir, iki oyuncu
+  da kim olduğunu bulmaya çalışır; maç boyunca toplam 3 ipucu hakkı
+- Bot rakip: dört modda da oda kurup beklemeden oynanır (kolay/orta/zor),
+  hızlı eşleşme zaman aşımında da teklif edilir; bot çözümü asla okumaz
+- Skor tablosu: online galibiyet/beraberlik/mağlubiyet ve bota karşı
+  galibiyet puanları, günün tahtası puanı; genel ve mod bazlı sıralama,
+  kendi sıran ve mod dağılımın (`GET /api/v1/leaderboard`)
+- Efsane oyuncular (yalnız tarihçede olanlar: Ronaldinho, Van Basten,
+  Maldini...) öneri listesinde ve doğrulamada
+- 87 dünya kulübü (Napoli, Atlético, Boca, Flamengo, Al Nassr...) kulüp
+  tarihçesine eklendi: +21.285 kayıt
+- Günün tahtasında doğru kutuda oyuncu fotoğrafı
+
+### Değişti
+- Son Harf modu kaldırıldı (yerine Kariyer Yolu)
+- Günün tahtası cevap girişi klavyeye yapışık alt sayfa; metin alanı artık
+  ekranın tepesine fırlamıyor
+- Günün tahtası paylaşım metni WhatsApp'a göre biçimlendi (kalın başlık,
+  değerlendirme satırı, davet)
+- Skorlar ayrı `scores.db` dosyasında; oyuncu veritabanı salt okunur kalır
+
+### Düzeltildi
+- Çok kelimeli soyadlar ("Del Piero", "De Bruyne", "Van Dijk") ad
+  indeksinde bulunuyor
+
 ## [1.2.0] - 2026-09-10
 
 ### Eklendi

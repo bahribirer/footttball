@@ -19,12 +19,17 @@ footttball/
 |-----|---------------|-------------|
 | **Tiki Taka Toe** | 3x3 tahtada kulüp × millet kesişimine uyan futbolcuyu yaz, üç taşı tamamla | Tur başına 30 sn |
 | **Oyuncu Tahmin** | Biri 5 milli takımdan, diğeri 5 kulüpten seçer; eşleşmeye uyan futbolcuyu ilk bilen turu alır | 5 tur, tur başına 3 deneme |
-| **Son Harf** | Rakibin yazdığı futbolcunun son harfiyle başlayan futbolcu yazılır | Oyuncu başına 50 sn, yanlışta −3 sn |
+| **Kariyer Yolu** | Futbolcunun kulüp yolu kısmen açık gelir; kim olduğunu ilk bilen turu alır. Maç boyunca 3 ipucu hakkı | Tur başına 60 sn, 10 sn'de bir kulüp açılır |
 | **Kategori Yarışı** | Verilen kategoriye uyan futbolcular sırayla yazılır | Oyuncu başına 50 sn, yanlışta −3 sn |
 
 Süre tabanlı modlarda saat yalnızca sırası gelen oyuncu için işler; süresi
 ilk biten kaybeder. Tüm cevaplar 161.888 kayıtlık oyuncu veritabanına karşı
-doğrulanır.
+doğrulanır; 110 bin oyunculuk kulüp tarihçesi katmanı efsaneleri de kapsar.
+
+Her mod rakip beklemeden **bota karşı** da oynanabilir (kolay / orta / zor).
+Bot çözümü okumaz; veritabanından, insan gibi tahmin eder. Online
+maçlar ve günün tahtası **skor tablosuna** puan yazar (galibiyet 10,
+beraberlik 4, mağlubiyet 1; bota karşı galibiyet zorluğa göre 1–3).
 
 ## Mobil taraf
 

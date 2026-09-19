@@ -9,6 +9,7 @@ Ayrıntı: [changelog.md](changelog.md)
 
 | Sürüm | Tarih | Özet |
 |---|---|---|
+| 1.3.0 | 2026-09-19 | Kariyer Yolu, bot rakip, skor tablosu, efsane oyuncular, günün tahtası düzeltmeleri |
 | 1.2.0 | 2026-09-10 | Günün tahtası, hızlı eşleşme, yeniden başlatmayı atlatma, Redis |
 
 ## Olaylar

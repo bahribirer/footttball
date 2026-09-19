@@ -93,7 +93,7 @@ Eski `/ws/{room_id}` uç noktası mağazadaki eski sürümler için korunmuştur
 |------------------|--------------|-------------------------|------|
 | `tiki_taka_toe`  | istemci      | tur başına 30 sn        | —    |
 | `player_guess`   | sunucu       | 5 tur, cevap için 30 sn | deneme hakkı (3) |
-| `last_letter`    | sunucu       | oyuncu başına 50 sn     | 3 sn |
+| `career_path`    | sunucu       | tur başına 60 sn        | maçta 3 ipucu, turda 5 deneme |
 | `category_race`  | sunucu       | oyuncu başına 50 sn     | 3 sn |
 
 ## Ortam değişkenleri
