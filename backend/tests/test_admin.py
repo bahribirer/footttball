@@ -91,3 +91,12 @@ def test_duyuru_dogrulama(client):
     assert client.post("/api/v1/admin/notify", headers=H, json={"message": ""}).status_code == 422
     assert client.post("/api/v1/admin/notify", headers=H,
                        json={"message": "x", "ttl_seconds": 1}).status_code == 422
+
+
+def test_panel_dosyasi_imaja_giriyor():
+    """Dockerfile static/admin'i kopyalamalı; yoksa üretimde /admin 500 verir."""
+    from pathlib import Path
+    dockerfile = (Path(__file__).resolve().parent.parent / "Dockerfile").read_text()
+    assert "COPY static/admin" in dockerfile
+    ignore = (Path(__file__).resolve().parent.parent / ".dockerignore").read_text()
+    assert "static/admin" not in ignore
