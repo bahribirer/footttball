@@ -350,11 +350,16 @@ def set_review_details(version_id: str) -> None:
     if existing.get("data"):
         call("PATCH", f"/appStoreReviewDetails/{existing['data']['id']}", json={"data": {
             "type": "appStoreReviewDetails", "id": existing["data"]["id"], "attributes": attrs}})
-    else:
+        print("  inceleme notu/iletişim güncellendi")
+    elif phone:
         call("POST", "/appStoreReviewDetails", json={"data": {
             "type": "appStoreReviewDetails", "attributes": attrs,
             "relationships": {"appStoreVersion": {"data": {"type": "appStoreVersions", "id": version_id}}}}})
-    print("  inceleme notu/iletişim yazıldı" + ("" if phone else " (telefon yok: REVIEW_PHONE gizli değişkeni gerekir)"))
+        print("  inceleme notu/iletişim oluşturuldu")
+    else:
+        # Apple telefon olmadan inceleme detayı oluşturmuyor (+90 ... biçiminde).
+        print("  ✗ İnceleme iletişim telefonu yok. REVIEW_PHONE gizli değişkenini ekleyin")
+        print("    (örn. +90 5xx xxx xx xx) ya da App Store Connect › App Review Information'a girin.")
 
 
 # --- ekran görüntüleri ----------------------------------------------------
