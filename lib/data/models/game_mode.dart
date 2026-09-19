@@ -20,13 +20,13 @@ enum GameMode {
     icon: Icons.bolt_rounded,
     colors: [Color(0xFFFF512F), Color(0xFFDD2476)],
   ),
-  lastLetter(
-    id: 'last_letter',
-    title: 'Son Harf',
-    tagline: 'İsim zinciri',
+  careerPath(
+    id: 'career_path',
+    title: 'Kariyer Yolu',
+    tagline: 'Kulüpten futbolcuya',
     description:
-        'Rakibinin yazdığı futbolcunun son harfiyle başlayan bir futbolcu yaz. Süresi ilk biten kaybeder.',
-    icon: Icons.abc_rounded,
+        'Bir futbolcunun kulüp yolu adım adım açılır. Kim olduğunu ilk bilen turu alır; maç boyunca 3 ipucu hakkın var.',
+    icon: Icons.timeline_rounded,
     colors: [Color(0xFF00F260), Color(0xFF0575E6)],
   ),
   categoryRace(
@@ -60,11 +60,12 @@ enum GameMode {
 
   /// Kurucunun tur sayısı belirlediği modlar.
   bool get needsRoundCount =>
-      this == GameMode.tikiTakaToe || this == GameMode.playerGuess;
+      this == GameMode.tikiTakaToe ||
+      this == GameMode.playerGuess ||
+      this == GameMode.careerPath;
 
   /// Satranç saatiyle oynanan modlar: oyuncu başına süre seçilir.
-  bool get isClockBased =>
-      this == GameMode.lastLetter || this == GameMode.categoryRace;
+  bool get isClockBased => this == GameMode.categoryRace;
 
   /// Kurucunun kategoriyi seçtiği mod.
   bool get needsCategory => this == GameMode.categoryRace;

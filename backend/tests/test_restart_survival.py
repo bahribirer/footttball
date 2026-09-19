@@ -89,7 +89,7 @@ async def test_bos_ve_bitmis_odalar_kaydedilmez(snapshot_file):
     hub = RoomHub()
 
     # Kimse bağlanmamış rezerve oda.
-    reserved = Room(code="1111", mode=GameMode.LAST_LETTER)
+    reserved = Room(code="1111", mode=GameMode.CAREER_PATH)
     hub._rooms["1111"] = reserved
 
     # Maçı bitmiş oda.
@@ -153,7 +153,7 @@ async def test_bellek_deposu_yayini_yerel_aboneye_verir():
 @pytest.mark.asyncio
 async def test_depo_odayi_saklar_ve_siler():
     store = room_store.MemoryStore()
-    await store.save_room("1234", {"code": "1234", "mode": "last_letter"})
-    assert (await store.load_room("1234"))["mode"] == "last_letter"
+    await store.save_room("1234", {"code": "1234", "mode": "career_path"})
+    assert (await store.load_room("1234"))["mode"] == "career_path"
     await store.delete_room("1234")
     assert await store.load_room("1234") is None

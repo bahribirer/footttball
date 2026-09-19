@@ -45,7 +45,7 @@ class SocketEvent {
   T? value<T>(String key) => raw[key] as T?;
 }
 
-/// Süre tabanlı modlarda (Son Harf, Kategori Yarışı) ortak durum.
+/// Süre tabanlı modlarda (Kategori Yarışı) ortak durum.
 class ClockGameState {
   final String phase;
   final int currentTurn;
@@ -232,4 +232,114 @@ Map<int, int> _intIntMap(dynamic source) {
     });
   }
   return map;
+}
+
+/// Kariyer Yolu'nda bir kulüp durağı; gizliyse null gelir.
+class CareerStop {
+  final String club;
+  final int start;
+  final int? end;
+
+  const CareerStop({required this.club, required this.start, this.end});
+
+  factory CareerStop.fromJson(Map<String, dynamic> json) => CareerStop(
+        club: json['club'] as String? ?? '',
+        start: json['start'] as int? ?? 0,
+        end: json['end'] as int?,
+      );
+
+  String get years => end == null ? '$start –' : '$start – $end';
+}
+
+/// Kariyer Yolu durumu.
+///
+/// `paths` oyuncu başına: gizli kulüpler sunucudan null gelir, istemci
+/// adını hiç görmez. Kendi slotuna bakarak kaç kulüp görebildiğini bilir.
+class CareerState {
+  final String phase;
+  final int round;
+  final int totalRounds;
+  final int countdown;
+  final int pathLength;
+  final Map<int, List<CareerStop?>> paths;
+  final int revealedPublic;
+  final Map<int, int> cluesLeft;
+  final Map<int, int> attempts;
+  final Map<int, List<String>> wrongGuesses;
+  final int? roundWinner;
+  final String? solution;
+  final String? solutionImage;
+  final String? solutionNationality;
+  final Map<int, int> scores;
+
+  const CareerState({
+    required this.phase,
+    required this.round,
+    required this.totalRounds,
+    required this.countdown,
+    required this.pathLength,
+    required this.paths,
+    required this.revealedPublic,
+    required this.cluesLeft,
+    required this.attempts,
+    required this.wrongGuesses,
+    required this.scores,
+    this.roundWinner,
+    this.solution,
+    this.solutionImage,
+    this.solutionNationality,
+  });
+
+  factory CareerState.fromJson(Map<String, dynamic> json) {
+    final rawPaths = (json['paths'] as Map?) ?? const {};
+    final paths = <int, List<CareerStop?>>{};
+    rawPaths.forEach((k, v) {
+      paths[int.parse('$k')] = ((v as List?) ?? const [])
+          .map((e) => e == null
+              ? null
+              : CareerStop.fromJson((e as Map).cast<String, dynamic>()))
+          .toList();
+    });
+    final rawWrong = (json['wrong_guesses'] as Map?) ?? const {};
+    final wrong = <int, List<String>>{};
+    rawWrong.forEach((k, v) {
+      wrong[int.parse('$k')] = ((v as List?) ?? const []).cast<String>();
+    });
+    return CareerState(
+      phase: json['phase'] as String? ?? 'idle',
+      round: json['round'] as int? ?? 0,
+      totalRounds: json['total_rounds'] as int? ?? 3,
+      countdown: json['countdown'] as int? ?? 0,
+      pathLength: json['path_length'] as int? ?? 0,
+      paths: paths,
+      revealedPublic: json['revealed_public'] as int? ?? 0,
+      cluesLeft: _intIntMap(json['clues_left']),
+      attempts: _intIntMap(json['attempts']),
+      wrongGuesses: wrong,
+      roundWinner: json['round_winner'] as int?,
+      solution: json['solution'] as String?,
+      solutionImage: json['solution_image'] as String?,
+      solutionNationality: json['solution_nationality'] as String?,
+      scores: _intIntMap(json['scores']),
+    );
+  }
+
+  static const CareerState empty = CareerState(
+    phase: 'idle',
+    round: 0,
+    totalRounds: 3,
+    countdown: 0,
+    pathLength: 0,
+    paths: {},
+    revealedPublic: 0,
+    cluesLeft: {},
+    attempts: {},
+    wrongGuesses: {},
+    scores: {},
+  );
+
+  List<CareerStop?> pathFor(int slot) => paths[slot] ?? const [];
+  int cluesOf(int slot) => cluesLeft[slot] ?? 0;
+  int attemptsOf(int slot) => attempts[slot] ?? 0;
+  int scoreOf(int slot) => scores[slot] ?? 0;
 }

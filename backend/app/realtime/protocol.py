@@ -43,7 +43,7 @@ class ErrorCode(StrEnum):
 class GameMode(StrEnum):
     TIKI_TAKA_TOE = "tiki_taka_toe"
     PLAYER_GUESS = "player_guess"
-    LAST_LETTER = "last_letter"
+    CAREER_PATH = "career_path"
     CATEGORY_RACE = "category_race"
 
 

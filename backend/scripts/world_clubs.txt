@@ -1,0 +1,90 @@
+# Ana veri setinin (Avrupa büyük ligleri) dışında kalan, futbol tarihinin
+# büyük kulüpleri. sync_club_history.py --club-file ile taranır; oyuncu
+# tabanı Avrupa dışını da kapsasın diye. Wikidata'daki İngilizce adlarıyla.
+SSC Napoli
+Atlético Madrid
+Boca Juniors
+River Plate
+Independiente
+Racing Club
+San Lorenzo
+Estudiantes de La Plata
+Flamengo
+Santos FC
+São Paulo FC
+Palmeiras
+Corinthians
+Grêmio
+Sport Club Internacional
+Cruzeiro
+Atlético Mineiro
+Vasco da Gama
+Fluminense
+Botafogo
+Peñarol
+Club Nacional de Football
+Colo-Colo
+Universidad de Chile
+Club América
+Chivas Guadalajara
+Cruz Azul
+UNAM Pumas
+Spartak Moscow
+CSKA Moscow
+Lokomotiv Moscow
+Dynamo Kyiv
+Shakhtar Donetsk
+Red Star Belgrade
+Partizan Belgrade
+Dinamo Zagreb
+Hajduk Split
+Olympiacos
+Panathinaikos
+AEK Athens
+PAOK
+Steaua București
+Sparta Prague
+Slavia Prague
+Ferencváros
+Legia Warsaw
+Al Nassr
+Al Hilal
+Al Ittihad
+Al Ahli Saudi
+Al Ahly
+Zamalek
+Raja Casablanca
+Wydad Casablanca
+Esperance de Tunis
+Kaizer Chiefs
+Orlando Pirates
+Mamelodi Sundowns
+Inter Miami CF
+LA Galaxy
+Seattle Sounders
+Atlanta United
+Toronto FC
+New York Red Bulls
+Kashima Antlers
+Urawa Red Diamonds
+Yokohama F. Marinos
+Vissel Kobe
+Guangzhou Evergrande
+Shanghai Port
+Jeonbuk Hyundai Motors
+FC Seoul
+Al Sadd
+Al Ain
+Melbourne Victory
+Sydney FC
+Malmö FF
+IFK Göteborg
+Rosenborg
+FC Copenhagen
+Brøndby
+Rapid Wien
+Austria Wien
+Red Bull Salzburg
+FC Basel
+Young Boys
+Grasshopper

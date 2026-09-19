@@ -19,7 +19,7 @@ from app.main import app
 from app.realtime.hub import hub
 
 
-async def _room(mode: str = "last_letter") -> str:
+async def _room(mode: str = "career_path") -> str:
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
         response = await client.post("/api/v1/rooms", json={"mode": mode})
@@ -44,12 +44,12 @@ async def test_kopan_oyuncu_belirtecle_ayni_yere_doner():
     code = await _room()
     socket_a, socket_b = _FakeSocket(), _FakeSocket()
 
-    room, player_a, resumed = await hub.join(code, socket_a, "Bahri", "last_letter")
+    room, player_a, resumed = await hub.join(code, socket_a, "Bahri", "career_path")
     assert resumed is False
     token = player_a.token
     slot = player_a.slot
 
-    await hub.join(code, socket_b, "Rakip", "last_letter")
+    await hub.join(code, socket_b, "Rakip", "career_path")
 
     # Ağ koptu: oyuncu odadan DÜŞMEZ, yeri korunur.
     await hub.mark_disconnected(room, player_a)
@@ -58,7 +58,7 @@ async def test_kopan_oyuncu_belirtecle_ayni_yere_doner():
 
     # Belirteçle dönünce aynı slot ve skor geri gelir.
     _, resumed_player, resumed_flag = await hub.join(
-        code, _FakeSocket(), "Bahri", "last_letter", token
+        code, _FakeSocket(), "Bahri", "career_path", token
     )
     assert resumed_flag is True
     assert resumed_player is player_a
@@ -71,10 +71,10 @@ async def test_kopan_oyuncu_belirtecle_ayni_yere_doner():
 @pytest.mark.asyncio
 async def test_yanlis_belirtec_yeni_oyuncu_sayilir():
     code = await _room()
-    room, _, _ = await hub.join(code, _FakeSocket(), "Bahri", "last_letter")
+    room, _, _ = await hub.join(code, _FakeSocket(), "Bahri", "career_path")
 
     _, player, resumed = await hub.join(
-        code, _FakeSocket(), "Yabanci", "last_letter", "gecersiz-belirtec"
+        code, _FakeSocket(), "Yabanci", "career_path", "gecersiz-belirtec"
     )
     assert resumed is False, "geçersiz belirteçle başkasının yerine geçilememeli"
     assert player.slot == 1
@@ -88,8 +88,8 @@ async def test_tolerans_dolunca_oyuncu_dusurulur(monkeypatch):
 
     code = await _room()
     socket_b = _FakeSocket()
-    room, player_a, _ = await hub.join(code, _FakeSocket(), "Bahri", "last_letter")
-    await hub.join(code, socket_b, "Rakip", "last_letter")
+    room, player_a, _ = await hub.join(code, _FakeSocket(), "Bahri", "career_path")
+    await hub.join(code, socket_b, "Rakip", "career_path")
 
     await hub.mark_disconnected(room, player_a)
     await asyncio.sleep(0.05)

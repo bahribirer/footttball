@@ -148,6 +148,7 @@ def _year(value: str | None) -> int | None:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--club", action="append", help="yalnızca bu kulüp(ler)")
+    parser.add_argument("--club-file", help="satır başına bir kulüp; # ile başlayanlar yorum")
     parser.add_argument("--limit", type=int, help="en fazla bu kadar kulüp işle")
     parser.add_argument("--min-players", type=int, default=1,
                         help="ana tabloda en az bu kadar oyuncusu olan kulüpler")
@@ -157,7 +158,12 @@ def main() -> int:
     conn = sqlite3.connect(DB_PATH)
     conn.executescript(SCHEMA)
 
-    if args.club:
+    if args.club_file:
+        # Ana veri seti Avrupa'nın büyük ligleriyle sınırlı; dünya
+        # kulüpleri elle listelenip buradan verilir.
+        with open(args.club_file, encoding="utf-8") as fh:
+            clubs = [line.strip() for line in fh if line.strip() and not line.startswith("#")]
+    elif args.club:
         clubs = args.club
     else:
         clubs = [

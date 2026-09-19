@@ -21,7 +21,7 @@ import 'package:footttball/core/session.dart';
 import 'package:footttball/data/models/game_mode.dart';
 import 'package:footttball/data/services/game_socket.dart';
 import 'package:footttball/features/games/category_race/category_race_screen.dart';
-import 'package:footttball/features/games/last_letter/last_letter_screen.dart';
+import 'package:footttball/features/games/career_path/career_path_screen.dart';
 import 'package:footttball/features/games/player_guess/player_guess_screen.dart';
 import 'package:footttball/features/games/tiki_taka_toe/tiki_taka_toe_screen.dart';
 import 'package:footttball/features/lobby/create_room_screen.dart';
@@ -167,10 +167,10 @@ void main() {
     }
   });
 
-  testWidgets('Son Harf: rakip katılınca oyun başlar, cevap sunucuya gider',
+  testWidgets('Kariyer Yolu: rakip katılınca oyun başlar, cevap sunucuya gider',
       (tester) async {
     await openMenu(tester);
-    final code = await createRoom(tester, GameMode.lastLetter);
+    final code = await createRoom(tester, GameMode.careerPath);
 
     await tester.ensureVisible(find.byKey(const ValueKey('btn_play')));
     await tester.tap(find.byKey(const ValueKey('btn_play')));
@@ -184,31 +184,28 @@ void main() {
       findsOneWidget,
     );
 
-    final rival = await joinAsRival(code, GameMode.lastLetter);
+    final rival = await joinAsRival(code, GameMode.careerPath);
     final rivalMessages = <Map<String, dynamic>>[];
     rival.stream.listen((raw) =>
         rivalMessages.add(jsonDecode(raw as String) as Map<String, dynamic>));
 
-    await pumpUntil(tester, find.byType(LastLetterScreen),
-        timeout: const Duration(seconds: 25), label: 'Son Harf ekranı');
+    await pumpUntil(tester, find.byType(CareerPathScreen),
+        timeout: const Duration(seconds: 25), label: 'Kariyer Yolu ekranı');
 
-    // Saat kartları ve harf paneli görünmeli.
-    expect(find.text('50'), findsWidgets, reason: '50 saniyelik saatler');
-    expect(
-      find.text('BU HARFLE BAŞLA').evaluate().isNotEmpty ||
-          find.text('SERBEST BAŞLANGIÇ').evaluate().isNotEmpty,
-      isTrue,
-      reason: 'Harf paneli görünmeli',
-    );
+    // Geri sayım (3 sn) bitip cevap aşaması açılana kadar bekle; ipucu
+    // düğmesi yalnızca cevap aşamasında çiziliyor.
+    await pumpUntil(tester, find.textContaining('İPUCU'),
+        timeout: const Duration(seconds: 15), label: 'ipucu düğmesi');
+    expect(find.text('KARİYER YOLU'), findsOneWidget);
+    expect(find.text('?'), findsWidgets, reason: 'gizli kulüp durakları');
 
-    // Sıra bizde değilse rakip ilk hamleyi yapsın.
-    final socket = GameSocket.instance;
-    if (socket.mySlot != (socket.lastState['current_turn'] as int? ?? 0)) {
-      rival.sink.add(jsonEncode(
-          {'type': 'action', 'action': 'answer', 'value': 'Erling Haaland'}));
-      await pumpFor(tester, const Duration(seconds: 3));
-    }
+    // İpucu kullan: bir kulüp daha açılmalı, hak düşmeli.
+    await tester.tap(find.textContaining('İPUCU'));
+    await pumpFor(tester, const Duration(seconds: 2));
+    expect(find.textContaining('2 kaldı'), findsOneWidget,
+        reason: 'ipucu hakkı 3 -> 2');
 
+    // Yanlış bir tahmin: deneme hakkı düşer, tur sürer.
     await tester.enterText(find.byType(TextField).first, 'David Silva');
     await pumpFor(tester, const Duration(milliseconds: 300));
     await tester.tap(find.byIcon(Icons.send_rounded));
@@ -217,10 +214,12 @@ void main() {
     expect(rivalMessages.any((m) => m['type'] == 'start'), isTrue,
         reason: 'Rakip start mesajını almalı');
     expect(
-      rivalMessages
-          .any((m) => m['event'] == 'accepted' || m['event'] == 'rejected'),
+      rivalMessages.any((m) =>
+          m['event'] == 'wrong_answer' ||
+          m['event'] == 'correct_answer' ||
+          m['event'] == 'opponent_clue'),
       isTrue,
-      reason: 'Gönderilen cevap sunucuda değerlendirilmeli',
+      reason: 'Hamleler sunucuda değerlendirilip rakibe yayılmalı',
     );
 
     await rival.sink.close();

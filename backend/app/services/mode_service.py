@@ -20,7 +20,7 @@ from app.realtime.protocol import GameMode
 MIN_CLIENT_VERSIONS: dict[str, str] = {
     GameMode.TIKI_TAKA_TOE: "1.0.0",
     GameMode.PLAYER_GUESS: "1.0.0",
-    GameMode.LAST_LETTER: "1.0.0",
+    GameMode.CAREER_PATH: "1.3.0",
     GameMode.CATEGORY_RACE: "1.0.0",
 }
 
@@ -30,7 +30,7 @@ MIN_CLIENT_VERSIONS: dict[str, str] = {
 MODE_LABELS: dict[str, str] = {
     GameMode.TIKI_TAKA_TOE: "Tiki Taka Toe",
     GameMode.PLAYER_GUESS: "Oyuncu Tahmin",
-    GameMode.LAST_LETTER: "Son Harf",
+    GameMode.CAREER_PATH: "Kariyer Yolu",
     GameMode.CATEGORY_RACE: "Kategori Yarışı",
 }
 

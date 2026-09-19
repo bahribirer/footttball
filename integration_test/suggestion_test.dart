@@ -14,7 +14,7 @@ import 'package:footttball/core/config/app_config.dart';
 import 'package:footttball/core/session.dart';
 import 'package:footttball/data/models/game_mode.dart';
 import 'package:footttball/data/services/game_socket.dart';
-import 'package:footttball/features/games/last_letter/last_letter_screen.dart';
+import 'package:footttball/features/games/career_path/career_path_screen.dart';
 import 'package:footttball/features/lobby/create_room_screen.dart';
 import 'package:footttball/features/lobby/start_page.dart';
 import 'package:footttball/features/lobby/waiting_room_screen.dart';
@@ -88,16 +88,21 @@ void main() {
       ..categoryId = null;
   });
 
-  testWidgets('Son Harf: yazdıkça öneri çıkmaz', (t) async {
-    final rival = await startGame(t, GameMode.lastLetter);
-    await waitFor(t, find.byType(LastLetterScreen), label: 'Son Harf ekranı');
-    await hold(t, const Duration(seconds: 3));
+  testWidgets('Kariyer Yolu: yazdıkça öneri çıkar', (t) async {
+    // Son Harf'te öneri kapalıydı (harf ele verirdi). Kariyer Yolu'nda
+    // öneri yazımı kolaylaştırır, futbolcuyu bilmeyi kolaylaştırmaz:
+    // kim olduğunu zaten bilmen gerekiyor.
+    final rival = await startGame(t, GameMode.careerPath);
+    await waitFor(t, find.byType(CareerPathScreen),
+        label: 'Kariyer Yolu ekranı');
+    await waitFor(t, find.byType(TextField),
+        timeout: const Duration(seconds: 15), label: 'cevap alanı');
 
     await t.enterText(find.byType(TextField).first, 'haal');
     await hold(t, const Duration(seconds: 4));
 
-    expect(find.textContaining('Haaland'), findsNothing,
-        reason: 'Son Harf modunda öneri gösterilmemeli');
+    expect(find.textContaining('Haaland'), findsWidgets,
+        reason: 'Kariyer Yolu\'nda öneri gösterilmeli');
 
     await rival.sink.close();
   });

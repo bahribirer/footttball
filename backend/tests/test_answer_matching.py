@@ -10,7 +10,6 @@ Test uçuşundan gelen geri bildirimler:
 
 import pytest
 
-from app.realtime.modes.last_letter import _openings, first_letter, last_letter
 from app.services import player_service as ps
 from tests.conftest import requires_player_data
 
@@ -56,16 +55,3 @@ def test_eski_donem_oyuncusu_kabul_edilir():
     # Ana tabloda Fatih Tekke'nin yalnızca Zenit ve Rubin kayıtları var,
     # uyruğu da boş. Doğru cevap yine de kabul edilmeli.
     assert ps.verify_player("Fatih Tekke", "Turkey", "Trabzonspor") is True
-
-
-def test_son_harf_zinciri_soyadi_kabul_eder():
-    # "Messi" yazıldığında kanonik ad "Lionel Messi"; zincir hem 'm' hem 'l'
-    # ile devam edebilmeli, sonraki harf kanonik adın sonundan gelir.
-    openings = _openings("Messi", "Lionel Messi")
-    assert "m" in openings and "l" in openings
-    assert last_letter("Lionel Messi") == "i"
-
-
-def test_ilk_ve_son_harf_aksandan_etkilenmez():
-    assert first_letter("Çalhanoğlu") == "c"
-    assert last_letter("Mbappé") == "e"

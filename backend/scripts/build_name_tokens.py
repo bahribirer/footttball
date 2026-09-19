@@ -77,9 +77,17 @@ def build(con: sqlite3.Connection) -> int:
         ).fetchall()
         batch: list[tuple[str, str]] = []
         for (name,) in names:
-            parts = {p for p in str(name).split() if len(p) >= MIN_TOKEN_LEN}
+            words = str(name).split()
+            parts = {w for w in words if len(w) >= MIN_TOKEN_LEN}
             # Tam ad da token olarak durur; eşitlik yolu tek sorguda çözülür.
             parts.add(str(name))
+            # Çok kelimeli soyadlar: "del piero", "de bruyne", "van der sar".
+            # Tek kelimelik tokenlarla "Del Piero" aranınca "del piero" diye
+            # bir token bulunamıyor ve dünya futbolunun en bilinen isimleri
+            # düşüyordu. Adın son 2 ve son 3 kelimesi de token olur.
+            for n in (2, 3):
+                if len(words) > n:
+                    parts.add(" ".join(words[-n:]))
             batch.extend((token, name) for token in parts)
             if len(batch) >= 50_000:
                 con.executemany(

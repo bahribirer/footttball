@@ -102,7 +102,7 @@ void main() {
   }
 
   testWidgets('görsel: Son Harf', (t) async {
-    await showMode(t, GameMode.lastLetter, rivalScript: (rival) {
+    await showMode(t, GameMode.careerPath, rivalScript: (rival) {
       rival.sink.add(jsonEncode(
           {'type': 'action', 'action': 'answer', 'value': 'Erling Haaland'}));
     });

@@ -8,7 +8,7 @@ import 'package:footttball/data/models/game_mode.dart';
 import 'package:footttball/data/models/team_model.dart';
 import 'package:footttball/data/services/game_socket.dart';
 import 'package:footttball/features/games/category_race/category_race_screen.dart';
-import 'package:footttball/features/games/last_letter/last_letter_screen.dart';
+import 'package:footttball/features/games/career_path/career_path_screen.dart';
 import 'package:footttball/features/games/player_guess/player_guess_screen.dart';
 import 'package:footttball/features/games/tiki_taka_toe/tiki_taka_toe_screen.dart';
 import 'package:footttball/shared/widgets/app_background.dart';
@@ -84,7 +84,7 @@ class _VsScreenState extends State<VsScreen> with TickerProviderStateMixin {
               payload['round_count'] as int? ?? Session.instance.roundCount,
         ),
       GameMode.playerGuess => const PlayerGuessScreen(),
-      GameMode.lastLetter => const LastLetterScreen(),
+      GameMode.careerPath => const CareerPathScreen(),
       GameMode.categoryRace => const CategoryRaceScreen(),
     };
 

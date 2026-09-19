@@ -12,7 +12,7 @@ from app.core.config import settings
 from app.realtime import persistence, store as room_store
 from app.realtime.modes.base import BaseMode
 from app.realtime.modes.category_race import CategoryRaceMode
-from app.realtime.modes.last_letter import LastLetterMode
+from app.realtime.modes.career_path import CareerPathMode
 from app.realtime.modes.player_guess import PlayerGuessMode
 from app.realtime.modes.tiki_taka_toe import TikiTakaToeMode
 from app.realtime.protocol import GameMode, ServerMessage
@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 MODE_ENGINES: dict[str, type[BaseMode]] = {
     GameMode.TIKI_TAKA_TOE: TikiTakaToeMode,
     GameMode.PLAYER_GUESS: PlayerGuessMode,
-    GameMode.LAST_LETTER: LastLetterMode,
+    GameMode.CAREER_PATH: CareerPathMode,
     GameMode.CATEGORY_RACE: CategoryRaceMode,
 }
 

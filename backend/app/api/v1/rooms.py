@@ -24,7 +24,7 @@ async def create_room(payload: CreateRoomRequest) -> CreateRoomResponse:
     if payload.mode == GameMode.TIKI_TAKA_TOE:
         room_settings["league_id"] = payload.league_id or "RANDOM"
         room_settings["round_count"] = payload.round_count or 1
-    elif payload.mode == GameMode.PLAYER_GUESS:
+    elif payload.mode in (GameMode.PLAYER_GUESS, GameMode.CAREER_PATH):
         room_settings["round_count"] = payload.round_count or settings.PG_ROUNDS
     else:
         room_settings["clock_seconds"] = payload.clock_seconds or settings.CLOCK_SECONDS

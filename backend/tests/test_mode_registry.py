@@ -47,11 +47,11 @@ def test_her_modun_etiketi_ve_surum_esigi_var(mode):
 
 
 def test_katalog_kapatilan_modu_isaretler(monkeypatch):
-    monkeypatch.setenv("MODES_DISABLED", GameMode.LAST_LETTER.value)
+    monkeypatch.setenv("MODES_DISABLED", GameMode.CAREER_PATH.value)
     by_id = {info.id: info for info in mode_service.catalog()}
-    assert by_id[GameMode.LAST_LETTER.value].enabled is False
+    assert by_id[GameMode.CAREER_PATH.value].enabled is False
     assert by_id[GameMode.TIKI_TAKA_TOE.value].enabled is True
-    assert mode_service.is_enabled(GameMode.LAST_LETTER.value) is False
+    assert mode_service.is_enabled(GameMode.CAREER_PATH.value) is False
 
 
 # --- istemci sözleşmesi ------------------------------------------------

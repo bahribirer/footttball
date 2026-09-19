@@ -114,7 +114,7 @@ def _default_settings(mode: str) -> dict:
 
     if mode == GameMode.TIKI_TAKA_TOE:
         return {"league_id": "RANDOM", "round_count": 1}
-    if mode == GameMode.PLAYER_GUESS:
+    if mode in (GameMode.PLAYER_GUESS, GameMode.CAREER_PATH):
         return {"round_count": 3}
     return {
         "clock_seconds": settings.CLOCK_SECONDS,

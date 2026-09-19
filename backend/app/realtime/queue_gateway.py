@@ -1,6 +1,6 @@
 """Hızlı eşleşme WebSocket'i.
 
-    ws://.../ws/queue?name=Bahri&mode=last_letter
+    ws://.../ws/queue?name=Bahri&mode=career_path
 
 Bağlantı açık kaldığı sürece oyuncu kuyruktadır. Eşleşme olunca oda kodu
 gönderilir ve bağlantı kapanır; istemci sıradan oda akışına geçer.

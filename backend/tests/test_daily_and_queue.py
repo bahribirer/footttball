@@ -81,15 +81,15 @@ async def test_ilk_oyuncu_bekler_ikincisi_eslesir(monkeypatch):
     monkeypatch.setattr(hub_module, "hub", _FakeHub())
 
     maker = Matchmaker()
-    first = await maker.enqueue(object(), "Bahri", GameMode.LAST_LETTER.value)
+    first = await maker.enqueue(object(), "Bahri", GameMode.CAREER_PATH.value)
     assert first.matched_code is None
-    assert (await maker.waiting_count())[GameMode.LAST_LETTER.value] == 1
+    assert (await maker.waiting_count())[GameMode.CAREER_PATH.value] == 1
 
-    second = await maker.enqueue(object(), "Rakip", GameMode.LAST_LETTER.value)
+    second = await maker.enqueue(object(), "Rakip", GameMode.CAREER_PATH.value)
     assert second.matched_code == "4242"
     assert first.matched_code == "4242", "bekleyen de uyandirilmali"
     assert first.event.is_set()
-    assert created["mode"] == GameMode.LAST_LETTER.value
+    assert created["mode"] == GameMode.CAREER_PATH.value
     # Kuyruk bosalmali.
     assert await maker.waiting_count() == {}
 
@@ -97,18 +97,18 @@ async def test_ilk_oyuncu_bekler_ikincisi_eslesir(monkeypatch):
 @pytest.mark.asyncio
 async def test_farkli_modlar_eslesmez():
     maker = Matchmaker()
-    a = await maker.enqueue(object(), "A", GameMode.LAST_LETTER.value)
+    a = await maker.enqueue(object(), "A", GameMode.CAREER_PATH.value)
     b = await maker.enqueue(object(), "B", GameMode.CATEGORY_RACE.value)
     assert a.matched_code is None and b.matched_code is None
     counts = await maker.waiting_count()
-    assert counts[GameMode.LAST_LETTER.value] == 1
+    assert counts[GameMode.CAREER_PATH.value] == 1
     assert counts[GameMode.CATEGORY_RACE.value] == 1
 
 
 @pytest.mark.asyncio
 async def test_vazgecen_kuyruktan_duser():
     maker = Matchmaker()
-    entry = await maker.enqueue(object(), "A", GameMode.LAST_LETTER.value)
+    entry = await maker.enqueue(object(), "A", GameMode.CAREER_PATH.value)
     await maker.cancel(entry)
     assert await maker.waiting_count() == {}
 
@@ -116,7 +116,7 @@ async def test_vazgecen_kuyruktan_duser():
 @pytest.mark.asyncio
 async def test_cok_bekleyen_dusurulur(monkeypatch):
     maker = Matchmaker()
-    entry = await maker.enqueue(object(), "A", GameMode.LAST_LETTER.value)
+    entry = await maker.enqueue(object(), "A", GameMode.CAREER_PATH.value)
     entry.joined_at -= 10_000
     assert await maker.sweep() == 1
     assert entry.event.is_set(), "dusen oyuncu uyandirilmali"
