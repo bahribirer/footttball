@@ -70,7 +70,7 @@ def call(method: str, path: str, ok_404: bool = False, **kwargs) -> dict:
     if response.status_code == 404 and ok_404:
         return {}
     if response.status_code >= 400:
-        raise SystemExit(f"{method} {path} -> {response.status_code}: {response.text[:800]}")
+        raise SystemExit(f"{method} {path} -> {response.status_code}: {response.text[:4000]}")
     return response.json() if response.content else {}
 
 
@@ -240,7 +240,7 @@ def set_age_rating(version_id: str) -> None:
                 "type": "ageRatingDeclarations", "id": did, "attributes": attrs2}})
             print(f"  yaş derecesi: 4+ ({len(bad)} bilinmeyen alan atlandı: {sorted(bad)})")
         except SystemExit as exc2:
-            print(f"  yaş derecesi yazılamadı: {str(exc2)[:300]}")
+            print(f"  yaş derecesi yazılamadı: {str(exc2)[:3000]}")
 
 
 def set_review_details(version_id: str) -> None:
@@ -285,8 +285,13 @@ def upload_screenshots(loc_id: str) -> None:
         sset = call("POST", "/appScreenshotSets", json={"data": {
             "type": "appScreenshotSets", "attributes": {"screenshotDisplayType": SCREENSHOT_DISPLAY},
             "relationships": {"appStoreVersionLocalization": {"data": {"type": "appStoreVersionLocalizations", "id": loc_id}}}}})["data"]
-    # Eskileri sil, sırayı baştan kur.
     old = call("GET", f"/appScreenshotSets/{sset['id']}/appScreenshots?limit=50")
+    have = [(x["attributes"].get("fileName"), x["attributes"].get("assetDeliveryState", {}).get("state")) for x in old.get("data", [])]
+    if [h[0] for h in have] == [p.name for p in files] and all(h[1] == "COMPLETE" for h in have):
+        print(f"  {len(have)} ekran görüntüsü zaten yüklü ve işlenmiş")
+        return
+    print(f"  mevcut: {have}")
+    # Eskileri sil, sırayı baştan kur.
     for shot in old.get("data", []):
         call("DELETE", f"/appScreenshots/{shot['id']}")
     ids = []
@@ -308,7 +313,19 @@ def upload_screenshots(loc_id: str) -> None:
         print(f"  yüklendi: {path.name} ({len(data)//1024} KB)")
     call("PATCH", f"/appScreenshotSets/{sset['id']}/relationships/appScreenshots", json={
         "data": [{"type": "appScreenshots", "id": i} for i in ids]})
-    print(f"  {len(ids)} ekran görüntüsü ({SCREENSHOT_DISPLAY})")
+    # İşlenmesini bekle; hata varsa göster (yanlış boyut burada anlaşılır).
+    for _ in range(30):
+        states = []
+        for i in ids:
+            a = call("GET", f"/appScreenshots/{i}")["data"]["attributes"]
+            st = a.get("assetDeliveryState", {})
+            states.append((a.get("fileName"), st.get("state"), st.get("errors")))
+        if all(s[1] == "COMPLETE" for s in states):
+            break
+        if any(s[1] == "FAILED" for s in states):
+            raise SystemExit(f"ekran görüntüsü işlenemedi: {states}")
+        time.sleep(5)
+    print(f"  {len(ids)} ekran görüntüsü ({SCREENSHOT_DISPLAY}): {[s[1] for s in states]}")
 
 
 # --- derleme ve gönderim ---------------------------------------------------
