@@ -14,6 +14,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY app ./app
 # Yönetim paneli sayfası (logolar volume'dan gelir, bu dosya imajda).
 COPY static/admin ./static/admin
+COPY static/site ./static/site
 
 # Konteyner root olarak çalışmaz.
 # Uygulama kullanıcısının uid'si host'taki sahibiyle aynı olmalı.

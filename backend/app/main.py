@@ -83,6 +83,21 @@ async def admin_panel():
     return FileResponse(ADMIN_HTML, media_type="text/html")
 
 
+@app.get("/privacy", include_in_schema=False)
+async def privacy_page():
+    """Gizlilik politikası (App Store zorunlu)."""
+    from fastapi.responses import FileResponse
+    from app.core.config import BASE_DIR
+    return FileResponse(BASE_DIR / "static" / "site" / "privacy.html", media_type="text/html")
+
+
+@app.get("/support", include_in_schema=False)
+async def support_page():
+    from fastapi.responses import FileResponse
+    from app.core.config import BASE_DIR
+    return FileResponse(BASE_DIR / "static" / "site" / "support.html", media_type="text/html")
+
+
 @app.get("/ping", tags=["health"])
 async def ping() -> dict:
     return {"status": "ok", "message": "Backend is reachable"}

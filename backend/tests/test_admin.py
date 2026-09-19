@@ -1,6 +1,8 @@
 """Yönetim paneli: anahtar zorunlu, oda listesi, duyuru, oda kapatma."""
 
 import pytest
+from pathlib import Path
+
 from fastapi.testclient import TestClient
 
 from app.core.config import settings
@@ -142,3 +144,11 @@ def test_oyuncu_listesi_arama_ve_can_verme(client):
     r = client.post("/api/v1/admin/players/cihaz-admin-1/lives", headers=H, json={})
     assert r.json()["lives"] == 10
     assert client.get("/api/v1/admin/system", headers=H).json()["lives"]["max"] == 10
+
+
+def test_gizlilik_ve_destek_sayfalari(client):
+    for path, word in (("/privacy", "Gizlilik"), ("/support", "Destek")):
+        r = client.get(path)
+        assert r.status_code == 200 and word in r.text, path
+    dockerfile = (Path(__file__).resolve().parent.parent / "Dockerfile").read_text()
+    assert "COPY static/site" in dockerfile
