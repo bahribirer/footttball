@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'package:footttball/core/theme/app_theme.dart';
+
 import 'package:footttball/data/models/game_mode.dart';
 import 'package:footttball/features/profile/name_screen.dart';
 import 'package:footttball/shared/widgets/app_background.dart';
@@ -23,21 +25,21 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       text:
           'Arkadaşınla aynı odada buluş, dört farklı modda karşı karşıya gel. '
           'Kazanan futbolu daha iyi bilen olsun.',
-      colors: [Color(0xFF6A11CB), Color(0xFF2575FC)],
+      colors: [AppTheme.pitch, AppTheme.pitch],
     ),
     _Step(
       icon: Icons.grid_3x3_rounded,
       title: 'DÖRT FARKLI\nOYUN MODU',
-      text: 'Tiki Taka Toe, Oyuncu Tahmin, Son Harf ve Kategori Yarışı. '
-          'Her mod farklı bir beceri istiyor.',
-      colors: [Color(0xFFFF512F), Color(0xFFDD2476)],
+      text: 'Tiki Taka Toe, Oyuncu Tahmin, Kariyer Yolu ve Kategori Yarışı. '
+          'Her mod farklı bir beceri istiyor. Rakip yoksa bota karşı oyna.',
+      colors: [Color(0xFF3B82F6), Color(0xFF3B82F6)],
     ),
     _Step(
       icon: Icons.bolt_rounded,
       title: 'SÜREYLE\nYARIŞ',
       text: 'Saat işlerken doğru futbolcuyu bulmalısın. Yanlış cevap süreden '
           'götürür — hızlı ve dikkatli ol.',
-      colors: [Color(0xFF00F260), Color(0xFF0575E6)],
+      colors: [Color(0xFFFF6B4A), Color(0xFFFF6B4A)],
     ),
   ];
 
@@ -188,26 +190,14 @@ class _StepView extends StatelessWidget {
             builder: (context, scale, child) =>
                 Transform.scale(scale: scale, child: child),
             child: Container(
-              width: 118,
-              height: 118,
+              width: 110,
+              height: 110,
               decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: LinearGradient(
-                  colors: step.colors,
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                border:
-                    Border.all(color: Colors.white.withOpacity(0.2), width: 2),
-                boxShadow: [
-                  BoxShadow(
-                    color: step.colors.last.withOpacity(0.4),
-                    blurRadius: 42,
-                    spreadRadius: 2,
-                  ),
-                ],
+                color: step.colors.first.withOpacity(0.14),
+                borderRadius: BorderRadius.circular(28),
+                border: Border.all(color: step.colors.first.withOpacity(0.5)),
               ),
-              child: Icon(step.icon, color: Colors.white, size: 56),
+              child: Icon(step.icon, color: step.colors.first, size: 52),
             ),
           ),
           const SizedBox(height: 38),
@@ -217,8 +207,8 @@ class _StepView extends StatelessWidget {
           Text(
             step.text,
             textAlign: TextAlign.center,
-            style: TextStyle(
-              color: Colors.white.withOpacity(0.66),
+            style: const TextStyle(
+              color: AppTheme.textMuted,
               fontSize: 14.5,
               height: 1.55,
             ),

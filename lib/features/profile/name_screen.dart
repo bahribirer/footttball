@@ -2,6 +2,8 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import 'package:footttball/core/theme/app_theme.dart';
+
 import 'package:footttball/core/session.dart';
 import 'package:footttball/features/modes/mode_select_screen.dart';
 import 'package:footttball/shared/widgets/app_background.dart';
@@ -74,13 +76,13 @@ class _NameRoomState extends State<NameRoom> with TickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
-    const accent = Colors.cyanAccent;
+    const accent = AppTheme.pitch;
 
     return Scaffold(
       resizeToAvoidBottomInset: true,
       body: Stack(
         children: [
-          const PlainBackground(accent: Color(0xFF6A11CB)),
+          const PlainBackground(accent: AppTheme.pitch),
           SafeArea(
             child: SingleChildScrollView(
               padding: const EdgeInsets.symmetric(horizontal: 26),
@@ -151,57 +153,22 @@ class _NameRoomState extends State<NameRoom> with TickerProviderStateMixin {
   }
 
   Widget _buildBadge(Color accent) {
-    return AnimatedBuilder(
-      animation: _glow,
-      builder: (context, child) => Container(
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          boxShadow: [
-            BoxShadow(
-              color: accent.withOpacity(0.18 + 0.16 * _glow.value),
-              blurRadius: 40 + 16 * _glow.value,
-              spreadRadius: 2,
-            ),
-          ],
-        ),
-        child: child,
+    return Container(
+      width: 100,
+      height: 100,
+      decoration: BoxDecoration(
+        color: AppTheme.pitch.withOpacity(0.14),
+        borderRadius: BorderRadius.circular(26),
+        border: Border.all(color: AppTheme.pitch.withOpacity(0.5)),
       ),
-      child: Container(
-        width: 104,
-        height: 104,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          gradient: const LinearGradient(
-            colors: [Color(0xFF6A11CB), Color(0xFF2575FC)],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-          border: Border.all(color: Colors.white.withOpacity(0.2), width: 2),
-        ),
-        child: const Icon(Icons.sports_soccer_rounded,
-            color: Colors.white, size: 52),
-      ),
+      child: const Icon(Icons.sports_soccer_rounded,
+          color: AppTheme.pitch, size: 50),
     );
   }
 
   Widget _buildField(Color accent) {
-    return AnimatedBuilder(
-      animation: _glow,
-      builder: (context, child) => Container(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(22),
-          boxShadow: [
-            BoxShadow(
-              color: (_valid ? accent : Colors.white24)
-                  .withOpacity(0.12 + 0.14 * _glow.value),
-              blurRadius: 22,
-              spreadRadius: 1,
-            ),
-          ],
-        ),
-        child: child,
-      ),
-      child: Container(
+    return Builder(
+      builder: (context) => Container(
         decoration: BoxDecoration(
           color: Colors.black.withOpacity(0.42),
           borderRadius: BorderRadius.circular(22),
