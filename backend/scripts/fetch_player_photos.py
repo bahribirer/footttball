@@ -148,5 +148,75 @@ def main() -> int:
     return 0
 
 
-if __name__ == "__main__":
+if __name__ == "__main__" and "--search-pass" not in sys.argv:
     raise SystemExit(main())
+
+
+# --- ikinci geçiş: etiket tutmayanlar için arama API'si -------------------
+
+def search_pass(min_fame: int = 3) -> None:
+    """Etiketle bulunamayan ünlü efsaneler: wbsearchentities → aday → P18."""
+    con = sqlite3.connect(settings.DB_PATH)
+    con.executescript(SCHEMA)
+    weights = ps._club_weights()
+    rows = con.execute(
+        """SELECT ch.name_normalized, MAX(ch.player_name), MAX(ch.country), MAX(ch.start_year),
+                  GROUP_CONCAT(DISTINCT ch.club_name)
+           FROM club_history ch LEFT JOIN players p ON p.name_normalized = ch.name_normalized
+           LEFT JOIN player_photos pp ON pp.name_normalized = ch.name_normalized
+           WHERE p.name_normalized IS NULL AND (pp.image_url IS NULL)
+           GROUP BY ch.name_normalized""").fetchall()
+    targets = []
+    for norm, name, country, ly, clubs in rows:
+        if (ly or 0) < 1970:
+            continue
+        big = {ps.normalize(c) for c in (clubs or "").split(",") if weights.get(c, 0) > 0}
+        if len({" ".join(sorted(x.split())) for x in big}) >= min_fame:
+            targets.append((norm, name, country))
+    print(f"arama geçişi: {len(targets)} efsane")
+    found = 0
+    now = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+    for i, (norm, name, country) in enumerate(targets, 1):
+        try:
+            r = requests.get("https://www.wikidata.org/w/api.php",
+                             params={"action": "wbsearchentities", "search": name, "language": "en",
+                                     "type": "item", "limit": 6, "format": "json"},
+                             headers={"User-Agent": UA}, timeout=30)
+            ids = [x["id"] for x in r.json().get("search", [])]
+        except (requests.RequestException, ValueError, KeyError):
+            ids = []
+        if not ids:
+            continue
+        values = " ".join(f"wd:{x}" for x in ids)
+        q = f"""SELECT ?p ?img ?country WHERE {{
+          VALUES ?p {{ {values} }}
+          ?p wdt:P106 wd:Q937857 ; wdt:P18 ?img .
+          OPTIONAL {{ ?p wdt:P27 ?c . ?c rdfs:label ?country FILTER(LANG(?country)="en") }} }}"""
+        binds = []
+        for attempt in range(2):
+            try:
+                rr = requests.get(SPARQL, params={"query": q, "format": "json"},
+                                  headers={"User-Agent": UA}, timeout=60)
+                if rr.status_code == 429:
+                    time.sleep(8); continue
+                binds = rr.json()["results"]["bindings"] if rr.status_code == 200 else []
+                break
+            except (requests.RequestException, ValueError):
+                time.sleep(2)
+        if not binds:
+            continue
+        # arama sırasını koru; uyruk tutan öncelikli
+        order = {f"http://www.wikidata.org/entity/{x}": k for k, x in enumerate(ids)}
+        binds.sort(key=lambda b: (0 if country and b.get("country", {}).get("value") == country else 1,
+                                  order.get(b["p"]["value"], 99)))
+        con.execute("INSERT OR REPLACE INTO player_photos VALUES (?, ?, ?, ?, ?)",
+                    (norm, name, _thumb(binds[0]["img"]["value"]), "wikidata:search", now))
+        con.commit(); found += 1
+        if i % 50 == 0:
+            print(f"  [{i}/{len(targets)}] bulundu {found}")
+        time.sleep(0.6)
+    print(f"arama geçişi bitti: {found} fotoğraf")
+
+
+if __name__ == "__main__" and "--search-pass" in sys.argv:
+    search_pass()
