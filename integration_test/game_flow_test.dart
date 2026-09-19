@@ -24,6 +24,7 @@ import 'package:footttball/features/games/category_race/category_race_screen.dar
 import 'package:footttball/features/games/career_path/career_path_screen.dart';
 import 'package:footttball/features/games/player_guess/player_guess_screen.dart';
 import 'package:footttball/features/games/tiki_taka_toe/tiki_taka_toe_screen.dart';
+import 'package:footttball/features/leaderboard/leaderboard_screen.dart';
 import 'package:footttball/features/lobby/create_room_screen.dart';
 import 'package:footttball/features/lobby/start_page.dart';
 import 'package:footttball/features/lobby/waiting_room_screen.dart';
@@ -363,5 +364,27 @@ void main() {
     final socket = GameSocket.instance;
     expect(socket.opponentName, isNot('Rakip'),
         reason: 'bot odaya oturmuş ve adını bildirmiş olmalı');
+  });
+
+  testWidgets('Skor tablosu: menüden açılır, sekmeler sunucudan yüklenir',
+      (tester) async {
+    await openMenu(tester);
+    await Session.instance.ensurePlayerId();
+    expect(Session.instance.playerId.length, greaterThanOrEqualTo(8));
+
+    await tester.tap(find.byKey(const ValueKey('btn_leaderboard')));
+    await pumpUntil(tester, find.byType(LeaderboardScreen),
+        label: 'skor tablosu ekranı');
+    await pumpUntil(tester, find.text('SKOR TABLOSU'), label: 'başlık');
+
+    // Kendi kartı (sunucu `me` döndürür) yüklenmeli.
+    await pumpUntil(tester, find.byKey(const ValueKey('lb_my_points')),
+        label: 'kendi puan kartı');
+
+    // Mod sekmesine geçince yeniden yüklenir; hata görünmemeli. (İlk mod
+    // sekmesi ekranda; şeridin gerisi yatay kaydırmayla açılır.)
+    await tester.tap(find.byKey(const ValueKey('lb_tab_tiki_taka_toe')));
+    await pumpFor(tester, const Duration(seconds: 2));
+    expect(find.text('Skor tablosu yüklenemedi'), findsNothing);
   });
 }

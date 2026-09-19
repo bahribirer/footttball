@@ -24,3 +24,13 @@ requires_player_data = pytest.mark.skipif(
     not HAS_PLAYER_DATA,
     reason="Oyuncu veritabanı yok; veriye dayalı testler atlandı.",
 )
+
+
+@pytest.fixture(autouse=True)
+def isolated_scores_db(tmp_path, monkeypatch):
+    """Her test kendi skor dosyasını kullanır; gerçek scores.db'ye dokunulmaz."""
+    from app.services import score_service
+
+    monkeypatch.setattr(score_service, "db_path", lambda: str(tmp_path / "scores.db"))
+    monkeypatch.setattr(score_service, "_initialised", False)
+    yield

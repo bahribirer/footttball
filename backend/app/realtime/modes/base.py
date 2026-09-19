@@ -5,6 +5,7 @@ import logging
 from typing import TYPE_CHECKING
 
 from app.realtime.protocol import ServerMessage
+from app.services import score_service
 
 if TYPE_CHECKING:
     from app.realtime.room import Player, Room
@@ -137,6 +138,23 @@ class BaseMode:
         message.update(extra)
         await self.room.broadcast(message)
 
+    def _record_score(self, winner_slot: int | None) -> None:
+        """Maç sonucunu skor tablosuna yazar; hata oyunu asla bozmaz."""
+        try:
+            players = [
+                {"slot": p.slot, "player_id": p.player_id, "name": p.name, "is_bot": p.is_bot}
+                for p in self.room.players
+            ]
+            if len(players) < 2:
+                return
+            score_service.record_match(
+                str(self.mode_id), players, winner_slot,
+                vs_bot=self.room.has_bot,
+                bot_difficulty=str(self.room.settings.get("bot_difficulty", "medium")),
+            )
+        except Exception:  # noqa: BLE001
+            logger.exception("Skor yazılamadı (oda %s)", self.room.code)
+
     async def emit(self, event: str, **payload) -> None:
         await self.room.broadcast({
             "type": ServerMessage.EVENT,
@@ -146,6 +164,7 @@ class BaseMode:
 
     async def finish(self, winner_slot: int | None, reason: str) -> None:
         self.finished = True
+        self._record_score(winner_slot)
         await self.room.broadcast({
             "type": ServerMessage.OVER,
             "winner": winner_slot,

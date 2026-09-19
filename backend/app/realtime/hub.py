@@ -152,6 +152,7 @@ class RoomHub:
         name: str,
         mode: str | None,
         token: str | None = None,
+        player_id: str | None = None,
     ) -> tuple[Room, Player, bool]:
         """Odaya katılır ya da kopan oturumu geri alır.
 
@@ -180,6 +181,8 @@ class RoomHub:
                         existing.disconnected_at = None
                         if name:
                             existing.name = name
+                        if player_id:
+                            existing.player_id = player_id
                         room.emptied_at = None
                         return room, existing, True
 
@@ -191,7 +194,7 @@ class RoomHub:
             room.players = active
 
             player = Player(socket=socket, name=name or f"Oyuncu {room.next_free_slot() + 1}",
-                            slot=room.next_free_slot())
+                            slot=room.next_free_slot(), player_id=player_id or None)
             room.players.append(player)
             room.emptied_at = None
             room.had_players = True

@@ -56,6 +56,7 @@ class _NameRoomState extends State<NameRoom> with TickerProviderStateMixin {
 
     setState(() => _loading = true);
     Session.instance.playerName = _controller.text.trim();
+    Session.instance.ensurePlayerId();
 
     Timer(const Duration(milliseconds: 700), () {
       if (!mounted) return;

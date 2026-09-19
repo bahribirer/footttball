@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 import 'package:footttball/core/config/app_config.dart';
+import 'package:footttball/core/session.dart';
 import 'package:footttball/data/models/game_mode.dart';
 import 'package:footttball/data/models/team_model.dart';
 
@@ -60,6 +61,34 @@ class ApiService {
 
     if (response.statusCode != 200) return false;
     return response.body.trim().toLowerCase() == 'true';
+  }
+
+  /// Doğrulama sonucu ve doğruysa oyuncunun kanonik adı + fotoğrafı.
+  static Future<GuessDetail> checkPlayerDetail({
+    required String playerName,
+    required String nationality,
+    required String club,
+  }) async {
+    final response = await http
+        .post(
+          _uri('/api/v1/guess_player/detail'),
+          headers: const {'Content-Type': 'application/json'},
+          body: jsonEncode({
+            'player_name': playerName,
+            'nationality': nationality,
+            'club': club,
+          }),
+        )
+        .timeout(AppConfig.requestTimeout);
+    if (response.statusCode != 200) return const GuessDetail(correct: false);
+    final json =
+        jsonDecode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>;
+    final player = json['player'] as Map<String, dynamic>?;
+    return GuessDetail(
+      correct: json['correct'] as bool? ?? false,
+      name: player?['name'] as String?,
+      imageUrl: player?['image_url'] as String?,
+    );
   }
 
   /// Otomatik tamamlama için oyuncu arar.
@@ -239,6 +268,46 @@ class ApiService {
     }
   }
 
+  /// Günün tahtası puanını skor tablosuna yazar. Sunucu aynı gün için
+  /// ikinci gönderimi yok sayar; ağ hatasında sessizce false döner.
+  static Future<bool> submitDailyScore({
+    required String date,
+    required int score,
+  }) async {
+    final me = Session.instance;
+    if (me.playerId.isEmpty) return false;
+    try {
+      final response = await http
+          .post(
+            _uri('/api/v1/leaderboard/daily'),
+            headers: const {'Content-Type': 'application/json'},
+            body: jsonEncode({
+              'player_id': me.playerId,
+              'name': me.displayName,
+              'date': date,
+              'score': score,
+            }),
+          )
+          .timeout(AppConfig.requestTimeout);
+      return response.statusCode == 200;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  // --- Skor tablosu ---------------------------------------------------------
+
+  /// Genel ya da mod bazlı sıralama; `me` istek sahibinin özeti.
+  static Future<Leaderboard> leaderboard({String mode = 'all'}) async {
+    final json = await _getJson(_uri('/api/v1/leaderboard', {
+      'mode': mode,
+      'limit': '50',
+      if (Session.instance.playerId.isNotEmpty)
+        'player_id': Session.instance.playerId,
+    }));
+    return Leaderboard.fromJson(json);
+  }
+
   // --- Kategoriler --------------------------------------------------------
 
   static Future<List<GameCategory>> categories({int count = 3}) async {
@@ -330,4 +399,82 @@ class ApiException implements Exception {
 
   @override
   String toString() => 'ApiException: $message ($uri)';
+}
+
+/// Skor tablosunun bir satırı.
+class LeaderboardEntry {
+  const LeaderboardEntry({
+    required this.rank,
+    required this.playerId,
+    required this.name,
+    required this.points,
+    required this.wins,
+    required this.matches,
+    required this.bestDaily,
+  });
+
+  factory LeaderboardEntry.fromJson(Map<String, dynamic> json) =>
+      LeaderboardEntry(
+        rank: json['rank'] as int? ?? 0,
+        playerId: json['player_id'] as String? ?? '',
+        name: json['name'] as String? ?? 'Oyuncu',
+        points: json['points'] as int? ?? 0,
+        wins: json['wins'] as int? ?? 0,
+        matches: json['matches'] as int? ?? 0,
+        bestDaily: json['best_daily'] as int? ?? 0,
+      );
+
+  final int rank;
+  final String playerId;
+  final String name;
+  final int points;
+  final int wins;
+  final int matches;
+  final int bestDaily;
+}
+
+/// İstek sahibinin kendi özeti: genel sıra ve mod başına puan.
+class MySummary {
+  const MySummary({
+    required this.total,
+    required this.rank,
+    required this.perMode,
+  });
+
+  factory MySummary.fromJson(Map<String, dynamic> json) => MySummary(
+        total: json['total'] as int? ?? 0,
+        rank: json['rank'] as int?,
+        perMode: (json['per_mode'] as Map<String, dynamic>? ?? const {})
+            .map((k, v) => MapEntry(k, v as int? ?? 0)),
+      );
+
+  final int total;
+  final int? rank;
+  final Map<String, int> perMode;
+}
+
+class Leaderboard {
+  const Leaderboard({required this.mode, required this.entries, this.me});
+
+  factory Leaderboard.fromJson(Map<String, dynamic> json) => Leaderboard(
+        mode: json['mode'] as String? ?? 'all',
+        entries: (json['entries'] as List? ?? const [])
+            .map((e) => LeaderboardEntry.fromJson(e as Map<String, dynamic>))
+            .toList(),
+        me: json['me'] != null
+            ? MySummary.fromJson(json['me'] as Map<String, dynamic>)
+            : null,
+      );
+
+  final String mode;
+  final List<LeaderboardEntry> entries;
+  final MySummary? me;
+}
+
+/// `checkPlayerDetail` sonucu.
+class GuessDetail {
+  const GuessDetail({required this.correct, this.name, this.imageUrl});
+  final bool correct;
+  final String? name;
+  final String? imageUrl;
 }

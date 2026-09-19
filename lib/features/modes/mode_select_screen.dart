@@ -4,6 +4,7 @@ import 'package:footttball/core/session.dart';
 import 'package:footttball/data/models/game_mode.dart';
 import 'package:footttball/data/services/api_service.dart';
 import 'package:footttball/features/daily/daily_challenge_screen.dart';
+import 'package:footttball/features/leaderboard/leaderboard_screen.dart';
 import 'package:footttball/features/lobby/quick_match_sheet.dart';
 import 'package:footttball/features/lobby/start_page.dart';
 import 'package:footttball/shared/widgets/app_background.dart';
@@ -57,6 +58,12 @@ class _ModeSelectScreenState extends State<ModeSelectScreen>
     );
   }
 
+  void _openLeaderboard() {
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => const LeaderboardScreen()),
+    );
+  }
+
   void _openQuickMatch() {
     showModalBottomSheet<void>(
       context: context,
@@ -98,8 +105,41 @@ class _ModeSelectScreenState extends State<ModeSelectScreen>
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 20),
                   child: Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
+                      // Skor tablosu kısayolu.
+                      GestureDetector(
+                        key: const ValueKey('btn_leaderboard'),
+                        onTap: _openLeaderboard,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 7),
+                          decoration: BoxDecoration(
+                            color: Colors.black.withOpacity(0.35),
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(
+                                color:
+                                    const Color(0xFFFFD200).withOpacity(0.45)),
+                          ),
+                          child: const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.emoji_events_rounded,
+                                  color: Color(0xFFFFD200), size: 17),
+                              SizedBox(width: 6),
+                              Text(
+                                'SIRALAMA',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                  letterSpacing: 1.2,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
                       Flexible(
                         child: Container(
                           padding: const EdgeInsets.symmetric(

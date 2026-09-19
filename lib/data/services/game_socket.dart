@@ -5,6 +5,7 @@ import 'package:web_socket_channel/web_socket_channel.dart';
 import 'package:web_socket_channel/status.dart' as ws_status;
 
 import 'package:footttball/core/config/app_config.dart';
+import 'package:footttball/core/session.dart';
 import 'package:footttball/data/models/game_mode.dart';
 import 'package:footttball/data/models/room_models.dart';
 
@@ -115,6 +116,7 @@ class GameSocket {
     final uri = Uri.parse(
       '${AppConfig.wsBase}/ws/v2/$roomCode'
       '?name=${Uri.encodeQueryComponent(_playerName)}&mode=${mode.id}'
+      '&pid=${Uri.encodeQueryComponent(Session.instance.playerId)}'
       '${token != null ? '&token=${Uri.encodeQueryComponent(token)}' : ''}',
     );
 

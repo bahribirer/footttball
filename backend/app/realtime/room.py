@@ -33,6 +33,8 @@ class Player:
     # Sunucuda yaşayan bot; soketi BotSocket. Oda boşaldı mı sayılırken ve
     # anlık görüntüde insan sayılmaz.
     is_bot: bool = False
+    # İstemcinin ürettiği kalıcı kimlik (skor tablosu için); boşsa puan yazılmaz.
+    player_id: str | None = None
 
     @property
     def symbol(self) -> str:

@@ -1,3 +1,7 @@
+import 'dart:math';
+
+import 'package:shared_preferences/shared_preferences.dart';
+
 import 'package:footttball/data/models/game_mode.dart';
 
 /// Uygulama boyunca yaşayan oturum bilgisi.
@@ -10,6 +14,39 @@ class Session {
 
   /// Oyuncunun isim ekranında girdiği ad.
   String playerName = '';
+
+  /// Cihaza bağlı kalıcı kimlik; skor tablosu bu kimlikle puan tutar.
+  ///
+  /// Hesap sistemi yok: ilk açılışta üretilir, `shared_preferences`'ta
+  /// saklanır. Uygulama silinirse puanlar yeni bir kimlikle sıfırdan başlar.
+  String playerId = '';
+
+  static const _idKey = 'player_id';
+
+  /// Kimliği yükler ya da ilk kez üretir. Başlangıçta bir kez çağrılır;
+  /// depolama okunamazsa oturumluk bir kimlik kullanılır.
+  Future<void> ensurePlayerId() async {
+    if (playerId.isNotEmpty) return;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final saved = prefs.getString(_idKey);
+      if (saved != null && saved.length >= 8) {
+        playerId = saved;
+        return;
+      }
+      playerId = _newId();
+      await prefs.setString(_idKey, playerId);
+    } catch (_) {
+      playerId = _newId();
+    }
+  }
+
+  static String _newId() {
+    const alphabet = 'abcdefghijklmnopqrstuvwxyz0123456789';
+    final rng = Random.secure();
+    return List.generate(24, (_) => alphabet[rng.nextInt(alphabet.length)])
+        .join();
+  }
 
   /// Menüde seçilen oyun modu.
   GameMode selectedMode = GameMode.tikiTakaToe;

@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:footttball/core/session.dart';
 import 'package:footttball/data/services/api_service.dart';
 import 'package:footttball/data/services/country_catalog.dart';
 import 'package:footttball/shared/widgets/app_background.dart';
@@ -37,6 +38,9 @@ class _DailyChallengeScreenState extends State<DailyChallengeScreen> {
 
   /// Doğru bilinen kutularda gösterilen futbolcu adı.
   final Map<int, String> _answers = {};
+
+  /// Doğru bilinen kutuların oyuncu fotoğrafları (kutu → url).
+  final Map<int, String> _photos = {};
 
   bool _checking = false;
 
@@ -79,6 +83,9 @@ class _DailyChallengeScreenState extends State<DailyChallengeScreen> {
       (saved['answers'] as Map<String, dynamic>? ?? {}).forEach((key, value) {
         _answers[int.parse(key)] = value as String;
       });
+      (saved['photos'] as Map<String, dynamic>? ?? {}).forEach((key, value) {
+        _photos[int.parse(key)] = value as String;
+      });
     } catch (_) {
       // Bozuk kayıt oyunu engellemesin; sıfırdan başlanır.
     }
@@ -95,6 +102,7 @@ class _DailyChallengeScreenState extends State<DailyChallengeScreen> {
           'date': board.date,
           'results': _results.map((k, v) => MapEntry('$k', v)),
           'answers': _answers.map((k, v) => MapEntry('$k', v)),
+          'photos': _photos.map((k, v) => MapEntry('$k', v)),
         }),
       );
     } catch (_) {
@@ -112,26 +120,51 @@ class _DailyChallengeScreenState extends State<DailyChallengeScreen> {
     final nation = board.nations[index ~/ 3];
     final club = board.clubs[index % 3];
 
-    final guess = await showDialog<String>(
+    // Alt sayfa: giriş alanı klavyenin hemen üstünde durur, öneriler onun
+    // üstünde açılır. Ortalanan bir diyalog klavye açılınca yukarı
+    // fırlıyor, alan ekranın tepesinde kalıyordu.
+    final guess = await showModalBottomSheet<String>(
       context: context,
-      builder: (_) => _GuessDialog(nation: nation, club: club),
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _GuessSheet(nation: nation, club: club),
     );
     if (guess == null || guess.trim().isEmpty || !mounted) return;
 
     setState(() => _checking = true);
-    final correct = await ApiService.checkPlayer(
-      playerName: guess.trim(),
-      nationality: nation,
-      club: club,
-    );
+    GuessDetail detail;
+    try {
+      detail = await ApiService.checkPlayerDetail(
+        playerName: guess.trim(),
+        nationality: nation,
+        club: club,
+      );
+    } catch (_) {
+      detail = const GuessDetail(correct: false);
+    }
     if (!mounted) return;
 
+    final correct = detail.correct;
     setState(() {
       _results[index] = correct;
-      if (correct) _answers[index] = guess.trim();
+      if (correct) {
+        _answers[index] = detail.name ?? guess.trim();
+        if (detail.imageUrl != null && detail.imageUrl!.isNotEmpty) {
+          _photos[index] = detail.imageUrl!;
+        }
+      }
       _checking = false;
     });
     await _saveProgress();
+    if (_finished) await _submitScore(board);
+  }
+
+  /// Tahta bitince puanı skor tablosuna yazar. Sunucu aynı gün ikinci
+  /// gönderimi yok sayar; ilerleme yerelde tutulduğu için burada tekrar
+  /// gönderim kaygısı yok.
+  Future<void> _submitScore(DailyBoard board) async {
+    await Session.instance.ensurePlayerId();
+    await ApiService.submitDailyScore(date: board.date, score: _score);
   }
 
   Future<void> _share() async {
@@ -249,6 +282,7 @@ class _DailyChallengeScreenState extends State<DailyChallengeScreen> {
                       index: row * 3 + col,
                       result: _results[row * 3 + col],
                       answer: _answers[row * 3 + col],
+                      photoUrl: _photos[row * 3 + col],
                       onTap: _openCell,
                     ),
                   ),
@@ -361,11 +395,13 @@ class _Cell extends StatelessWidget {
     required this.result,
     required this.answer,
     required this.onTap,
+    this.photoUrl,
   });
 
   final int index;
   final bool? result;
   final String? answer;
+  final String? photoUrl;
   final ValueChanged<int> onTap;
 
   @override
@@ -389,20 +425,16 @@ class _Cell extends StatelessWidget {
             child: Center(
               child: result == null
                   ? const Icon(Icons.add_rounded, color: Colors.white38)
-                  : Padding(
-                      padding: const EdgeInsets.all(4),
-                      child: Text(
-                        answer ?? '✕',
-                        textAlign: TextAlign.center,
-                        maxLines: 3,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
+                  : result!
+                      ? _CorrectCell(name: answer ?? '', photoUrl: photoUrl)
+                      : const Text(
+                          '✕',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
-                      ),
-                    ),
             ),
           ),
         ),
@@ -411,17 +443,61 @@ class _Cell extends StatelessWidget {
   }
 }
 
-class _GuessDialog extends StatefulWidget {
-  const _GuessDialog({required this.nation, required this.club});
+/// Doğru bilinen kutu: oyuncu fotoğrafı + adı.
+class _CorrectCell extends StatelessWidget {
+  const _CorrectCell({required this.name, required this.photoUrl});
+
+  final String name;
+  final String? photoUrl;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final avatar = (constraints.maxHeight * 0.5).clamp(28.0, 56.0);
+        return Padding(
+          padding: const EdgeInsets.all(4),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              PlayerAvatar(
+                name: name,
+                imageUrl: photoUrl,
+                size: avatar,
+                borderColor: Colors.greenAccent,
+              ),
+              const SizedBox(height: 4),
+              Text(
+                name,
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 9.5,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+/// Klavyeye yapışık cevap sayfası.
+class _GuessSheet extends StatefulWidget {
+  const _GuessSheet({required this.nation, required this.club});
 
   final String nation;
   final String club;
 
   @override
-  State<_GuessDialog> createState() => _GuessDialogState();
+  State<_GuessSheet> createState() => _GuessSheetState();
 }
 
-class _GuessDialogState extends State<_GuessDialog> {
+class _GuessSheetState extends State<_GuessSheet> {
   final _controller = TextEditingController();
 
   @override
@@ -432,12 +508,29 @@ class _GuessDialogState extends State<_GuessDialog> {
 
   @override
   Widget build(BuildContext context) {
-    return Dialog(
-      backgroundColor: Colors.transparent,
-      child: NeonPanel(
+    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+    return Padding(
+      // Klavye açılınca sayfa onun üstüne kayar; alan hep görünür kalır.
+      padding: EdgeInsets.only(bottom: bottomInset),
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+        decoration: BoxDecoration(
+          color: const Color(0xFF14142A),
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+          border: Border.all(color: Colors.cyanAccent.withOpacity(0.35)),
+        ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            Container(
+              width: 40,
+              height: 4,
+              margin: const EdgeInsets.only(bottom: 12),
+              decoration: BoxDecoration(
+                color: Colors.white24,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
@@ -458,19 +551,26 @@ class _GuessDialogState extends State<_GuessDialog> {
                     size: 24,
                   ),
                 ),
+                const SizedBox(width: 10),
+                Flexible(
+                  child: Text(
+                    '${CountryCatalog.turkish(widget.nation)} × ${widget.club}',
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w800,
+                      fontSize: 14,
+                    ),
+                  ),
+                ),
               ],
             ),
-            const SizedBox(height: 8),
-            NeonTitle(
-              '${CountryCatalog.turkish(widget.nation)} × ${widget.club}',
-              fontSize: 15,
-            ),
-            const SizedBox(height: 6),
+            const SizedBox(height: 4),
             const Text(
               'Tek hakkın var.',
               style: TextStyle(color: Colors.white54, fontSize: 12),
             ),
-            const SizedBox(height: 14),
+            const SizedBox(height: 12),
             ClipRRect(
               borderRadius: BorderRadius.circular(16),
               child: PlayerSuggestionField(
@@ -481,7 +581,7 @@ class _GuessDialogState extends State<_GuessDialog> {
                 onSubmit: (value) => Navigator.of(context).pop(value),
               ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 6),
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
               child:

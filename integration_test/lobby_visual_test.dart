@@ -6,7 +6,6 @@ import 'package:web_socket_channel/web_socket_channel.dart';
 
 import 'package:footttball/core/config/app_config.dart';
 import 'package:footttball/core/session.dart';
-import 'package:footttball/data/models/game_mode.dart';
 import 'package:footttball/data/services/game_socket.dart';
 import 'package:footttball/features/lobby/create_room_screen.dart';
 import 'package:footttball/features/lobby/start_page.dart';

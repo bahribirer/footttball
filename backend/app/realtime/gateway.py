@@ -27,12 +27,13 @@ async def websocket_v2(
     name: str = Query(default=""),
     mode: str = Query(default=""),
     token: str = Query(default=""),
+    pid: str = Query(default=""),
 ) -> None:
     await websocket.accept()
 
     try:
         room, player, resumed = await hub.join(
-            code, websocket, name, mode or None, token or None
+            code, websocket, name, mode or None, token or None, pid[:64] or None
         )
     except RoomFull:
         await websocket.send_text(json.dumps(

@@ -31,6 +31,14 @@ def today() -> date:
     return datetime.now(timezone.utc).date()
 
 
+def recent_dates(count: int = 2) -> set[str]:
+    """Bugün ve geriye doğru `count-1` günün ISO tarihleri (saat dilimi payı)."""
+    from datetime import timedelta
+    now = today()
+    # UTC gece yarısı etrafında istemci bir gün ileride olabilir.
+    return {(now + timedelta(days=d)).isoformat() for d in range(-(count - 1), 2)}
+
+
 def puzzle_number(day: date | None = None) -> int:
     """Paylaşım metninde görünen sıra numarası (#1, #2, ...)."""
     day = day or today()
@@ -66,17 +74,37 @@ def board(day: date | None = None) -> dict:
     }
 
 
-def share_text(number: int, results: list[bool]) -> str:
-    """Paylaşılabilir emoji ızgarası.
+def _verdict(score: int) -> str:
+    if score >= 9:
+        return "🏆 Kusursuz!"
+    if score >= 7:
+        return "🔥 Harika!"
+    if score >= 5:
+        return "👏 İyi iş!"
+    if score >= 3:
+        return "💪 Fena değil"
+    return "😅 Yarın daha iyi"
 
-    Doğru cevaplar yeşil, boş bırakılan ya da yanlışlar gri. Futbolcu
-    adları YAZILMAZ: paylaşım cevabı ele vermemeli, yoksa arkadaşına
-    gönderdiğin an bulmacayı bozarsın.
+
+def share_text(number: int, results: list[bool]) -> str:
+    """Paylaşılabilir emoji ızgarası (WhatsApp'a göre biçimlenmiş).
+
+    `*...*` WhatsApp'ta kalın görünür. Doğru cevaplar yeşil, boş bırakılan
+    ya da yanlışlar gri. Futbolcu adları YAZILMAZ: paylaşım cevabı ele
+    vermemeli, yoksa arkadaşına gönderdiğin an bulmacayı bozarsın.
     """
-    filled = (results + [False] * (BOARD_SIZE * BOARD_SIZE))[: BOARD_SIZE * BOARD_SIZE]
+    total = BOARD_SIZE * BOARD_SIZE
+    filled = (results + [False] * total)[:total]
     score = sum(1 for value in filled if value)
     rows = []
     for row in range(BOARD_SIZE):
         chunk = filled[row * BOARD_SIZE : (row + 1) * BOARD_SIZE]
         rows.append("".join("🟩" if value else "⬜" for value in chunk))
-    return f"Tiki Taka Toe #{number}   {score}/{BOARD_SIZE * BOARD_SIZE}\n" + "\n".join(rows)
+    return "\n".join([
+        f"⚽ *Tiki Taka Toe* · Günün Tahtası #{number}",
+        f"{_verdict(score)}  {score}/{total}",
+        "",
+        *rows,
+        "",
+        "Sen de dene 👉 tikitakatoe.com",
+    ])

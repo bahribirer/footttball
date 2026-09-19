@@ -47,12 +47,14 @@ def test_tahta_uc_ucluk():
 
 def test_paylasim_metni_cevap_sizdirmaz():
     text = daily_service.share_text(7, [True, False, True] * 3)
-    assert "Tiki Taka Toe #7" in text
+    assert "*Tiki Taka Toe*" in text and "#7" in text
     assert "6/9" in text
     assert text.count("🟩") == 6
     assert text.count("⬜") == 3
-    # Futbolcu adi gecmemeli: paylasim bulmacayi bozmamali.
-    assert not any(ch.isalpha() and ch not in "TikaToe" for ch in text.split("\n", 1)[1])
+    # Futbolcu adi gecmemeli: izgara satirlari yalnizca kutulardan olusur.
+    grid_rows = [line for line in text.split("\n") if "🟩" in line or "⬜" in line]
+    assert len(grid_rows) == 3
+    assert all(set(line) <= {"🟩", "⬜"} for line in grid_rows)
 
 
 def test_eksik_sonuc_listesi_tamamlanir():

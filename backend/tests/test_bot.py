@@ -197,9 +197,9 @@ async def test_career_bot_cozumu_okumaz(fast_bot, monkeypatch):
     """Botun beyni state'ten yalnız kendi görebildiği kulüpleri alır."""
     from app.realtime.modes import career_path as cp
     from app.services import career_service
-    captured = {}
+    calls = []
     def spy(clubs, ex):
-        captured["clubs"] = list(clubs); return []
+        calls.append(list(clubs)); return []
     monkeypatch.setattr(bot_service, "guess_from_career", spy)
     sample = {"key": "x y", "name": "X Y", "nationality": "Z", "position": None, "image_url": None,
               "path": [{"club": "Gizli1", "start": 1, "end": 2}, {"club": "Gizli2", "start": 2, "end": 3},
@@ -211,7 +211,10 @@ async def test_career_bot_cozumu_okumaz(fast_bot, monkeypatch):
     engine = hub.build_engine(room)
     await engine.start()
     await _settle(1.0)
-    assert captured.get("clubs") == ["Gizli1"], "bot yalniz acik olan ilk kulubu gormeli"
+    # İlk bakışta yalnız açık kulüp; ipucu kullanırsa bir sonraki de açılır
+    # ama hiçbir zaman tüm yol görünmez.
+    assert calls and calls[0] == ["Gizli1"], "bot yalniz acik olan ilk kulubu gormeli"
+    assert all(len(c) < 3 for c in calls), "bot cozumun tamamini gormemeli"
 
 
 # --- Kategori Yarışı ----------------------------------------------------
