@@ -100,8 +100,14 @@ for table in TABLES:
     sql = sql.replace(f'"{table}"', f'"{table}__new"')
     sql = sql.replace(f"TABLE {table} ", f"TABLE {table}__new ")
     sql = sql.replace(f"ON {table}(", f"ON {table}__new(")
-# İndeks adları da benzersiz olmalı.
-sql = sql.replace("CREATE INDEX idx_", "CREATE INDEX new_idx_")
+# İndeks adları da benzersiz olmalı — ve her koşuda farklı: tablo yeniden
+# adlandırılınca indeks adı kalıyor, aynı ad ikinci koşuda çakışıyordu.
+import time as _t
+stamp = _t.strftime("%Y%m%d%H%M%S")
+sql = sql.replace("CREATE INDEX idx_", f"CREATE INDEX i{stamp}_")
+# Önceki koşulardan kalan eski adlı indeksler (yeni tabloyla gelecek olanlar)
+for row in con.execute("SELECT name FROM sqlite_master WHERE type='index' AND (name LIKE 'new_idx_%' OR name LIKE 'i2%_idx_%')").fetchall():
+    pass  # canlı tablonun indeksleri; takasla birlikte tablo düşünce giderler
 
 con.executescript("".join(f"DROP TABLE IF EXISTS {t}__new;" for t in TABLES))
 con.executescript(sql)
