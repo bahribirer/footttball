@@ -227,6 +227,66 @@ def set_app_info() -> None:
             print(f"  kategori yazılamadı (mevcut korunur): {str(exc)[:160]}")
 
 
+def set_copyright(version_id: str) -> None:
+    u = urls()
+    call("PATCH", f"/appStoreVersions/{version_id}", json={"data": {
+        "type": "appStoreVersions", "id": version_id,
+        "attributes": {"copyright": u.get("COPYRIGHT", "2026 Bahri Birer")}}})
+    print(f"  telif: {u.get('COPYRIGHT')}")
+
+
+def set_pricing() -> None:
+    """Ücretsiz fiyat planı (tüm ülkeler, taban ülke ABD)."""
+    current = call("GET", f"/apps/{APP_ID}/appPriceSchedule", ok_404=True)
+    if current.get("data"):
+        print("  fiyat planı zaten var")
+        return
+    points = call("GET", f"/apps/{APP_ID}/appPricePoints?filter[territory]=USA&limit=200")
+    free = next((p for p in points.get("data", []) if float(p["attributes"].get("customerPrice", "1")) == 0.0), None)
+    if not free:
+        raise SystemExit("ücretsiz fiyat noktası bulunamadı")
+    call("POST", "/appPriceSchedules", json={
+        "data": {
+            "type": "appPriceSchedules",
+            "relationships": {
+                "app": {"data": {"type": "apps", "id": APP_ID}},
+                "baseTerritory": {"data": {"type": "territories", "id": "USA"}},
+                "manualPrices": {"data": [{"type": "appPrices", "id": "${price-free}"}]},
+            },
+        },
+        "included": [{
+            "type": "appPrices", "id": "${price-free}",
+            "attributes": {"startDate": None},
+            "relationships": {"appPricePoint": {"data": {"type": "appPricePoints", "id": free["id"]}}},
+        }],
+    })
+    print("  fiyat: ücretsiz (taban ülke ABD)")
+    # Tüm ülkelerde erişilebilir olsun.
+    try:
+        avail = call("GET", f"/apps/{APP_ID}/appAvailabilityV2", ok_404=True)
+        if not avail.get("data"):
+            terr = call("GET", "/territories?limit=200").get("data", [])
+            ids = [t["id"] for t in terr]
+            call("POST", "/appAvailabilities", json={
+                "data": {
+                    "type": "appAvailabilities",
+                    "attributes": {"availableInNewTerritories": True},
+                    "relationships": {
+                        "app": {"data": {"type": "apps", "id": APP_ID}},
+                        "territoryAvailabilities": {"data": [{"type": "territoryAvailabilities", "id": f"${{t-{i}}}"} for i in ids]},
+                    },
+                },
+                "included": [{"type": "territoryAvailabilities", "id": f"${{t-{i}}}",
+                              "attributes": {"available": True},
+                              "relationships": {"territory": {"data": {"type": "territories", "id": i}}}} for i in ids],
+            })
+            print(f"  erişilebilirlik: {len(ids)} ülke")
+        else:
+            print("  erişilebilirlik zaten ayarlı")
+    except SystemExit as exc:
+        print(f"  erişilebilirlik yazılamadı (ASC'de elle bakılmalı): {str(exc)[:300]}")
+
+
 def set_content_rights() -> None:
     """Üçüncü taraf içerik beyanı (kulüp armaları, Wikimedia fotoğrafları)."""
     call("PATCH", f"/apps/{APP_ID}", json={"data": {
@@ -477,6 +537,10 @@ def main() -> int:
         upload_screenshots(loc_id)
         for oid in others:
             upload_screenshots(oid)
+    print("▶ Telif")
+    set_copyright(vid)
+    print("▶ Fiyat ve erişilebilirlik")
+    set_pricing()
     print("▶ İçerik hakları")
     set_content_rights()
     print("▶ Yaş derecesi")
