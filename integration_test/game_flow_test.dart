@@ -203,6 +203,12 @@ void main() {
 
     // İpucu kullan: bir kulüp daha açılmalı, hak düşmeli. Yavaş CI
     // koşucusunda cevap 2 sn'yi aşabiliyor; görünene kadar beklenir.
+    // Klavye açıkken düğme klavyenin altında kalıyor (CI simülatöründe
+    // yazılım klavyesi açık); önce odak bırakılır, düğme görünür kılınır.
+    FocusManager.instance.primaryFocus?.unfocus();
+    await pumpFor(tester, const Duration(milliseconds: 500));
+    await tester.ensureVisible(find.textContaining('İPUCU'));
+    await pumpFor(tester, const Duration(milliseconds: 200));
     await tester.tap(find.textContaining('İPUCU'));
     await pumpUntil(tester, find.textContaining('2 kaldı'),
         timeout: const Duration(seconds: 12), label: 'ipucu hakkı 3 -> 2');
