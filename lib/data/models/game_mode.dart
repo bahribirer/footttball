@@ -9,7 +9,7 @@ enum GameMode {
     description:
         'Kulüp ve millet kesişimine uyan futbolcuyu yaz, üç taşı ilk sen tamamla.',
     icon: Icons.grid_3x3_rounded,
-    colors: [Color(0xFF6A11CB), Color(0xFF2575FC)],
+    colors: [Color(0xFF3B82F6), Color(0xFF3B82F6)],
   ),
   playerGuess(
     id: 'player_guess',
@@ -18,7 +18,7 @@ enum GameMode {
     description:
         'Biriniz milli takımı, diğeriniz kulübü seçer. Eşleşmeye uyan futbolcuyu ilk bilen puanı alır.',
     icon: Icons.bolt_rounded,
-    colors: [Color(0xFFFF512F), Color(0xFFDD2476)],
+    colors: [Color(0xFFFF6B4A), Color(0xFFFF6B4A)],
   ),
   careerPath(
     id: 'career_path',
@@ -27,7 +27,7 @@ enum GameMode {
     description:
         'Bir futbolcunun kulüp yolu adım adım açılır. Kim olduğunu ilk bilen turu alır; maç boyunca 3 ipucu hakkın var.',
     icon: Icons.timeline_rounded,
-    colors: [Color(0xFF00F260), Color(0xFF0575E6)],
+    colors: [Color(0xFF22C55E), Color(0xFF22C55E)],
   ),
   categoryRace(
     id: 'category_race',
@@ -36,7 +36,7 @@ enum GameMode {
     description:
         'Verilen kategoriye uyan futbolcuları sırayla yazın. Yanlış cevap süreden götürür.',
     icon: Icons.category_rounded,
-    colors: [Color(0xFF8E2DE2), Color(0xFF4A00E0)],
+    colors: [Color(0xFFA855F7), Color(0xFFA855F7)],
   );
 
   const GameMode({

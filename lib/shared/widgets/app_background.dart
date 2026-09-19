@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'package:footttball/core/theme/app_theme.dart';
+
 /// Uygulamanın koyu uzay temalı arka planı.
 ///
 /// `Positioned.fill` yerine `SizedBox.expand` kullanılır: `Stack` varsayılan
@@ -43,52 +45,69 @@ class AppBackground extends StatelessWidget {
   }
 }
 
-/// Logosuz, düz gradyan arka plan.
+/// Logosuz, düz zemin.
 ///
-/// Arka plan görselindeki büyük "TIKI TAKA TOE" logosu, üzerine içerik gelen
-/// ekranlarda yazılarla çakışıyordu. Lobi ve oyun ekranları bu yüzden aynı
-/// renk dünyasını koruyan ama logosuz bir zemin kullanır.
+/// Lacivert katman üstünde çok soluk saha çizgileri (orta yuvarlak, orta
+/// çizgi). Kimlik sahadan geliyor; renkli parlamalar ve gradyan lekeler
+/// yok. `accent` moda özgü ince bir üst şerit çizer.
 class PlainBackground extends StatelessWidget {
   const PlainBackground({super.key, this.accent});
 
-  /// Moda özgü hafif bir renk vurgusu (üst köşede).
+  /// Moda özgü vurgu: ekranın üst kenarında 3 px'lik şerit.
   final Color? accent;
 
   @override
   Widget build(BuildContext context) {
-    final glow = accent ?? const Color(0xFF6A11CB);
-
     return SizedBox.expand(
-      child: DecoratedBox(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [Color(0xFF241B4A), Color(0xFF15102E), Color(0xFF0C0A1C)],
-            stops: [0, 0.55, 1],
-          ),
-        ),
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            gradient: RadialGradient(
-              center: const Alignment(-0.7, -0.85),
-              radius: 1.1,
-              colors: [glow.withOpacity(0.28), Colors.transparent],
-            ),
-          ),
-          child: DecoratedBox(
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          const DecoratedBox(
             decoration: BoxDecoration(
-              gradient: RadialGradient(
-                center: const Alignment(0.9, 0.9),
-                radius: 1.0,
-                colors: [glow.withOpacity(0.16), Colors.transparent],
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [AppTheme.bgRaised, AppTheme.bg],
               ),
             ),
           ),
-        ),
+          const CustomPaint(painter: _PitchLinesPainter()),
+          if (accent != null)
+            Align(
+              alignment: Alignment.topCenter,
+              child: Container(height: 3, color: accent!.withOpacity(0.9)),
+            ),
+        ],
       ),
     );
   }
+}
+
+/// Zemindeki saha çizgileri: orta yuvarlak ve orta çizgi, %4 beyaz.
+class _PitchLinesPainter extends CustomPainter {
+  const _PitchLinesPainter();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = Colors.white.withOpacity(0.04)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.5;
+    final center = Offset(size.width / 2, size.height * 0.5);
+    canvas.drawCircle(center, size.width * 0.34, paint);
+    canvas.drawCircle(center, 3, paint..style = PaintingStyle.fill);
+    paint.style = PaintingStyle.stroke;
+    canvas.drawLine(Offset(0, center.dy), Offset(size.width, center.dy), paint);
+    // Kenar çizgileri
+    final inset = 14.0;
+    canvas.drawRect(
+      Rect.fromLTRB(inset, -20, size.width - inset, size.height + 20),
+      paint,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
 /// Oyun ekranlarının kullandığı, içeriği öne çıkaran koyu arka plan.
@@ -112,14 +131,17 @@ class BoardBackground extends StatelessWidget {
       const PlainBackground(accent: Color(0xFF2575FC));
 }
 
-/// Neon çerçeveli koyu panel — diyaloglarda ve kartlarda ortak görünüm.
+/// Kart: düz yüzey, ince kenarlık, üstte 2 px vurgu çizgisi.
+///
+/// Adı eski neon dönemden kalma; görünüm artık sakin. `colors.first` vurgu
+/// çizgisinin rengi.
 class NeonPanel extends StatelessWidget {
   const NeonPanel({
     super.key,
     required this.child,
-    this.colors = const [Colors.cyanAccent, Colors.purpleAccent],
+    this.colors = const [AppTheme.pitch, AppTheme.pitch],
     this.padding = const EdgeInsets.all(20),
-    this.radius = 22,
+    this.radius = AppTheme.radiusLg,
   });
 
   final Widget child;
@@ -130,41 +152,34 @@ class NeonPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(2.5),
+      clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
+        color: AppTheme.surface,
         borderRadius: BorderRadius.circular(radius),
-        gradient: LinearGradient(
-          colors: colors,
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: colors.last.withOpacity(0.35),
-            blurRadius: 20,
-            spreadRadius: 1,
-          ),
-        ],
+        border: Border.all(color: AppTheme.borderStrong),
+        boxShadow: AppTheme.shadow,
       ),
-      child: Container(
-        padding: padding,
-        decoration: BoxDecoration(
-          color: const Color(0xFF14142A),
-          borderRadius: BorderRadius.circular(radius - 2.5),
-        ),
-        child: child,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Container(height: 2, color: colors.first),
+          Padding(padding: padding, child: child),
+        ],
       ),
     );
   }
 }
 
-/// Kenarlığı çizili, içi gradyan dolgulu başlık yazısı.
+/// Başlık: düz, kalın, hafif aralıklı. Kontur ve gradyan yok.
+///
+/// `colors.last` altındaki kısa vurgu çizgisinin rengi.
 class NeonTitle extends StatelessWidget {
   const NeonTitle(
     this.text, {
     super.key,
     this.fontSize = 22,
-    this.colors = const [Colors.white, Colors.cyanAccent],
+    this.colors = const [AppTheme.text, AppTheme.pitch],
   });
 
   final String text;
@@ -173,36 +188,27 @@ class NeonTitle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Stack(
+    return Column(
+      mainAxisSize: MainAxisSize.min,
       children: [
         Text(
           text,
           textAlign: TextAlign.center,
           style: TextStyle(
             fontSize: fontSize,
-            fontWeight: FontWeight.w900,
-            letterSpacing: 1.2,
-            foreground: Paint()
-              ..style = PaintingStyle.stroke
-              ..strokeWidth = 3.5
-              ..color = colors.last.withOpacity(0.45),
+            fontWeight: FontWeight.w800,
+            color: AppTheme.text,
+            letterSpacing: 1.4,
+            height: 1.1,
           ),
         ),
-        ShaderMask(
-          shaderCallback: (bounds) => LinearGradient(
-            colors: colors,
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-          ).createShader(bounds),
-          child: Text(
-            text,
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: fontSize,
-              fontWeight: FontWeight.w900,
-              color: Colors.white,
-              letterSpacing: 1.2,
-            ),
+        const SizedBox(height: 6),
+        Container(
+          width: 28,
+          height: 3,
+          decoration: BoxDecoration(
+            color: colors.last,
+            borderRadius: BorderRadius.circular(2),
           ),
         ),
       ],
@@ -210,7 +216,7 @@ class NeonTitle extends StatelessWidget {
   }
 }
 
-/// Ekranların sol üstündeki cam görünümlü geri düğmesi.
+/// Sol üst geri düğmesi: düz yüzey, ince kenarlık.
 class GlassBackButton extends StatelessWidget {
   const GlassBackButton({super.key, this.onTap});
 
@@ -221,30 +227,16 @@ class GlassBackButton extends StatelessWidget {
     return GestureDetector(
       onTap: onTap ?? () => Navigator.of(context).maybePop(),
       child: Container(
-        width: 45,
-        height: 45,
+        width: 44,
+        height: 44,
         decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [
-              Colors.white.withOpacity(0.2),
-              Colors.white.withOpacity(0.1),
-            ],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.white.withOpacity(0.5)),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.2),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
-            ),
-          ],
+          color: AppTheme.surface,
+          borderRadius: BorderRadius.circular(AppTheme.radius),
+          border: Border.all(color: AppTheme.borderStrong),
         ),
         child: const Center(
           child: Icon(Icons.arrow_back_ios_new_rounded,
-              size: 20, color: Colors.white),
+              size: 18, color: AppTheme.text),
         ),
       ),
     );
@@ -252,12 +244,14 @@ class GlassBackButton extends StatelessWidget {
 }
 
 /// Ana eylem düğmesi (START / JOIN / PLAY).
+///
+/// Düz dolgu, koyu yazı; parlama yok. `colors.first` dolgu rengi.
 class PrimaryButton extends StatelessWidget {
   const PrimaryButton({
     super.key,
     required this.label,
     required this.onTap,
-    this.colors = const [Color(0xFF6A11CB), Color(0xFF2575FC)],
+    this.colors = const [AppTheme.pitch, AppTheme.pitch],
     this.enabled = true,
     this.icon,
   });
@@ -270,51 +264,43 @@ class PrimaryButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final fill = colors.first;
+    // Açık dolguda koyu yazı, koyu dolguda beyaz.
+    final fg = fill.computeLuminance() > 0.35 ? AppTheme.bg : Colors.white;
     return Opacity(
       opacity: enabled ? 1 : 0.45,
-      child: GestureDetector(
-        onTap: enabled ? onTap : null,
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 28),
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: colors,
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-            borderRadius: BorderRadius.circular(28),
-            border:
-                Border.all(color: Colors.white.withOpacity(0.2), width: 1.5),
-            boxShadow: [
-              BoxShadow(
-                color: colors.first.withOpacity(0.5),
-                blurRadius: 18,
-                offset: const Offset(0, 8),
-              ),
-            ],
-          ),
-          // Dar ekranlarda uzun etiketler ("OYUNU BAŞLAT") butonu taşırıyordu;
-          // içerik sığmadığında orantılı olarak küçülür.
-          child: FittedBox(
-            fit: BoxFit.scaleDown,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                if (icon != null) ...[
-                  Icon(icon, color: Colors.white, size: 22),
-                  const SizedBox(width: 10),
-                ],
-                Text(
-                  label,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 20,
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: 2,
+      child: Material(
+        color: fill,
+        borderRadius: BorderRadius.circular(AppTheme.radius),
+        child: InkWell(
+          onTap: enabled ? onTap : null,
+          borderRadius: BorderRadius.circular(AppTheme.radius),
+          child: Container(
+            height: 54,
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            alignment: Alignment.center,
+            // Dar ekranlarda uzun etiketler ("OYUNU BAŞLAT") butonu
+            // taşırıyordu; içerik sığmadığında orantılı olarak küçülür.
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (icon != null) ...[
+                    Icon(icon, color: fg, size: 20),
+                    const SizedBox(width: 10),
+                  ],
+                  Text(
+                    label,
+                    style: TextStyle(
+                      color: fg,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 1.6,
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),

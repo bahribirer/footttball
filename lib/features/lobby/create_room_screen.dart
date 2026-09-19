@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+
+import 'package:footttball/core/theme/app_theme.dart';
 import 'package:flutter/services.dart';
 
 import 'package:footttball/core/session.dart';
@@ -655,9 +657,9 @@ class _CreateRoomScreenState extends State<CreateRoomScreen>
       };
 
   List<Color> _optionColors(int index) => switch (index) {
-        0 => const [Color(0xFF00F260), Color(0xFF0575E6)],
-        1 => const [Color(0xFF8E2DE2), Color(0xFF4A00E0)],
-        _ => const [Color(0xFFFF512F), Color(0xFFDD2476)],
+        0 => const [AppTheme.pitch, AppTheme.pitch],
+        1 => const [Color(0xFF3B82F6), Color(0xFF3B82F6)],
+        _ => const [Color(0xFFFF6B4A), Color(0xFFFF6B4A)],
       };
 }
 
@@ -699,9 +701,7 @@ class _SetupSection extends StatelessWidget {
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  gradient: LinearGradient(
-                    colors: [accent, accent.withOpacity(0.55)],
-                  ),
+                  color: accent,
                 ),
                 child: Text(
                   '$step',
@@ -779,30 +779,12 @@ class _OptionCard extends StatelessWidget {
         curve: Curves.easeOut,
         padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 6),
         decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: selected
-                ? colors
-                : [
-                    colors.first.withOpacity(0.18),
-                    colors.last.withOpacity(0.18)
-                  ],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-          borderRadius: BorderRadius.circular(16),
+          color: selected ? colors.first.withOpacity(0.16) : AppTheme.surface,
+          borderRadius: BorderRadius.circular(AppTheme.radius),
           border: Border.all(
-            color: selected ? Colors.white.withOpacity(0.7) : Colors.white12,
-            width: selected ? 2 : 1.2,
+            color: selected ? colors.first : AppTheme.borderStrong,
+            width: selected ? 1.6 : 1,
           ),
-          boxShadow: selected
-              ? [
-                  BoxShadow(
-                    color: colors.first.withOpacity(0.5),
-                    blurRadius: 16,
-                    offset: const Offset(0, 6),
-                  ),
-                ]
-              : null,
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -890,9 +872,6 @@ class _CategoryTile extends StatelessWidget {
             color: selected ? accent : Colors.white12,
             width: selected ? 1.8 : 1.1,
           ),
-          boxShadow: selected
-              ? [BoxShadow(color: accent.withOpacity(0.32), blurRadius: 14)]
-              : null,
         ),
         child: Row(
           children: [
@@ -1017,11 +996,9 @@ class _ModeBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
       decoration: BoxDecoration(
-        gradient: LinearGradient(colors: mode.colors),
+        color: mode.colors.first.withOpacity(0.16),
         borderRadius: BorderRadius.circular(24),
-        boxShadow: [
-          BoxShadow(color: mode.colors.first.withOpacity(0.45), blurRadius: 14),
-        ],
+        border: Border.all(color: mode.colors.first.withOpacity(0.6)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,

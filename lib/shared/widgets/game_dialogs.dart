@@ -2,6 +2,8 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 
+import 'package:footttball/core/theme/app_theme.dart';
+
 import 'package:footttball/data/services/api_service.dart';
 import 'package:footttball/shared/widgets/app_background.dart';
 import 'package:footttball/shared/widgets/player_search_dialog.dart';
@@ -53,11 +55,10 @@ class GameDialogs {
       title: title,
       message: message,
       actionLabel: actionLabel ?? (isSeries ? '🎮  YENİ OYUN' : '▶  DEVAM'),
-      gradient: isSeries
-          ? const [Color(0xFF6A11CB), Color(0xFF2575FC)]
-          : (isDraw
-              ? const [Color(0xFF232526), Color(0xFF414345)]
-              : const [Color(0xFF0F2027), Color(0xFF2C5364)]),
+      gradient: const [],
+      accent: isSeries
+          ? AppTheme.gold
+          : (isDraw ? AppTheme.textMuted : AppTheme.pitch),
       onDismiss: onDismiss,
     );
   }
@@ -75,7 +76,7 @@ class GameDialogs {
       message: message,
       actionLabel: 'TAMAM',
       gradient: const [Color(0xFF3A1C1C), Color(0xFF5A2A2A)],
-      accent: Colors.redAccent,
+      accent: AppTheme.danger,
     );
   }
 
@@ -89,7 +90,7 @@ class GameDialogs {
       message: 'Rakibin oyundan ayrıldı.',
       actionLabel: '🏠  MENÜYE DÖN',
       gradient: const [Color(0xFF1A1A2E), Color(0xFF16213E)],
-      accent: Colors.redAccent,
+      accent: AppTheme.danger,
       barrierDismissible: false,
       onDismiss: onExit,
     );
@@ -102,7 +103,7 @@ class GameDialogs {
     required String message,
     required String actionLabel,
     required List<Color> gradient,
-    Color accent = Colors.cyanAccent,
+    Color accent = AppTheme.pitch,
     bool barrierDismissible = true,
     VoidCallback? onDismiss,
   }) {
@@ -114,92 +115,78 @@ class GameDialogs {
       transitionDuration: const Duration(milliseconds: 350),
       pageBuilder: (dialogContext, _, __) => Center(
         child: Container(
-          margin: const EdgeInsets.symmetric(horizontal: 30),
+          margin: const EdgeInsets.symmetric(horizontal: 28),
+          constraints: const BoxConstraints(maxWidth: 380),
+          clipBehavior: Clip.antiAlias,
           decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: gradient,
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-            borderRadius: BorderRadius.circular(24),
-            border: Border.all(color: accent.withOpacity(0.4), width: 2),
-            boxShadow: [
-              BoxShadow(
-                  color: accent.withOpacity(0.3),
-                  blurRadius: 30,
-                  spreadRadius: 2),
-            ],
+            color: AppTheme.surface,
+            borderRadius: BorderRadius.circular(AppTheme.radiusLg),
+            border: Border.all(color: AppTheme.borderStrong),
+            boxShadow: AppTheme.shadow,
           ),
           child: Material(
             color: Colors.transparent,
             child: Column(
               mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const SizedBox(height: 24),
-                Text(emoji, style: const TextStyle(fontSize: 46)),
+                Container(height: 3, color: accent),
+                const SizedBox(height: 22),
+                Text(emoji,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(fontSize: 40)),
                 const SizedBox(height: 12),
                 Text(
                   title,
                   textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 22,
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: 1.8,
-                    shadows: [
-                      Shadow(blurRadius: 12, color: accent.withOpacity(0.5))
-                    ],
+                  style: const TextStyle(
+                    color: AppTheme.text,
+                    fontSize: 21,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 1.6,
                   ),
                 ),
-                const SizedBox(height: 14),
+                const SizedBox(height: 12),
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 24),
                   child: Text(
                     message,
                     textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: Colors.white.withOpacity(0.88),
-                      fontSize: 15,
+                    style: const TextStyle(
+                      color: AppTheme.textMuted,
+                      fontSize: 14.5,
                       height: 1.45,
                     ),
                   ),
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: 22),
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 32),
-                  child: GestureDetector(
-                    onTap: () => Navigator.of(dialogContext).pop(),
-                    child: Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          colors: [Colors.amberAccent, Colors.orangeAccent],
-                        ),
-                        borderRadius: BorderRadius.circular(16),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.amber.withOpacity(0.4),
-                            blurRadius: 12,
-                            offset: const Offset(0, 4),
-                          ),
-                        ],
-                      ),
-                      child: Center(
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  child: Material(
+                    color: accent,
+                    borderRadius: BorderRadius.circular(AppTheme.radius),
+                    child: InkWell(
+                      onTap: () => Navigator.of(dialogContext).pop(),
+                      borderRadius: BorderRadius.circular(AppTheme.radius),
+                      child: Container(
+                        height: 50,
+                        alignment: Alignment.center,
                         child: Text(
                           actionLabel,
-                          style: const TextStyle(
-                            color: Colors.black87,
-                            fontSize: 15,
-                            fontWeight: FontWeight.w900,
-                            letterSpacing: 1.1,
+                          style: TextStyle(
+                            color: accent.computeLuminance() > 0.35
+                                ? AppTheme.bg
+                                : Colors.white,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 1.2,
                           ),
                         ),
                       ),
                     ),
                   ),
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: 22),
               ],
             ),
           ),

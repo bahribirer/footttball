@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'package:footttball/core/theme/app_theme.dart';
+
 import 'package:footttball/core/session.dart';
 import 'package:footttball/data/models/game_mode.dart';
 import 'package:footttball/features/lobby/create_room_screen.dart';
@@ -89,11 +91,8 @@ class _StartPageState extends State<StartPage> with TickerProviderStateMixin {
                             title: 'ODAYA KATIL',
                             subtitle: 'Sana verilen kodu gir',
                             icon: Icons.login_rounded,
-                            colors: const [
-                              Color(0xFF1F1B3A),
-                              Color(0xFF2C2652)
-                            ],
-                            borderColor: _mode.colors.last,
+                            colors: _mode.colors,
+                            borderColor: _mode.colors.first,
                             glow: _glow,
                             onTap: () => _open(const JoinRoomScreen()),
                           ),
@@ -131,57 +130,32 @@ class _StartPageState extends State<StartPage> with TickerProviderStateMixin {
   }
 
   Widget _buildModeHero() {
+    final accent = _mode.colors.first;
     return Column(
       children: [
-        AnimatedBuilder(
-          animation: _glow,
-          builder: (context, child) => Container(
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              boxShadow: [
-                BoxShadow(
-                  color:
-                      _mode.colors.last.withOpacity(0.22 + 0.18 * _glow.value),
-                  blurRadius: 38 + 16 * _glow.value,
-                  spreadRadius: 2,
-                ),
-              ],
-            ),
-            child: child,
+        Container(
+          width: 84,
+          height: 84,
+          decoration: BoxDecoration(
+            color: accent.withOpacity(0.14),
+            borderRadius: BorderRadius.circular(AppTheme.radiusLg),
+            border: Border.all(color: accent.withOpacity(0.5)),
           ),
-          child: Container(
-            width: 92,
-            height: 92,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: LinearGradient(
-                colors: _mode.colors,
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              border:
-                  Border.all(color: Colors.white.withOpacity(0.22), width: 2),
-            ),
-            child: Icon(_mode.icon, color: Colors.white, size: 44),
-          ),
+          child: Icon(_mode.icon, color: accent, size: 40),
         ),
         const SizedBox(height: 18),
         NeonTitle(
           _mode.title.toUpperCase(),
-          fontSize: 26,
-          colors: [Colors.white, _mode.colors.last],
+          fontSize: 24,
+          colors: [AppTheme.text, accent],
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 10),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 12),
           child: Text(
             _mode.description,
             textAlign: TextAlign.center,
-            style: TextStyle(
-              color: Colors.white.withOpacity(0.62),
-              fontSize: 13.5,
-              height: 1.45,
-            ),
+            style: AppTheme.body,
           ),
         ),
       ],
@@ -219,7 +193,10 @@ class _ActionCardState extends State<_ActionCard> {
 
   @override
   Widget build(BuildContext context) {
-    final border = widget.borderColor ?? Colors.white.withOpacity(0.22);
+    // Birincil kart dolu (mod rengi), ikincil kart yüzey renginde.
+    final primary = widget.borderColor == null;
+    final accent = primary ? widget.colors.first : widget.borderColor!;
+    final fg = primary ? _onAccent(accent) : AppTheme.text;
 
     return GestureDetector(
       onTapDown: (_) => setState(() => _pressed = true),
@@ -229,76 +206,61 @@ class _ActionCardState extends State<_ActionCard> {
         widget.onTap();
       },
       child: AnimatedScale(
-        scale: _pressed ? 0.97 : 1,
+        scale: _pressed ? 0.98 : 1,
         duration: const Duration(milliseconds: 120),
-        child: AnimatedBuilder(
-          animation: widget.glow,
-          builder: (context, child) => Container(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(24),
-              boxShadow: [
-                BoxShadow(
-                  color: widget.colors.last
-                      .withOpacity(0.2 + 0.14 * widget.glow.value),
-                  blurRadius: 22,
-                  offset: const Offset(0, 10),
-                ),
-              ],
-            ),
-            child: child,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 20),
+          decoration: BoxDecoration(
+            color: primary ? accent : AppTheme.surface,
+            borderRadius: BorderRadius.circular(AppTheme.radiusLg),
+            border: Border.all(
+                color: primary ? Colors.transparent : AppTheme.borderStrong),
+            boxShadow: AppTheme.shadow,
           ),
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 22),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: widget.colors,
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
+          child: Row(
+            children: [
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: primary
+                      ? Colors.black.withOpacity(0.14)
+                      : accent.withOpacity(0.14),
+                  borderRadius: BorderRadius.circular(AppTheme.radius),
+                ),
+                child:
+                    Icon(widget.icon, color: primary ? fg : accent, size: 24),
               ),
-              borderRadius: BorderRadius.circular(24),
-              border: Border.all(color: border, width: 1.6),
-            ),
-            child: Row(
-              children: [
-                Container(
-                  width: 54,
-                  height: 54,
-                  decoration: BoxDecoration(
-                    color: Colors.black.withOpacity(0.28),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: Colors.white.withOpacity(0.16)),
-                  ),
-                  child: Icon(widget.icon, color: Colors.white, size: 27),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        widget.title,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 19,
-                          fontWeight: FontWeight.w900,
-                          letterSpacing: 1.4,
-                        ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      widget.title,
+                      style: TextStyle(
+                        color: fg,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 1.2,
                       ),
-                      const SizedBox(height: 4),
-                      Text(
-                        widget.subtitle,
-                        style: TextStyle(
-                          color: Colors.white.withOpacity(0.72),
-                          fontSize: 12.5,
-                        ),
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      widget.subtitle,
+                      style: TextStyle(
+                        color:
+                            primary ? fg.withOpacity(0.75) : AppTheme.textMuted,
+                        fontSize: 12.5,
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
-                Icon(Icons.arrow_forward_ios_rounded,
-                    color: Colors.white.withOpacity(0.65), size: 17),
-              ],
-            ),
+              ),
+              Icon(Icons.arrow_forward_ios_rounded,
+                  color: primary ? fg.withOpacity(0.8) : AppTheme.textMuted,
+                  size: 16),
+            ],
           ),
         ),
       ),
@@ -306,7 +268,9 @@ class _ActionCardState extends State<_ActionCard> {
   }
 }
 
-/// İki oyuncunun aynı kodda buluşması gerektiğini anlatan ipucu.
+Color _onAccent(Color c) =>
+    c.computeLuminance() > 0.35 ? AppTheme.bg : Colors.white;
+
 class _HintRow extends StatelessWidget {
   const _HintRow({required this.accent});
 
@@ -317,22 +281,18 @@ class _HintRow extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.045),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withOpacity(0.09)),
+        color: AppTheme.surface,
+        borderRadius: BorderRadius.circular(AppTheme.radius),
+        border: Border.all(color: AppTheme.border),
       ),
       child: Row(
         children: [
-          Icon(Icons.groups_rounded, color: accent.withOpacity(0.85), size: 19),
+          Icon(Icons.groups_rounded, color: accent, size: 19),
           const SizedBox(width: 12),
-          Expanded(
+          const Expanded(
             child: Text(
               'İki kişilik oyun: biriniz oda kurar, diğeriniz o kodla katılır.',
-              style: TextStyle(
-                color: Colors.white.withOpacity(0.6),
-                fontSize: 12.5,
-                height: 1.4,
-              ),
+              style: AppTheme.body,
             ),
           ),
         ],
