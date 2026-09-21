@@ -9,4 +9,4 @@ websockets==17.1
 sentry-sdk[fastapi]==2.69.1
 # Cok surecli calisma icin paylasilan oda durumu. REDIS_URL
 # verilmezse ice aktarilmaz.
-redis==5.2.1
+redis==8.1.0
