@@ -1,12 +1,12 @@
 fastapi==0.141.1
-uvicorn[standard]==0.52.4
+uvicorn[standard]==0.53.0
 requests==2.34.2
 pycountry==26.2.16
 pydantic==2.13.5
 python-multipart==0.0.32
 websockets==17.1
 # Hata raporlama. SENTRY_DSN verilmezse devreye girmez.
-sentry-sdk[fastapi]==2.69.1
+sentry-sdk[fastapi]==2.69.2
 # Cok surecli calisma icin paylasilan oda durumu. REDIS_URL
 # verilmezse ice aktarilmaz.
 redis==5.2.1
