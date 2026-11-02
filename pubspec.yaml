@@ -40,9 +40,9 @@ dependencies:
   web_socket_channel: ^3.0.1
   # Günlük meydan okumanın ilerlemesi uygulama kapanınca
   # sıfırlanmamalı; yoksa "tek deneme" kuralı anlamsız olur.
-  shared_preferences: ^2.3.3
-  audioplayers: ^6.1.0
-  flutter_launcher_icons: ^0.13.1
+  shared_preferences: ^2.5.6
+  audioplayers: ^6.8.1
+  flutter_launcher_icons: ^0.14.4
 
 flutter_launcher_icons:
   android: "ic_launcher"
